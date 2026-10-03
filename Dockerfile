@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
+ENV APP_ENV=prod APP_DEBUG=0
 COPY SYMFONY/composer.json SYMFONY/composer.lock ./
 RUN php -m && composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts
 COPY SYMFONY/ .
