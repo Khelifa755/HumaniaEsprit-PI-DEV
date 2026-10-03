@@ -23,7 +23,7 @@ class GoogleOAuthService
     /**
      * Generate Google OAuth authorization URL
      */
-    public function getAuthorizationUrl(string $redirectUri, string $state = null): string
+    public function getAuthorizationUrl(string $redirectUri, ?string $state = null): string
     {
         $state = $state ?? bin2hex(random_bytes(16));
 
