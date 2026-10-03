@@ -1,4 +1,4 @@
-FROM php:8.2-apache
+FROM php:8.4-apache
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl libcurl4-openssl-dev libfreetype6-dev libicu-dev libjpeg62-turbo-dev libonig-dev libpng-dev libxml2-dev libzip-dev unzip \
@@ -11,7 +11,7 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 COPY SYMFONY/composer.json SYMFONY/composer.lock ./
-RUN php -m && composer diagnose && composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts
+RUN php -m && composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts
 COPY SYMFONY/ .
 RUN composer run-script post-install-cmd --no-interaction \
     && mkdir -p var/cache var/log public/uploads \
