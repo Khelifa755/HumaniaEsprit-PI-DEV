@@ -1,0 +1,75 @@
+security:
+    password_hashers:
+        Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
+    
+    providers:
+        app_user_provider:
+            entity:
+                class: App\Entity\Utilisateur
+                property: email
+    
+    firewalls:
+        dev:
+            pattern: ^/(_(profiler|wdt)|css|images|js)/
+            security: false
+        
+        main:
+            lazy: true
+            provider: app_user_provider
+            custom_authenticators:
+                - App\Security\Utilisateur\LoginFormAuthenticator
+                - App\Security\Utilisateur\GoogleAuthenticator
+            logout:
+                path: app_logout
+                target: app_login
+            remember_me:
+                secret: '%env(APP_SECRET)%'
+                lifetime: 604800
+                path: /
+
+    access_control:
+        # Module de planification - Admin Only (Catalogue & Événements globaux)
+        - { path: ^/espaces, roles: ROLE_ADMIN }
+        - { path: ^/evenement, roles: ROLE_ADMIN }
+        
+        # Module de planification - RH & Admin (Gestion administrative)
+        - { path: ^/boarding, roles: [ROLE_ADMIN, ROLE_RH] }
+        - { path: ^/onboarding, roles: [ROLE_ADMIN, ROLE_RH] }
+        - { path: ^/offboarding, roles: [ROLE_ADMIN, ROLE_RH] }
+        
+        # Module de planification - Accès Employé (Réservations, participations, carte)
+        # L'accès est donné à tout utilisateur connecté (ROLE_USER) car EMPLOYEE est le rôle de base
+        - { path: ^/reservation-espaces, roles: ROLE_USER }
+        - { path: ^/part-evenement, roles: ROLE_USER }
+        - { path: ^/reunion, roles: ROLE_USER }
+        - { path: ^/carte, roles: ROLE_USER }
+
+        # Admin & RH zones génériques
+        - { path: ^/admin, roles: [ROLE_ADMIN, ROLE_RH] }
+        - { path: ^/rh, roles: ROLE_RH }
+        - { path: ^/login/mfa, roles: PUBLIC_ACCESS }
+        
+        # Public routes
+        - { path: ^/login, roles: PUBLIC_ACCESS }
+        - { path: ^/login/face, roles: PUBLIC_ACCESS }
+        - { path: ^/logout, roles: PUBLIC_ACCESS }
+        - { path: ^/connect/, roles: PUBLIC_ACCESS }
+        - { path: ^/mot-de-passe-oublie, roles: PUBLIC_ACCESS }
+        - { path: ^/api/offres/filter, roles: PUBLIC_ACCESS }
+        - { path: ^/candidature-externe/submit, roles: PUBLIC_ACCESS }
+        
+        # Everything else requires a logged-in user
+        - { path: ^/.*, roles: ROLE_USER }
+
+when@test:
+  security:
+    password_hashers:
+      # By default, password hashers are resource intensive and take time. This is
+      # important to generate secure password hashes. In tests however, secure hashes
+      # are not important, waste resources and increase test times. The following
+      # reduces the work factor to the lowest possible values.
+      Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:
+        algorithm: auto
+        cost: 4 # Lowest possible value for bcrypt
+        time_cost: 3 # Lowest possible value for argon
+        memory_cost: 10 # Lowest possible value for argon

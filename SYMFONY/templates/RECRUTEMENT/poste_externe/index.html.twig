@@ -1,0 +1,491 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Postes Externes — Humania{% endblock %}
+
+{% block stylesheets %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cyan:    #06b6d4;
+    --green:   #10b981;
+    --gray:    #94a3b8;
+    --red:     #ef4444;
+    --purple:  #8b5cf6;
+    --orange:  #f59e0b;
+    --blue:    #3b82f6;
+    --bg:      #f4f6fb;
+    --card:    #ffffff;
+    --text:    #1e293b;
+    --muted:   #64748b;
+    --border:  #e2e8f0;
+    --radius:  14px;
+    --shadow:  0 2px 12px rgba(0,0,0,.07);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); }
+
+  /* ── Header ── */
+  .page-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 28px;
+  }
+  .page-header h1 { font-size: 1.75rem; font-weight: 700; }
+  .page-header p  { color: var(--muted); font-size: .9rem; margin-top: 3px; }
+
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--cyan); color: #fff;
+    border: none; border-radius: 10px; padding: 11px 22px;
+    font-size: .9rem; font-weight: 600; cursor: pointer;
+    text-decoration: none; white-space: nowrap;
+    transition: background .2s, transform .15s;
+  }
+  .btn-primary:hover { background: #0891b2; transform: translateY(-1px); }
+
+  /* ── Stats ── */
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(5,1fr);
+    gap: 16px; margin-bottom: 28px;
+  }
+  @media(max-width:1100px) { .stats-grid { grid-template-columns: repeat(3,1fr); } }
+  @media(max-width:700px)  { .stats-grid { grid-template-columns: 1fr 1fr; } }
+
+  .stat-card {
+    background: var(--card); border-radius: var(--radius);
+    padding: 20px 22px; box-shadow: var(--shadow);
+    border-top: 4px solid var(--cyan);
+  }
+  .stat-card.green  { border-top-color: var(--green); }
+  .stat-card.gray   { border-top-color: var(--gray); }
+  .stat-card.red    { border-top-color: var(--red); }
+  .stat-card.purple { border-top-color: var(--purple); }
+
+  .stat-val { font-size: 2rem; font-weight: 700; line-height: 1; margin-bottom: 4px; color: var(--cyan); }
+  .stat-card.green  .stat-val { color: var(--green); }
+  .stat-card.gray   .stat-val { color: var(--gray); }
+  .stat-card.red    .stat-val { color: var(--red); }
+  .stat-card.purple .stat-val { color: var(--purple); }
+  .stat-label { font-size: .88rem; font-weight: 600; margin-bottom: 6px; }
+  .stat-sub   { font-size: .76rem; color: var(--muted); }
+
+  /* ── Filters ── */
+  .filters { display: flex; gap: 12px; margin-bottom: 24px; }
+  .search-box {
+    flex: 1; display: flex; align-items: center;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0 16px; gap: 10px; box-shadow: var(--shadow);
+  }
+  .search-box input {
+    border: none; outline: none; width: 100%;
+    font-size: .9rem; font-family: inherit;
+    color: var(--text); padding: 12px 0; background: transparent;
+  }
+  .filter-select {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0 36px 0 14px;
+    font-size: .88rem; font-family: inherit; color: var(--text);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
+    height: 46px; min-width: 130px; cursor: pointer; box-shadow: var(--shadow);
+  }
+
+  /* ── Poste Cards ── */
+  .poste-list { display: flex; flex-direction: column; gap: 14px; }
+
+  .poste-card {
+    background: var(--card); border-radius: var(--radius);
+    box-shadow: var(--shadow); border-left: 5px solid var(--gray);
+    padding: 0; overflow: hidden;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .poste-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.1); }
+  .poste-card.ouvert   { border-left-color: var(--green); }
+  .poste-card.ferme    { border-left-color: var(--gray); }
+  .poste-card.haute    { border-left-color: var(--red); }
+  .poste-card.moyenne  { border-left-color: var(--orange); }
+  .poste-card.basse    { border-left-color: var(--cyan); }
+
+  .card-inner {
+    display: flex; align-items: center; gap: 18px;
+    padding: 18px 22px 10px;
+  }
+  .card-icon {
+    width: 52px; height: 52px; border-radius: 12px;
+    background: #e0f2fe; color: #0369a1;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .card-body    { flex: 1; min-width: 0; }
+  .card-title   { font-weight: 700; font-size: 1.02rem; margin-bottom: 5px; }
+  .card-desc    {
+    font-size: .83rem; color: var(--muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 560px; margin-bottom: 8px;
+  }
+  .card-meta    { display: flex; align-items: center; gap: 12px; font-size: .8rem; color: var(--muted); }
+  .card-meta span { display: flex; align-items: center; gap: 5px; }
+
+  /* Contract pill */
+  .pill {
+    display: inline-block; padding: 3px 11px;
+    border-radius: 20px; font-size: .74rem; font-weight: 700;
+  }
+  .pill-cdi  { background: #ede9fe; color: #6d28d9; }
+  .pill-cdd  { background: #dbeafe; color: #1d4ed8; }
+  .pill-stage{ background: #fef3c7; color: #b45309; }
+  .pill-other{ background: #f1f5f9; color: var(--muted); }
+
+  .card-badges {
+    display: flex; gap: 8px; align-items: center; flex-shrink: 0;
+  }
+  .badge {
+    padding: 4px 13px; border-radius: 20px;
+    font-size: .75rem; font-weight: 600;
+  }
+  .badge-ouvert  { background: #d1fae5; color: #065f46; }
+  .badge-ferme   { background: #f1f5f9; color: var(--muted); }
+  .badge-haute   { background: #fee2e2; color: #991b1b; }
+  .badge-moyenne { background: #fef3c7; color: #b45309; }
+  .badge-basse   { background: #e0f2fe; color: #0369a1; }
+
+  .card-actions-row {
+    display: flex; justify-content: flex-end; gap: 8px;
+    padding: 0 22px 14px;
+  }
+  .btn-action {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: 8px;
+    font-size: .8rem; font-weight: 600;
+    cursor: pointer; border: none; text-decoration: none;
+    transition: background .2s, transform .15s;
+  }
+  .btn-edit   { background: #fef9ec; color: #b45309; }
+  .btn-edit:hover   { background: #fde68a; transform: translateY(-1px); }
+  .btn-delete { background: #fef2f2; color: #dc2626; }
+  .btn-delete:hover { background: #fecaca; transform: translateY(-1px); }
+
+  /* ── Alerts ── */
+  .alert { padding: 12px 18px; border-radius: 10px; margin-bottom: 20px; font-size: .88rem; font-weight: 500; }
+  .alert-success { background: #d1fae5; color: #065f46; border-left: 4px solid var(--green); }
+  .alert-danger  { background: #fee2e2; color: #991b1b; border-left: 4px solid var(--red); }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty-state svg { margin-bottom: 12px; opacity: .4; }
+
+  /* ══════════════════════════════════
+     MODAL
+  ══════════════════════════════════ */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(15,23,42,.45); backdrop-filter: blur(3px);
+    z-index: 10050; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-overlay.active { display: flex; }
+
+  /* .rec-dialog — éviter "modal" (Bootstrap cache .modal sans .show) */
+  .rec-dialog {
+    display: block;
+    background: var(--card); border-radius: 18px;
+    width: 100%; max-width: 680px;
+    max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 24px 60px rgba(0,0,0,.2);
+    animation: slideUp .25s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+  .modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 28px 18px; border-bottom: 1px solid var(--border);
+  }
+  .modal-header h2 { font-size: 1.15rem; font-weight: 700; }
+  .modal-close {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: none; background: var(--bg); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; color: var(--muted); transition: background .15s;
+  }
+  .modal-close:hover { background: var(--border); }
+  .modal-body { padding: 24px 28px 28px; }
+</style>
+{% endblock %}
+
+{% block body %}
+
+{# Flash messages #}
+{% for label, messages in app.flashes %}
+  {% for message in messages %}
+    <div class="alert alert-{{ label == 'success' ? 'success' : 'danger' }}">{{ message }}</div>
+  {% endfor %}
+{% endfor %}
+
+{# ── Header ── #}
+<div class="page-header">
+  <div>
+    <h1>Postes Externes</h1>
+    <p>Offres d'emploi publiées — recrutement externe</p>
+  </div>
+  <button class="btn-primary" onclick="openModal('modal-new')">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+      <path d="M12 5v14M5 12h14"/>
+    </svg>
+    Publier un poste
+  </button>
+</div>
+
+{# ── Stats ── #}
+{% set total   = poste_externes|length %}
+{% set ouverts = poste_externes|filter(p => p.statut == 'Ouvert')|length %}
+{% set fermes  = poste_externes|filter(p => p.statut == 'Fermé')|length %}
+{% set haute   = poste_externes|filter(p => p.priorite == 'Haute')|length %}
+{% set cdi     = poste_externes|filter(p => p.typeContrat == 'CDI')|length %}
+
+<div class="stats-grid">
+  <div class="stat-card cyan">
+    <div class="stat-val">{{ total }}</div>
+    <div class="stat-label">Total postes</div>
+    <div class="stat-sub">✦ Toutes offres</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-val">{{ ouverts }}</div>
+    <div class="stat-label">Postes ouverts</div>
+    <div class="stat-sub">✔ Recrutement actif</div>
+  </div>
+  <div class="stat-card gray">
+    <div class="stat-val">{{ fermes }}</div>
+    <div class="stat-label">Postes fermés</div>
+    <div class="stat-sub">🔒 Recrutement clôturé</div>
+  </div>
+  <div class="stat-card red">
+    <div class="stat-val">{{ haute }}</div>
+    <div class="stat-label">Haute priorité</div>
+    <div class="stat-sub">🔥 Urgents</div>
+  </div>
+  <div class="stat-card purple">
+    <div class="stat-val">{{ cdi }}</div>
+    <div class="stat-label">CDI publiés</div>
+    <div class="stat-sub">📄 Contrats permanents</div>
+  </div>
+</div>
+
+{# ── Filters ── #}
+<div class="filters">
+  <div class="search-box">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+    </svg>
+    <input type="text" id="searchInput"
+           placeholder="Rechercher par titre, description, type de contrat…"
+           oninput="filterCards()">
+  </div>
+  <select class="filter-select" id="filterStatut" onchange="filterCards()">
+    <option value="">Tous</option>
+    <option>Ouvert</option>
+    <option>Fermé</option>
+  </select>
+</div>
+
+{# ── List ── #}
+<div class="poste-list" id="posteList">
+  {% for p in poste_externes %}
+    {% set prioriteSlug = p.priorite|lower|replace({'é':'e','è':'e'}) %}
+    {% set statutSlug   = p.statut|lower|replace({'é':'e'}) %}
+    {# Choose left border: priorite takes precedence for color, statut for open/closed #}
+    {% set borderClass = p.statut == 'Ouvert' ? 'ouvert' : 'ferme' %}
+    {% if p.priorite == 'Haute' %}{% set borderClass = 'haute' %}{% endif %}
+    {% if p.priorite == 'Moyenne' %}{% set borderClass = 'moyenne' %}{% endif %}
+
+    {# Contract pill class #}
+    {% set contrat = p.typeContrat|upper %}
+    {% set pillClass = contrat == 'CDI' ? 'pill-cdi' : (contrat == 'CDD' ? 'pill-cdd' : (contrat == 'STAGE' ? 'pill-stage' : 'pill-other')) %}
+
+    <div class="poste-card {{ borderClass }}"
+         data-search="{{ p.titre|lower }} {{ p.description|lower }} {{ p.typeContrat|lower }}"
+         data-statut="{{ p.statut }}">
+
+      <div class="card-inner">
+        <div class="card-icon">
+          <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <rect x="2" y="7" width="20" height="14" rx="2"/>
+            <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+            <line x1="12" y1="12" x2="12" y2="12"/>
+            <path d="M12 12h.01"/>
+          </svg>
+        </div>
+
+        <div class="card-body">
+          <div class="card-title">{{ p.titre }}</div>
+          {% if p.description %}
+          <div class="card-desc">
+            {{ p.description|length > 80 ? p.description|slice(0,80) ~ '…' : p.description }}
+          </div>
+          {% endif %}
+          <div class="card-meta">
+            <span>
+              <span class="pill {{ pillClass }}">{{ p.typeContrat }}</span>
+            </span>
+            {% if p.datePublication %}
+            <span>
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+              </svg>
+              {{ p.datePublication|date('d/m/Y') }}
+            </span>
+            {% endif %}
+            {% if p.salaire %}
+            <span>
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <line x1="12" y1="1" x2="12" y2="23"/>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+              </svg>
+              {{ p.salaire|number_format(0,',','') }} TND
+            </span>
+            {% endif %}
+            {% if p.experienceRequise %}
+            <span>
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              {{ p.experienceRequise }}
+            </span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="card-badges">
+          {# Statut badge #}
+          <span class="badge {{ p.statut == 'Ouvert' ? 'badge-ouvert' : 'badge-ferme' }}">
+            {% if p.statut == 'Ouvert' %}✔{% else %}🔒{% endif %} {{ p.statut }}
+          </span>
+          {# Priorité badge #}
+          {% if p.priorite %}
+          <span class="badge
+            {% if p.priorite == 'Haute' %}badge-haute
+            {% elseif p.priorite == 'Moyenne' %}badge-moyenne
+            {% else %}badge-basse{% endif %}">
+            {% if p.priorite == 'Haute' %}🔥{% elseif p.priorite == 'Moyenne' %}⊙{% else %}↓{% endif %}
+            {{ p.priorite }}
+          </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card-actions-row">
+        <a href="{{ path('app_poste_externe_edit', {'id': p.id}) }}" class="btn-action btn-edit">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          Modifier
+        </a>
+        <button class="btn-action btn-delete" onclick="confirmDelete({{ p.id }})">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/>
+          </svg>
+          Supprimer
+        </button>
+      </div>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+        <rect x="2" y="7" width="20" height="14" rx="2"/>
+        <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+      </svg>
+      <p>Aucun poste externe trouvé</p>
+    </div>
+  {% endfor %}
+</div>
+
+{# ══════════════════════════════════
+   MODAL — Nouveau poste
+══════════════════════════════════ #}
+<div class="modal-overlay" id="modal-new" onclick="closeOnBackdrop(event,'modal-new')">
+  <div class="rec-dialog">
+    <div class="modal-header">
+      <h2>📋 Publier un nouveau poste</h2>
+      <button class="modal-close" onclick="closeModal('modal-new')">✕</button>
+    </div>
+    <div class="modal-body">
+      {{ include('RECRUTEMENT/poste_externe/_form.html.twig', {
+        form: form,
+        button_label: 'Publier',
+        form_action: path('app_poste_externe_new')
+      }) }}
+    </div>
+  </div>
+</div>
+
+{# ══════════════════════════════════
+   MODAL — Modifier poste
+══════════════════════════════════ #}
+<div class="modal-overlay" id="modal-edit" onclick="closeOnBackdrop(event,'modal-edit')">
+  <div class="rec-dialog">
+    <div class="modal-header">
+      <h2>✎ Modifier le poste</h2>
+      <button class="modal-close" onclick="closeModal('modal-edit')">✕</button>
+    </div>
+    <div class="modal-body" id="modal-edit-body">
+      <p style="color:var(--muted);text-align:center;padding:30px 0">Chargement…</p>
+    </div>
+  </div>
+</div>
+
+{# Hidden delete forms #}
+{% for p in poste_externes %}
+<form id="del-{{ p.id }}" method="post"
+      action="{{ path('app_poste_externe_delete', {'id': p.id}) }}"
+      style="display:none">
+  <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ p.id) }}">
+</form>
+{% endfor %}
+
+<script>
+  function openModal(id) {
+    document.getElementById(id).classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+    document.body.style.overflow = '';
+  }
+  function closeOnBackdrop(e, id) {
+    if (e.target.id === id) closeModal(id);
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape')
+      document.querySelectorAll('.modal-overlay.active').forEach(m => closeModal(m.id));
+  });
+
+  function openEditModal(id) {
+    openModal('modal-edit');
+    const body = document.getElementById('modal-edit-body');
+    body.innerHTML = '<p style="color:var(--muted);text-align:center;padding:30px 0">Chargement…</p>';
+    fetch({{ path('app_poste_externe_edit', {id: 999999999})|json_encode|raw }}.replace('999999999', String(id)) + '?modal=1')
+      .then(r => r.text())
+      .then(html => { body.innerHTML = html; })
+      .catch(() => { body.innerHTML = '<p style="color:red;padding:20px">Erreur de chargement.</p>'; });
+  }
+
+  function confirmDelete(id) {
+    if (!confirm('Confirmer la suppression de ce poste ?')) return;
+    document.getElementById('del-' + id).submit();
+  }
+
+  function filterCards() {
+    const q  = document.getElementById('searchInput').value.toLowerCase();
+    const st = document.getElementById('filterStatut').value.toLowerCase();
+    document.querySelectorAll('.poste-card').forEach(card => {
+      const s  = (card.dataset.search || '').toLowerCase();
+      const cs = (card.dataset.statut || '').toLowerCase();
+      card.style.display =
+        (!q || s.includes(q)) && (!st || cs === st) ? 'block' : 'none';
+    });
+  }
+</script>
+{% endblock %}

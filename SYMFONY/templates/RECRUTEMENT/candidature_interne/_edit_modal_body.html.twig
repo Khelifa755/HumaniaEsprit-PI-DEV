@@ -1,0 +1,5 @@
+{{ include('RECRUTEMENT/candidature_interne/_form.html.twig', {
+  form: form,
+  button_label: 'Mettre à jour',
+  form_action: path('app_candidature_interne_edit', {'id': candidature_interne.id})
+}) }}

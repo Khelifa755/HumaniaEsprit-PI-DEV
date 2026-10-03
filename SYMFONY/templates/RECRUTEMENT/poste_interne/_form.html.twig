@@ -1,0 +1,46 @@
+{% set form_start_opts = {'attr': {'novalidate': 'novalidate'}} %}
+{% if form_action is defined %}
+    {% set form_start_opts = form_start_opts|merge({'action': form_action}) %}
+{% endif %}
+{{ form_start(form, form_start_opts) }}
+
+<div class="form-group">
+    {{ form_label(form.typePoste, 'Type de poste') }}
+    {{ form_widget(form.typePoste, {'attr': {'class': 'form-control'}}) }}
+    {{ form_errors(form.typePoste) }}
+</div>
+
+<div class="form-group">
+    {{ form_label(form.remuneration, 'Rémunération (TND)') }}
+    {{ form_widget(form.remuneration, {'attr': {'class': 'form-control', 'placeholder': 'Ex: 1500'}}) }}
+    {{ form_errors(form.remuneration) }}
+</div>
+
+<div class="form-row">
+    <div class="form-group">
+        {{ form_label(form.dateDebut, 'Date de début') }}
+        {{ form_widget(form.dateDebut, {'attr': {'class': 'form-control'}}) }}
+        {{ form_errors(form.dateDebut) }}
+    </div>
+    <div class="form-group">
+        {{ form_label(form.dateFin, 'Date de fin') }}
+        {{ form_widget(form.dateFin, {'attr': {'class': 'form-control'}}) }}
+        {{ form_errors(form.dateFin) }}
+    </div>
+</div>
+
+<div class="modal-footer">
+    {% if modal_mode is defined and modal_mode %}
+        <button type="button" class="btn-cancel" onclick="closeModal('createModal')">Annuler</button>
+    {% else %}
+        <a href="{{ path('app_poste_interne_index') }}" class="btn-cancel" style="text-decoration:none; display:inline-flex; align-items:center;">
+            Annuler
+        </a>
+    {% endif %}
+    <button type="submit" class="btn-save">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:5px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        {{ button_label|default('Enregistrer') }}
+    </button>
+</div>
+
+{{ form_end(form) }}

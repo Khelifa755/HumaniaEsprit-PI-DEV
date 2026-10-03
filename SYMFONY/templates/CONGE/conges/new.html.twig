@@ -1,0 +1,151 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Nouveau Congé — Humania{% endblock %}
+
+{% block body %}
+
+<div class="page-header">
+    <div>
+        <div class="page-header-title">🌴 Nouveau congé</div>
+        <div class="page-header-sub">Renseignez les informations de votre demande</div>
+    </div>
+    <a href="{{ path('app_conge_index') }}" class="btn btn-white">← Retour à la liste</a>
+</div>
+
+<div class="card" style="max-width:720px; margin:0 auto;">
+
+    <div class="card-header" style="background:linear-gradient(to right, #f0fdf4, #dcfce7);">
+        <span style="font-size:20px;">📋</span>
+        <div>
+            <div style="font-weight:700; font-size:15px; color:var(--text);">Demande de congé</div>
+            <div style="font-size:11px; color:var(--muted);">Sélectionnez les dates — le nombre de jours est calculé automatiquement</div>
+        </div>
+    </div>
+
+    <div class="card-body">
+        {{ form_start(form, {'attr': {'novalidate': 'novalidate', 'id': 'conge-form'}}) }}
+
+            {% if not form.vars.valid %}
+                <div class="alert alert-danger" style="margin-bottom:20px;">
+                    ⚠️ Veuillez corriger les erreurs ci-dessous.
+                </div>
+            {% endif %}
+
+            <!-- Dates -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">DATE DE DÉBUT *</label>
+                    {{ form_widget(form.dateDebut, {'attr': {'class': 'form-control', 'id': 'date_debut'}}) }}
+                    {% if form_errors(form.dateDebut) %}
+                        <div class="form-error">{{ form_errors(form.dateDebut) }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">DATE DE FIN *</label>
+                    {{ form_widget(form.dateFin, {'attr': {'class': 'form-control', 'id': 'date_fin'}}) }}
+                    {% if form_errors(form.dateFin) %}
+                        <div class="form-error">{{ form_errors(form.dateFin) }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Nombre de jours -->
+            <div class="form-group">
+                <label class="form-label">NOMBRE DE JOURS <span style="color:var(--muted); font-weight:400;">(calculé automatiquement)</span></label>
+                <div style="position:relative;">
+                    {{ form_widget(form.nbrJours, {
+                        'attr': {
+                            'class':       'form-control',
+                            'id':          'nbr_jours_display',
+                            'readonly':    'readonly',
+                            'tabindex':    '-1',
+                            'style':       'background:#f0fdf4; color:#059669; font-weight:700; cursor:not-allowed; border-color:#d1fae5;',
+                            'placeholder': 'Calculé automatiquement…'
+                        }
+                    }) }}
+                    <span style="position:absolute; right:14px; top:50%; transform:translateY(-50%); font-size:16px; pointer-events:none;">📆</span>
+                </div>
+                <div style="font-size:11px; color:var(--muted); margin-top:5px;">
+                    💡 Ce champ se remplit automatiquement dès que vous sélectionnez les deux dates.
+                </div>
+            </div>
+
+            <!-- Statut -->
+            <div class="form-group">
+                <label class="form-label">STATUT *</label>
+                {{ form_widget(form.statut, {'attr': {'class': 'form-control'}}) }}
+                {% if form_errors(form.statut) %}
+                    <div class="form-error">{{ form_errors(form.statut) }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Type de congé et Utilisateur -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">TYPE DE CONGÉ *</label>
+                    {{ form_widget(form.typeCongeId, {'attr': {'class': 'form-control', 'placeholder': 'Ex: 1'}}) }}
+                    {% if form_errors(form.typeCongeId) %}
+                        <div class="form-error">{{ form_errors(form.typeCongeId) }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">UTILISATEUR *</label>
+                    {{ form_widget(form.utilisateurId, {'attr': {'class': 'form-control', 'placeholder': 'Ex: 1'}}) }}
+                    {% if form_errors(form.utilisateurId) %}
+                        <div class="form-error">{{ form_errors(form.utilisateurId) }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Boutons -->
+            <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:24px; padding-top:20px; border-top:1px solid var(--border);">
+                <a href="{{ path('app_conge_index') }}" class="btn btn-secondary">❌ Annuler</a>
+                <button type="submit" class="btn btn-success">💾 Enregistrer le congé</button>
+            </div>
+
+        {{ form_end(form) }}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block javascripts %}
+<script>
+(function () {
+    const fieldDebut   = document.getElementById('date_debut');
+    const fieldFin     = document.getElementById('date_fin');
+    const fieldDisplay = document.getElementById('nbr_jours_display');
+
+    if (!fieldDebut || !fieldFin || !fieldDisplay) return;
+
+    function calculer() {
+        const d1 = fieldDebut.value ? new Date(fieldDebut.value) : null;
+        const d2 = fieldFin.value   ? new Date(fieldFin.value)   : null;
+
+        if (d1 && d2) {
+            if (d2 < d1) {
+                fieldDisplay.value = '⚠️ Date de fin avant début';
+                fieldDisplay.style.color       = '#ef4444';
+                fieldDisplay.style.borderColor = '#ef4444';
+                fieldDisplay.style.background  = '#fee2e2';
+                return;
+            }
+            const diff = Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
+            fieldDisplay.value = diff + ' jour' + (diff > 1 ? 's' : '');
+            fieldDisplay.style.color       = '#059669';
+            fieldDisplay.style.borderColor = '#d1fae5';
+            fieldDisplay.style.background  = '#f0fdf4';
+        } else {
+            fieldDisplay.value = '';
+            fieldDisplay.style.color       = '#94a3b8';
+            fieldDisplay.style.borderColor = '#e8eeff';
+            fieldDisplay.style.background  = '#f8faff';
+        }
+    }
+
+    fieldDebut.addEventListener('change', calculer);
+    fieldFin.addEventListener('change', calculer);
+    calculer();
+})();
+</script>
+{% endblock %}

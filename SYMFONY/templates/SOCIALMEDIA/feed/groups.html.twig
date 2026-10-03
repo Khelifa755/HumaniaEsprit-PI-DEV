@@ -1,0 +1,207 @@
+{% extends 'SOCIALMEDIA/feed/base.html.twig' %}
+
+{% block feed_content %}
+<div class="groups-list-container">
+    <div class="groups-header" style="padding: 24px; text-align: center; border-bottom: 1px solid #E8EAF6; margin-bottom: 24px;">
+        <h2 style="font-size: 24px; font-weight: 800; color: #1A1D2E; margin: 0 0 8px 0;">👥 Groupes</h2>
+        <p style="color: #A0A8CC; font-size: 13px; margin: 0 0 20px 0;">Rejoignez des groupes pour collaborer avec votre équipe</p>
+        {# Only managers can create groups #}
+        {% if currentUser.role == 'MANAGER' %}
+            <button onclick="openCreateGroupModal()" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 24px; background: linear-gradient(135deg, #6C5CE7, #a29bfe); color: white; border: none; border-radius: 50px; font-weight: 700; cursor: pointer; font-size: 13px;">
+                ➕ Créer un groupe
+            </button>
+        {% endif %}
+    </div>
+
+    {% if groups|length > 0 %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; padding: 0 24px 32px 24px;">
+            {% for item in groups %}
+                {% set group = item.group %}
+                {# Assign color based on group ID #}
+                {% set colors = ['#3D7EE8', '#2DAA63', '#F5A623', '#E8392A'] %}
+                {% set groupColor = colors[group.id % 4] %}
+                
+                <div style="background: white; border-radius: 16px; border: 1px solid #E8EAF6; overflow: hidden; transition: all 0.3s; box-shadow: 0 2px 10px rgba(108, 92, 231, 0.05);" 
+                     onmouseover="this.style.boxShadow='0 8px 24px rgba(108, 92, 231, 0.15)'; this.style.transform='translateY(-4px)'; this.style.borderColor='{{ groupColor }}';"
+                     onmouseout="this.style.boxShadow='0 2px 10px rgba(108, 92, 231, 0.05)'; this.style.transform='translateY(0)'; this.style.borderColor='#E8EAF6';">
+                    
+                    <!-- Header avec couleur du groupe -->
+                    <div style="height: 100px; background: linear-gradient(135deg, {{ groupColor }}, rgba(0,0,0,0.08)); display: flex; align-items: center; justify-content: center;">
+                        <div style="width: 56px; height: 56px; background: rgba(255, 255, 255, 0.2); border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; color: white; border: 3px solid white;">
+                            {{ group.name|first|upper }}
+                        </div>
+                    </div>
+
+                    <!-- Contenu -->
+                    <div style="padding: 16px;">
+                        <h3 style="font-size: 15px; font-weight: 700; color: #1A1D2E; margin: 0 0 6px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            {{ group.name }}
+                        </h3>
+                        <p style="font-size: 12px; color: #6B7280; margin: 0 0 12px 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4;">
+                            {{ group.description|slice(0, 80) }}{% if group.description|length > 80 %}...{% endif %}
+                        </p>
+
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-top: 1px solid #F0F0F8; font-size: 12px; color: #A0A8CC;">
+                            <span>👥 {{ item.memberCount }} {% if item.memberCount <= 1 %}membre{% else %}membres{% endif %}</span>
+                            <span>📅 {{ group.createdAt|date('d/m/Y') }}</span>
+                        </div>
+
+                        <div style="display: flex; gap: 8px; padding-top: 12px;">
+                            {% if item.isMember %}
+                                <a href="{{ path('social_groups_show', {'id': group.id}) }}" style="flex: 1; text-align: center; padding: 8px 12px; background: #F4F5FB; color: {{ groupColor }}; border: none; border-radius: 8px; font-weight: 600; font-size: 12px; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
+                                    Voir détail
+                                </a>
+                                <button onclick="leaveGroup({{ group.id }})" style="flex: 1; padding: 8px 12px; background: #EDFBF4; color: #059669; border: none; border-radius: 8px; font-weight: 600; font-size: 12px; cursor: pointer; transition: all 0.2s;">
+                                    ✓ Membre
+                                </button>
+                            {% elseif currentUser.role == 'ADMIN' %}
+                                <a href="{{ path('social_groups_show', {'id': group.id}) }}" style="flex: 1; text-align: center; padding: 8px 12px; background: #FEE2E2; color: #DC2626; border: none; border-radius: 8px; font-weight: 600; font-size: 12px; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
+                                    🔧 Admin
+                                </a>
+                            {% else %}
+                                <div style="flex: 1; padding: 8px 12px; text-align: center; background: #F3F4F6; color: #A0A8CC; border-radius: 8px; font-weight: 600; font-size: 12px;">
+                                    Non-membre
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div style="text-align: center; padding: 60px 20px; color: #A0A8CC;">
+            <div style="font-size: 48px; margin-bottom: 16px;">🏘️</div>
+            <p style="margin: 0; font-size: 15px; font-weight: 600;">Aucun groupe disponible pour le moment</p>
+            <p style="margin: 8px 0 0 0; font-size: 13px;">Créez le premier groupe ou attendez qu'une invitation arrive</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Modal pour créer un groupe (managers only) -->
+{% if currentUser.role == 'MANAGER' %}
+<div id="createGroupModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); align-items: center; justify-content: center;">
+    <div style="background-color: white; padding: 32px; border-radius: 16px; width: 90%; max-width: 500px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
+        <div style="font-size: 20px; font-weight: 800; color: #1A1D2E; margin-bottom: 24px;">Créer un nouveau groupe</div>
+        <form id="createGroupForm" style="display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="font-weight: 600; color: #1A1D2E; font-size: 13px;">Nom du groupe</label>
+                <input type="text" id="groupName" placeholder="ex: Équipe Marketing" required 
+                       style="padding: 10px 12px; border: 1px solid #E8EAF6; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px;">
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="font-weight: 600; color: #1A1D2E; font-size: 13px;">Description</label>
+                <textarea id="groupDesc" placeholder="Décrivez votre groupe..." required 
+                          style="padding: 10px 12px; border: 1px solid #E8EAF6; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; resize: vertical; min-height: 100px;"></textarea>
+            </div>
+            <div style="display: flex; gap: 12px; margin-top: 24px;">
+                <button type="button" onclick="closeCreateGroupModal()" 
+                        style="flex: 1; padding: 10px; background: #F0F0F8; color: #6B7280; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    Annuler
+                </button>
+                <button type="submit" 
+                        style="flex: 1; padding: 10px; background: linear-gradient(135deg, #6C5CE7, #a29bfe); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    Créer le groupe
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<script>
+    function openCreateGroupModal() {
+        document.getElementById('createGroupModal').style.display = 'flex';
+    }
+
+    function closeCreateGroupModal() {
+        document.getElementById('createGroupModal').style.display = 'none';
+        document.getElementById('createGroupForm').reset();
+    }
+
+    document.getElementById('createGroupForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const formData = new FormData();
+        formData.append('name', document.getElementById('groupName').value);
+        formData.append('description', document.getElementById('groupDesc').value);
+
+        try {
+            const response = await fetch('{{ path("social_groups_create") }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert('✅ Groupe créé avec succès!');
+                closeCreateGroupModal();
+                location.reload();
+            } else {
+                alert('❌ Erreur: ' + (data.error || 'Une erreur est survenue'));
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+            alert('❌ Erreur lors de la création du groupe');
+        }
+    });
+
+    async function joinGroup(groupId) {
+        try {
+            const response = await fetch(`{{ path('social_groups_join', {'id': 0}) }}`.replace('/0', '/' + groupId), {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert('✅ Vous avez rejoint le groupe!');
+                location.reload();
+            } else {
+                alert('❌ Erreur: ' + (data.error || 'Une erreur est survenue'));
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+            alert('❌ Erreur lors de l\'adhésion');
+        }
+    }
+
+    async function leaveGroup(groupId) {
+        if (!confirm('Êtes-vous sûr de vouloir quitter ce groupe?')) return;
+
+        try {
+            const response = await fetch(`{{ path('social_groups_leave', {'id': 0}) }}`.replace('/0', '/' + groupId), {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert('✅ Vous avez quitté le groupe');
+                location.reload();
+            } else {
+                alert('❌ Erreur: ' + (data.error || 'Une erreur est survenue'));
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+            alert('❌ Erreur lors de la désinscription');
+        }
+    }
+
+    window.onclick = function(event) {
+        const modal = document.getElementById('createGroupModal');
+        if (event.target == modal) {
+            closeCreateGroupModal();
+        }
+    };
+</script>
+{% endblock %}

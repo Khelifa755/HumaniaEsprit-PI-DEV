@@ -1,0 +1,81 @@
+{# templates/plannification/coworking_reservation/index.html.twig
+   Java equivalent: the JavaFX scene / FXML that listed Espace objects of type "coworking"
+   Uses the same index.html.twig pattern already established in ReservationEspacesController.php
+#}
+{% extends 'base.html.twig' %}
+
+{% block title %}Espaces Coworking{% endblock %}
+
+{% block body %}
+<div class="container py-4">
+
+    <h1 class="mb-4">
+        <i class="bi bi-building me-2"></i>Espaces de Coworking
+    </h1>
+
+    {# Flash messages — replaces JavaFX Alert dialogs #}
+    {% for label, messages in app.flashes %}
+        {% for message in messages %}
+            <div class="alert alert-{{ label == 'error' ? 'danger' : 'success' }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endfor %}
+
+    {% if espaces is empty %}
+        <div class="alert alert-info">Aucun espace de coworking disponible pour le moment.</div>
+    {% else %}
+        <div class="row row-cols-1 row-cols-md-3 g-4">
+            {% for espace in espaces %}
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+
+                    {# Java: EspaceModel.urlImage — displayed as card header image #}
+                    {% if espace.urlImage %}
+                        <img src="{{ espace.urlImage }}"
+                             class="card-img-top"
+                             alt="{{ espace.nom }}"
+                             style="height:180px; object-fit:cover;">
+                    {% endif %}
+
+                    <div class="card-body">
+                        <h5 class="card-title">{{ espace.nom }}</h5>
+
+                        <ul class="list-unstyled small text-muted mb-3">
+                            {# Java: EspaceModel.capacite #}
+                            <li>
+                                <i class="bi bi-people me-1"></i>
+                                <strong>Capacité :</strong> {{ espace.capacite }} siège(s)
+                            </li>
+                            <li>
+                                <i class="bi bi-layers me-1"></i>
+                                <strong>Étage :</strong> {{ espace.etage }}
+                            </li>
+                        </ul>
+
+                        {# Date picker: replaces the JavaFX DatePicker control.
+                           The chosen date is passed as a query param to coworking_seats. #}
+                        <form method="get"
+                              action="{{ path('coworking_seats', {'id': espace.id}) }}"
+                              class="d-flex gap-2 align-items-center">
+                            <input type="date"
+                                   name="date"
+                                   class="form-control form-control-sm"
+                                   value="{{ 'now'|date('Y-m-d') }}"
+                                   min="{{ 'now'|date('Y-m-d') }}"
+                                   required>
+                            <button type="submit" class="btn btn-primary btn-sm text-nowrap">
+                                <i class="bi bi-grid me-1"></i>Voir les sièges
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

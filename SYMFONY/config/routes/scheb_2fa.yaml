@@ -1,0 +1,2 @@
+# Scheb 2FA routes are intentionally disabled.
+# MFA login verification is handled by app route: app_login_mfa (/login/mfa).

@@ -1,0 +1,287 @@
+{% extends 'SOCIALMEDIA/feed/base.html.twig' %}
+
+{% block title %}Sauvegardés · Social{% endblock %}
+
+{% block feed_content %}
+
+{# ══ TITRE ══ #}
+<div style="background:#fff;border-radius:16px;border:1.5px solid #E8EAF6;padding:16px 18px;margin-bottom:16px;box-shadow:0 2px 10px rgba(108,92,231,0.06)">
+    <div style="font-size:16px;font-weight:700;color:#1A1D2E">📌 Publications sauvegardées</div>
+    <div style="font-size:12px;color:#A0A8CC;margin-top:4px">Retrouvez vos publications sauvegardées</div>
+</div>
+
+{# ══ LISTE DES PUBLICATIONS ══ #}
+{% if publications is empty %}
+    <div style="text-align:center;padding:60px 20px;background:#fff;border-radius:16px;border:1.5px dashed #E8EAF6">
+        <div style="font-size:44px;margin-bottom:10px">📭</div>
+        <div style="font-size:14px;font-weight:600;color:#4A5080">Aucune publication sauvegardée</div>
+        <div style="font-size:12px;color:#A0A8CC;margin-top:5px">Sauvegardez une publication pour la retrouver ici</div>
+    </div>
+{% else %}
+
+    {% for pub in publications %}
+        {% set author  = pub.authorId %}
+        {% set pubId   = pub.getId() %}
+        {% set myReact = userReactions[pubId] ?? null %}
+        {% set isSaved = userSaved[pubId] ?? false %}
+
+        <div style="background:#fff;border-radius:16px;border:1.5px solid #E8EAF6;padding:0;margin-bottom:16px;box-shadow:0 2px 10px rgba(108,92,231,0.06);overflow:hidden">
+
+            {# ── PUBLI CONTENT ── #}
+            {% if pub.contenu %}
+            <div style="padding:16px 18px">
+                <div style="font-size:14px;line-height:1.6;color:#1A1D2E">{{ pub.contenu }}</div>
+
+                {# Image URL #}
+                {% if pub.imageUrl is not null and pub.imageUrl != '' %}
+                    <img src="{{ pub.imageUrl }}" alt="image" style="width:100%;border-radius:9px;margin-top:10px;max-height:350px;object-fit:cover">
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {# ── ENTÊTE (user, datetime, actions) ── #}
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-top:1px solid #F4F5FB">
+                <div style="display:flex;align-items:center;gap:10px;flex:1">
+
+                    {% if author %}
+                    {# Avatar #}
+                    <div style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#A29BFE,#6C5CE7);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700">
+                        {{ author.firstName|slice(0, 1)|upper }}{{ author.lastName|slice(0, 1)|upper }}
+                    </div>
+
+                    {# Info user #}
+                    <div>
+                        <div style="display:flex;align-items:center;gap:7px">
+                            <div style="font-size:13.5px;font-weight:700;color:#1A1D2E">
+                                {{ author.firstName }} {{ author.lastName }}
+                            </div>
+                            <span style="font-size:9px;font-weight:600;background:rgba(108,92,231,0.10);color:#6C5CE7;border-radius:20px;padding:2px 7px;margin-left:5px">
+                                {{ pub.visibility }}
+                            </span>
+                        </div>
+                        <div style="font-size:11px;color:#A0A8CC;margin-top:1px">
+                            {{ author.bio ?? '' }}{% if author.bio %} · {% endif %}{{ pub.dateCreation|date('d/m/Y H:i') }}
+                        </div>
+                    </div>
+                    {% else %}
+                    {# Utilisateur supprimé #}
+                    <div style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#74b9ff,#0984e3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700">?</div>
+                    <div style="flex:1">
+                        <div style="font-size:13.5px;font-weight:700;color:#1A1D2E">Humania Bot</div>
+                        <div style="font-size:11px;color:#A0A8CC;margin-top:1px">{{ pub.dateCreation|date('d/m/Y H:i') }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {# Éditer & Supprimer (si auteur = user courant) #}
+                {% if author and author.getId() == currentUserId %}
+                    <div style="display:flex;gap:6px">
+                        <button type="button"
+                                onclick="openEditModal({{ pubId }}, '{{ pub.contenu|escape('js') }}', '{{ pub.visibility }}', '{{ pub.imageUrl ?? ''|escape('js') }}')"
+                                style="background:none;border:none;font-size:17px;color:#A0A8CC;cursor:pointer;padding:4px 6px;border-radius:7px"
+                                title="Éditer">✏️</button>
+                        <form action="{{ path('social_feed_delete', { id: pubId }) }}" method="post"
+                              onsubmit="return confirm('Supprimer cette publication ?')"
+                              style="display:inline">
+                            <button type="submit" style="background:none;border:none;font-size:17px;color:#A0A8CC;cursor:pointer;padding:4px 6px;border-radius:7px" title="Supprimer">🗑️</button>
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+
+            {# ── ACTIONS (like, comment, save) ── #}
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:#E8EAF6;border-top:1px solid #E8EAF6">
+                {# Like #}
+                <form action="{{ path('social_feed_react', { id: pubId }) }}" method="post" style="display:contents">
+                    <button type="submit" name="type" value="LIKE"
+                            style="background:#fff;border:none;padding:11px;font-size:12px;font-weight:600;color:{% if myReact == 'LIKE' %}#E84393{% else %}#A0A8CC{% endif %};cursor:pointer;text-align:center;font-family:inherit">
+                        {% if myReact == 'LIKE' %}❤️{% else %}🤍{% endif %} J'aime
+                    </button>
+                </form>
+
+                {# Comment #}
+                <button type="button"
+                        onclick="document.getElementById('comments-{{ pubId }}').style.display = document.getElementById('comments-{{ pubId }}').style.display === 'none' ? 'block' : 'none'"
+                        style="background:#fff;border:none;padding:11px;font-size:12px;font-weight:600;color:#A0A8CC;cursor:pointer;text-align:center;font-family:inherit">
+                    💬 {{ pub.nombreCommentaires }} commentaire{{ pub.nombreCommentaires != 1 ? 's' : '' }}
+                </button>
+
+                {# Save #}
+                <form action="{{ path('social_feed_save', { id: pubId }) }}" method="post" style="display:contents">
+                    <button type="submit" style="background:#fff;border:none;padding:11px;font-size:12px;font-weight:600;color:{% if isSaved %}#E84393{% else %}#A0A8CC{% endif %};cursor:pointer;text-align:center;font-family:inherit">
+                        {% if isSaved %}📌{% else %}📍{% endif %} {% if isSaved %}Sauvé{% else %}Sauver{% endif %}
+                    </button>
+                </form>
+            </div>
+
+            {# ── COMMENTAIRES (toggle) ── #}
+            <div id="comments-{{ pubId }}" style="display:none;padding:0 14px 13px;border-top:1px solid #F4F5FB">
+
+                {# Formulaire #}
+                <form action="{{ path('social_feed_comment', { id: pubId }) }}" method="post"
+                      style="display:flex;gap:9px;align-items:center;margin:11px 0">
+                    <div style="width:30px;height:30px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#A29BFE,#6C5CE7);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700">
+                        {% if currentUser %}{{ currentUser.firstName|slice(0, 1)|upper }}{{ currentUser.lastName|slice(0, 1)|upper }}{% endif %}
+                    </div>
+                    <input type="text" name="contenu" placeholder="Écrire un commentaire..." required
+                           style="flex:1;border:1.5px solid #E8EAF6;border-radius:24px;padding:8px 15px;font-size:12.5px;outline:none;font-family:inherit;background:#F4F5FB">
+                    <button type="submit" style="width:32px;height:32px;border-radius:50%;background:#6C5CE7;border:none;color:#fff;font-size:13px;cursor:pointer;flex-shrink:0">➤</button>
+                </form>
+
+                {# Liste commentaires #}
+                {% set comments = commentRepo.findByPublication(pubId) %}
+                {% for comment in comments %}
+                    {% set commentId = comment.getId() %}
+                    {% set ca = comment.authorId %}
+                    <div style="display:flex;gap:9px;margin-bottom:9px">
+                        <div style="width:30px;height:30px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#74b9ff,#0984e3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700">
+                            {% if ca %}{{ ca.firstName|slice(0, 1)|upper }}{{ ca.lastName|slice(0, 1)|upper }}{% else %}👤{% endif %}
+                        </div>
+                        <div style="background:#F4F5FB;border-radius:13px 13px 13px 3px;padding:9px 13px;flex:1">
+                            <div style="font-size:11.5px;font-weight:700;color:#1A1D2E">{% if ca %}{{ ca.firstName }} {{ ca.lastName }}{% else %}Humania Bot{% endif %}</div>
+                            <div style="font-size:12.5px;color:#4A5080;margin-top:2px;line-height:1.5">{{ comment.contenu }}</div>
+
+                            {# gifUrl nullable #}
+                            {% if comment.gifUrl is not null and comment.gifUrl != '' %}
+                                <img src="{{ comment.gifUrl }}" alt="gif" style="max-width:200px;border-radius:8px;margin-top:6px">
+                            {% endif %}
+
+                            <div style="font-size:10px;color:#A0A8CC;margin-top:4px">
+                                {{ comment.dateCreation|date('d/m H:i') }}
+                            </div>
+
+                            {# Éditer & Supprimer (authorized users only - check on backend) #}
+                            {% if ca and ca.getId() == currentUserId %}
+                            <div style="display:flex;gap:6px;margin-top:6px">
+                                <button type="button"
+                                        onclick="openEditCommentModal({{ commentId }}, '{{ comment.contenu|escape('js') }}')"
+                                        style="background:none;border:none;font-size:12px;color:#A0A8CC;cursor:pointer;padding:2px 4px;border-radius:4px">
+                                    ✏️
+                                </button>
+                                <form action="{{ path('social_feed_delete_comment', { id: commentId }) }}" method="post"
+                                      onsubmit="return confirm('Supprimer ce commentaire ?')"
+                                      style="display:inline">
+                                    <button type="submit" style="background:none;border:none;font-size:12px;color:#A0A8CC;cursor:pointer;padding:2px 4px;border-radius:4px">
+                                        🗑️
+                                    </button>
+                                </form>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+
+            </div>
+
+        </div>{# /post card #}
+    {% endfor %}
+
+{% endif %}
+
+{# ══ EDIT POST MODAL (reused from index) ══ #}
+<div id="editPostModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.45);align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:18px;width:100%;max-width:540px;margin:0 16px;box-shadow:0 20px 60px rgba(0,0,0,0.2);border:1.5px solid #E8EAF6;overflow:hidden">
+
+        {# Header #}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #E8EAF6">
+            <div style="font-size:15px;font-weight:700;color:#1A1D2E">Éditer la publication</div>
+            <button type="button" onclick="document.getElementById('editPostModal').style.display='none'"
+                    style="background:none;border:none;font-size:21px;color:#A0A8CC;cursor:pointer;line-height:1">×</button>
+        </div>
+
+        <form id="editPostForm" method="post" style="display:contents">
+            <div style="padding:18px 20px">
+
+                {# Texte #}
+                <textarea id="editContenu" name="contenu" rows="4" required
+                    placeholder="Partagez quelque chose avec votre équipe..."
+                    style="width:100%;border:1.5px solid #E8EAF6;border-radius:11px;padding:13px 15px;font-size:13.5px;font-family:inherit;color:#1A1D2E;resize:vertical;outline:none;background:#F4F5FB;box-sizing:border-box;margin-bottom:9px"></textarea>
+
+                {# Visibilité #}
+                <select id="editVisibility" name="visibility" style="width:100%;background:#F4F5FB;border:1.5px solid #E8EAF6;border-radius:7px;padding:9px 13px;font-size:12.5px;color:#4A5080;outline:none;font-family:inherit;cursor:pointer;box-sizing:border-box;margin-bottom:9px">
+                    <option value="PUBLIC">🌍 Public</option>
+                    <option value="FRIENDS">👥 Abonnés</option>
+                    <option value="PRIVATE">🔒 Privé</option>
+                </select>
+
+                {# Image URL #}
+                <input type="text" id="editImageUrl" name="imageUrl"
+                       placeholder="🖼️ URL image (optionnel)"
+                       style="width:100%;border:1.5px solid #E8EAF6;border-radius:9px;padding:9px 13px;font-size:12.5px;font-family:inherit;outline:none;background:#F4F5FB;box-sizing:border-box">
+            </div>
+
+            {# Footer #}
+            <div style="display:flex;justify-content:flex-end;gap:9px;padding:13px 20px;border-top:1px solid #E8EAF6">
+                <button type="button"
+                        onclick="document.getElementById('editPostModal').style.display='none'"
+                        style="padding:8px 18px;border-radius:9px;border:1.5px solid #E8EAF6;background:#F4F5FB;color:#4A5080;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">
+                    Annuler
+                </button>
+                <button type="submit"
+                        style="padding:8px 20px;border-radius:9px;border:none;background:linear-gradient(135deg,#6C5CE7,#A29BFE);color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(108,92,231,0.3)">
+                    Enregistrer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# ══ MODAL D'ÉDITION DE COMMENTAIRE ══ #}
+<div id="editCommentModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.45);align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:18px;width:100%;max-width:500px;margin:0 16px;box-shadow:0 20px 60px rgba(0,0,0,0.2);border:1.5px solid #E8EAF6;overflow:hidden">
+
+        {# Header #}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #E8EAF6">
+            <div style="font-size:15px;font-weight:700;color:#1A1D2E">Éditer le commentaire</div>
+            <button type="button" onclick="document.getElementById('editCommentModal').style.display='none'"
+                    style="background:none;border:none;font-size:21px;color:#A0A8CC;cursor:pointer;line-height:1">×</button>
+        </div>
+
+        <form id="editCommentForm" method="post" style="display:contents">
+            <div style="padding:18px 20px">
+
+                {# Texte #}
+                <textarea id="editCommentContenu" name="contenu" rows="3" required
+                    placeholder="Écrire un commentaire..."
+                    style="width:100%;border:1.5px solid #E8EAF6;border-radius:11px;padding:13px 15px;font-size:13.5px;font-family:inherit;color:#1A1D2E;resize:vertical;outline:none;background:#F4F5FB;box-sizing:border-box"></textarea>
+            </div>
+
+            {# Footer #}
+            <div style="display:flex;justify-content:flex-end;gap:9px;padding:13px 20px;border-top:1px solid #E8EAF6">
+                <button type="button"
+                        onclick="document.getElementById('editCommentModal').style.display='none'"
+                        style="padding:8px 18px;border-radius:9px;border:1.5px solid #E8EAF6;background:#F4F5FB;color:#4A5080;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">
+                    Annuler
+                </button>
+                <button type="submit"
+                        style="padding:8px 20px;border-radius:9px;border:none;background:linear-gradient(135deg,#6C5CE7,#A29BFE);color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(108,92,231,0.3)">
+                    Enregistrer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openEditModal(pubId, contenu, visibility, imageUrl) {
+    document.getElementById('editContenu').value = contenu;
+    document.getElementById('editVisibility').value = visibility;
+    document.getElementById('editImageUrl').value = imageUrl || '';
+    
+    const form = document.getElementById('editPostForm');
+    form.action = '{{ path("social_feed_edit", {id: 0}) }}'.replace('/0', '/' + pubId);
+    
+    document.getElementById('editPostModal').style.display = 'flex';
+}
+
+function openEditCommentModal(commentId, contenu) {
+    document.getElementById('editCommentContenu').value = contenu;
+    
+    const form = document.getElementById('editCommentForm');
+    form.action = '{{ path("social_feed_edit_comment", {id: 0}) }}'.replace('/0', '/' + commentId);
+    
+    document.getElementById('editCommentModal').style.display = 'flex';
+}
+</script>
+
+{% endblock %}

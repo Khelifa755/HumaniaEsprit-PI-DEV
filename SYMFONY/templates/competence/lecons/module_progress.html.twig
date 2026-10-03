@@ -1,0 +1,1091 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ formation.titre }} – Progression{% endblock %}
+
+{% block body %}
+
+{% set catAccents = {
+  'Technical Training':   '#2563EB',
+  'Management Training':  '#059669',
+  'Soft Skills':          '#7C3AED',
+  'DevOps':               '#D97706',
+  'Frontend':             '#0284C7',
+  'Cloud':                '#4F46E5',
+  'Soft Skills Avancées': '#DB2777',
+  'Autre':                '#6B7280',
+} %}
+{% set cat    = formation.categorie ?? 'Autre' %}
+{% set accent = catAccents[cat] ?? '#4F46E5' %}
+
+{% set typeIcons = {
+  'video':    '▶',
+  'reading':  '◉',
+  'lecture':  '◉',
+  'cours':    '◉',
+  'quiz':     '◆',
+  'exercice': '✎',
+} %}
+
+<div class="mp-page">
+
+  {# ══ HERO HEADER ══════════════════════════════════════════════════════════ #}
+  <div class="mp-hero" style="--accent:{{ accent }}">
+    <div class="mp-hero-glow"></div>
+    <div class="mp-hero-inner">
+      <a href="{{ path('mes_lecons_index') }}" class="mp-back-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg>
+        Mes Leçons
+      </a>
+
+      <div class="mp-hero-body">
+        <div class="mp-hero-left">
+          <div class="mp-cat-chip">{{ cat }}</div>
+          <h1 class="mp-formation-title">{{ formation.titre }}</h1>
+          <div class="mp-formation-meta">
+            {% if formation.formateur_nom and formation.formateur_nom != 'N/A' %}
+              <span class="mp-meta-pill">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                {{ formation.formateur_nom }}
+              </span>
+            {% endif %}
+            <span class="mp-meta-pill">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+              {{ formation.duree }}h
+            </span>
+            <span class="mp-meta-pill mp-type-pill">{{ formation.typeFormation ?? 'E-LEARNING' }}</span>
+          </div>
+
+          {# Action buttons #}
+          <div class="mp-action-row">
+            <button class="mp-action-btn mp-btn-ai" onclick="callAI('skills_gap')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2m-3.5-8.5-1.4 1.4M7 17.5l-1.5 1.5m14 0-1.5-1.5M7 6.5 5.5 5"/></svg>
+              Analyse IA
+            </button>
+            <button class="mp-action-btn mp-btn-yt" onclick="loadYoutube()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-2.74 12 12 0 00-8.45 0A4.83 4.83 0 013.6 6.69 42.66 42.66 0 003 12a42.66 42.66 0 00.6 5.31 4.83 4.83 0 003.77 2.74 12 12 0 008.45 0 4.83 4.83 0 003.77-2.74A42.66 42.66 0 0021 12a42.66 42.66 0 00-.41-5.31zm-9.09 8.64V8.67l5.4 3.33z"/></svg>
+              Vidéos
+            </button>
+            <a href="{{ path('module_progress_export_pdf', {id: formation.id}) }}" class="mp-action-btn mp-btn-pdf" target="_blank">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+              PDF
+            </a>
+          </div>
+        </div>
+
+        {# Progress ring #}
+        <div class="mp-ring-wrap">
+          <svg class="mp-ring-svg" viewBox="0 0 120 120">
+            <circle class="mp-ring-bg" cx="60" cy="60" r="50" fill="none" stroke-width="10"/>
+            <circle class="mp-ring-fill" cx="60" cy="60" r="50" fill="none" stroke="{{ accent }}" stroke-width="10"
+                    stroke-dasharray="{{ (progress / 100 * 314.16)|round(2) }} 314.16"
+                    stroke-linecap="round" transform="rotate(-90 60 60)"
+                    style="transition:stroke-dasharray 1s cubic-bezier(.4,0,.2,1)"/>
+          </svg>
+          <div class="mp-ring-center">
+            <div class="mp-ring-pct" style="color:{{ accent }}">{{ progress }}%</div>
+            <div class="mp-ring-label">{{ doneMods }}/{{ totalMods }}</div>
+          </div>
+        </div>
+      </div>
+
+      {# Progress bar strip #}
+      <div class="mp-progress-strip">
+        <div class="mp-progress-track">
+          <div class="mp-progress-fill" style="width:{{ progress }}%;background:{{ accent }}"></div>
+        </div>
+        <div class="mp-progress-labels">
+          <span>{{ doneMods }} module{{ doneMods > 1 ? 's' : '' }} terminé{{ doneMods > 1 ? 's' : '' }}</span>
+          <span>{{ totalMods - doneMods }} restant{{ (totalMods - doneMods) > 1 ? 's' : '' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ══ AI PANEL ════════════════════════════════════════════════════════════ #}
+  <div id="aiPanel" class="mp-panel mp-panel-ai" style="display:none">
+    <div class="mp-panel-header">
+      <div class="mp-panel-icon mp-icon-ai">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2"/></svg>
+      </div>
+      <span id="aiPanelTitle" class="mp-panel-title">Analyse IA</span>
+      <div id="aiPanelStatus" class="mp-panel-status">
+        <span class="mp-spinner"></span>
+        <span id="aiPanelStatusText">Génération en cours…</span>
+      </div>
+      <button class="mp-panel-close" onclick="document.getElementById('aiPanel').style.display='none'">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="aiPanelContent" class="mp-panel-content" style="display:none"></div>
+  </div>
+
+  {# ══ YOUTUBE PANEL ═══════════════════════════════════════════════════════ #}
+  <div id="ytPanel" class="mp-panel mp-panel-yt" style="display:none">
+    <div class="mp-panel-header">
+      <div class="mp-panel-icon mp-icon-yt">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-2.74 12 12 0 00-8.45 0A4.83 4.83 0 013.6 6.69 42.66 42.66 0 003 12a42.66 42.66 0 00.6 5.31 4.83 4.83 0 003.77 2.74 12 12 0 008.45 0 4.83 4.83 0 003.77-2.74A42.66 42.66 0 0021 12a42.66 42.66 0 00-.41-5.31zm-9.09 8.64V8.67l5.4 3.33z"/></svg>
+      </div>
+      <span class="mp-panel-title">Vidéos suggérées · {{ formation.titre }}</span>
+      <div id="ytStatus" class="mp-panel-status">
+        <span class="mp-spinner mp-spinner-red"></span>
+        <span>Recherche en cours…</span>
+      </div>
+      <button class="mp-panel-close" onclick="document.getElementById('ytPanel').style.display='none'">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="ytResults" class="mp-yt-grid"></div>
+  </div>
+
+  {# ══ MODULES SECTION ══════════════════════════════════════════════════════ #}
+  <div class="mp-section">
+    <div class="mp-section-label">Contenu du cours</div>
+
+    <div class="mp-modules">
+      {% for mod in modules %}
+        {% set isDone     = mod.statut == 'completed' %}
+        {% set isUnlocked = mod.unlocked ?? true %}
+        {% set typeIcon   = typeIcons[mod.type_contenu|lower] ?? '◉' %}
+
+        <div class="mp-mod {{ isDone ? 'mp-mod-done' : '' }} {{ not isUnlocked ? 'mp-mod-locked' : '' }}">
+          {# Timeline connector #}
+          <div class="mp-mod-line {{ isDone ? 'line-done' : '' }}"></div>
+
+          {# Status node #}
+          <div class="mp-mod-node {{ isDone ? 'node-done' : (isUnlocked ? 'node-ready' : 'node-locked') }}"
+               style="{{ isDone ? '' : (isUnlocked ? '--accent:'~accent : '') }}">
+            {% if isDone %}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg>
+            {% elseif not isUnlocked %}
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            {% else %}
+              <span style="font-size:11px;font-weight:700;color:{{ accent }}">{{ mod.ordre }}</span>
+            {% endif %}
+          </div>
+
+          {# Content #}
+          <div class="mp-mod-content">
+            <div class="mp-mod-top">
+              <div class="mp-mod-info">
+                <div class="mp-mod-title-row">
+                  <span class="mp-mod-title {{ isDone ? 'title-done' : '' }}">{{ mod.titre }}</span>
+                  {% if isDone %}
+                    <span class="mp-badge mp-badge-done">Terminé</span>
+                  {% elseif not isUnlocked %}
+                    <span class="mp-badge mp-badge-locked">Verrouillé</span>
+                  {% endif %}
+                </div>
+                {% if mod.description %}
+                  <div class="mp-mod-desc">{{ mod.description }}</div>
+                {% endif %}
+                <div class="mp-mod-chips">
+                  <span class="mp-chip mp-chip-type mp-chip-{{ mod.type_contenu|lower }}">
+                    {{ typeIcon }} {{ mod.type_contenu|upper }}
+                  </span>
+                  {% if mod.duree_minutes %}
+                    <span class="mp-chip">{{ mod.duree_minutes }} min</span>
+                  {% endif %}
+                  {% if mod.score > 0 %}
+                    <span class="mp-chip mp-chip-score">Quiz {{ mod.score }}%</span>
+                  {% endif %}
+                </div>
+              </div>
+
+              {# Action button #}
+              <div class="mp-mod-action">
+                {% if isUnlocked %}
+                  <a href="{{ path('module_learner_show', {id: mod.id}) }}"
+                     class="mp-btn-module {{ isDone ? 'mp-btn-revoir' : 'mp-btn-start' }}"
+                     style="{{ not isDone ? '--accent:'~accent : '' }}">
+                    {% if isDone %}
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="5,12 12,5 19,12"/><path d="M5 12v8"/><path d="M19 12v8"/></svg>
+                      Revoir
+                    {% else %}
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+                      Démarrer
+                    {% endif %}
+                  </a>
+                {% else %}
+                  <span class="mp-btn-locked-label">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                    Verrouillé
+                  </span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# ══ FINAL EXAM SECTION ════════════════════════════════════════════════════ #}
+  {% if allComplete ?? false %}
+    <div class="mp-section">
+      <div class="mp-section-label">Certification</div>
+
+      <div class="mp-exam-card" style="--accent:{{ accent }}">
+        <div class="mp-exam-glow"></div>
+
+        <div class="mp-exam-inner">
+          {# Header #}
+          <div class="mp-exam-header">
+            <div class="mp-exam-trophy">🏆</div>
+            <div class="mp-exam-header-text">
+              <h2 class="mp-exam-title">Examen Final de Certification</h2>
+              <p class="mp-exam-subtitle">
+                {{ examQCount ?? 50 }} questions disponibles · {{ totalMods }} modules maîtrisés · Score requis {{ passScore ?? 70 }}%
+              </p>
+            </div>
+            {# Language toggle #}
+            <div class="mp-lang-toggle">
+              <span class="mp-lang-label">Langue :</span>
+              <div class="mp-lang-btns" id="examLangBtns">
+                <button class="mp-lang-btn active" id="langBtnFR" onclick="setExamLang('fr')">
+                  <span class="mp-lang-flag">🇫🇷</span> FR
+                </button>
+                <button class="mp-lang-btn" id="langBtnEN" onclick="setExamLang('en')">
+                  <span class="mp-lang-flag">🇬🇧</span> EN
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {# Info grid #}
+          <div class="mp-exam-grid">
+            <div class="mp-exam-info-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{ accent }}" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              <div>
+                <div class="ei-label" id="ei-label-1">50 questions QCM</div>
+                <div class="ei-sub" id="ei-sub-1">Choix multiple</div>
+              </div>
+            </div>
+            <div class="mp-exam-info-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{ accent }}" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+              <div>
+                <div class="ei-label" id="ei-label-2">Score requis : {{ passScore ?? 70 }}%</div>
+                <div class="ei-sub" id="ei-sub-2">Pour valider</div>
+              </div>
+            </div>
+            <div class="mp-exam-info-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{ accent }}" stroke-width="2"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg>
+              <div>
+                <div class="ei-label" id="ei-label-3">Réussite → +1 niveau compétence</div>
+                <div class="ei-sub" id="ei-sub-3">Progression automatique</div>
+              </div>
+            </div>
+            <div class="mp-exam-info-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{ accent }}" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              <div>
+                <div class="ei-label" id="ei-label-4">Tentatives illimitées</div>
+                <div class="ei-sub" id="ei-sub-4">Repassez autant que nécessaire</div>
+              </div>
+            </div>
+          </div>
+
+          {# Last result badge #}
+          {% if lastExam %}
+            <div class="mp-last-result {{ lastExam.passed ? 'lr-passed' : 'lr-failed' }}">
+              <span class="lr-icon">{{ lastExam.passed ? '✓' : '✗' }}</span>
+              <span class="lr-text" id="lr-text">
+                Dernière tentative : {{ lastExam.score_pct }}%
+                ({{ lastExam.nb_correct }}/{{ lastExam.nb_total }})
+                — {{ lastExam.passed ? 'Réussi' : 'Échoué' }}
+              </span>
+            </div>
+          {% endif %}
+
+          {# CTA Button #}
+          <div class="mp-exam-cta">
+            <button class="mp-exam-launch-btn" id="examLaunchBtn" onclick="launchExam()" style="--accent:{{ accent }}">
+              <span id="examBtnText">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5,3 19,12 5,21"/></svg>
+                Lancer l'examen final
+              </span>
+            </button>
+            <p class="mp-exam-cta-note" id="examCTANote">L'examen se lance dans la langue sélectionnée ci-dessus.</p>
+          </div>
+        </div>
+      </div>
+
+      {# ── EXAM INTERFACE (hidden until launch) ── #}
+      <div id="examInterface" class="mp-exam-interface" style="display:none">
+        <div class="ei-topbar">
+          <div class="ei-topbar-left">
+            <span id="ei-formation-name" class="ei-title-sm">{{ formation.titre }}</span>
+            <span class="ei-separator">·</span>
+            <span id="ei-exam-title-bar">Examen Final</span>
+          </div>
+          <div class="ei-topbar-right">
+            <div class="ei-progress-pill">
+              <span id="ei-q-current">0</span>/<span id="ei-q-total">0</span>
+            </div>
+            <div class="ei-lang-badge" id="eiLangBadge">🇫🇷 FR</div>
+            <button class="ei-close-btn" onclick="closeExam()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="ei-progress-bar">
+          <div class="ei-progress-fill" id="eiProgressFill" style="background:{{ accent }}"></div>
+        </div>
+
+        <div id="eiBody" class="ei-body"></div>
+      </div>
+    </div>
+  {% endif %}
+
+  {# ══ COMPLETION BANNER ═════════════════════════════════════════════════════
+  {% if progress >= 100 %}
+    <div class="mp-completion-banner" style="--accent:{{ accent }}">
+      <div class="completion-emoji">🎉</div>
+      <div class="completion-text">
+        <div class="completion-title">Formation terminée !</div>
+        <div class="completion-sub">Tous les modules ont été complétés.{% if allComplete ?? false %} Passez l'examen final pour obtenir votre certification.{% endif %}</div>
+      </div>
+      <a href="{{ path('mes_lecons_index') }}" class="completion-btn" style="background:{{ accent }}">← Mes Leçons</a>
+    </div>
+  {% endif %} #}
+
+</div>
+
+{# ══════════════════ SCRIPTS ══════════════════ #}
+<script>
+const FORMATION_ID = {{ formation.id }};
+let examLang = 'fr';
+let examQuestions = [];
+let examAnswers = {};
+let examTranslated = {};
+
+// ── Language toggle ────────────────────────────────────────────────────────
+const TRANSLATIONS = {
+  fr: {
+    examTitle: 'Examen Final de Certification',
+    examLaunch: 'Lancer l\'examen final',
+    examNote: 'L\'examen se lance dans la langue sélectionnée ci-dessus.',
+    eiLabel1: '50 questions QCM', eiSub1: 'Choix multiple',
+    eiLabel2: `Score requis : {{ passScore ?? 70 }}%`, eiSub2: 'Pour valider',
+    eiLabel3: 'Réussite → +1 niveau compétence', eiSub3: 'Progression automatique',
+    eiLabel4: 'Tentatives illimitées', eiSub4: 'Repassez autant que nécessaire',
+    lrText: (pct, correct, total, passed) =>
+      `Dernière tentative : ${pct}% (${correct}/${total}) — ${passed ? 'Réussi' : 'Échoué'}`,
+    examBarTitle: 'Examen Final',
+    loading: 'Chargement des questions…',
+    translating: 'Traduction en cours…',
+    submit: 'Soumettre l\'examen',
+    close: 'Fermer',
+    resultPassed: '🎉 Félicitations !',
+    resultFailed: '📚 Continuez vos efforts',
+    resultPassedSub: 'Examen réussi avec succès. Votre certification est validée.',
+    resultFailedSub: 'Score insuffisant. Révisez les modules et réessayez.',
+    retake: 'Repasser l\'examen',
+    backToProgress: 'Retour à la progression',
+    qLabel: 'Question',
+    noQ: 'Aucune question disponible. Vérifiez les quiz des modules.',
+  },
+  en: {
+    examTitle: 'Final Certification Exam',
+    examLaunch: 'Launch the final exam',
+    examNote: 'The exam launches in the language selected above.',
+    eiLabel1: '50 MCQ questions', eiSub1: 'Multiple choice',
+    eiLabel2: `Required score: {{ passScore ?? 70 }}%`, eiSub2: 'To pass',
+    eiLabel3: 'Pass → +1 skill level', eiSub3: 'Automatic progression',
+    eiLabel4: 'Unlimited attempts', eiSub4: 'Retake as many times as needed',
+    lrText: (pct, correct, total, passed) =>
+      `Last attempt: ${pct}% (${correct}/${total}) — ${passed ? 'Passed' : 'Failed'}`,
+    examBarTitle: 'Final Exam',
+    loading: 'Loading questions…',
+    translating: 'Translating questions…',
+    submit: 'Submit exam',
+    close: 'Close',
+    resultPassed: '🎉 Congratulations!',
+    resultFailed: '📚 Keep going',
+    resultPassedSub: 'Exam passed successfully. Your certification is validated.',
+    resultFailedSub: 'Score not sufficient. Review the modules and try again.',
+    retake: 'Retake the exam',
+    backToProgress: 'Back to progress',
+    qLabel: 'Question',
+    noQ: 'No questions available. Check the module quizzes.',
+  }
+};
+
+function setExamLang(lang) {
+  examLang = lang;
+  const t = TRANSLATIONS[lang];
+  document.getElementById('langBtnFR').classList.toggle('active', lang === 'fr');
+  document.getElementById('langBtnEN').classList.toggle('active', lang === 'en');
+  // Update static labels
+  setText('ei-label-1', t.eiLabel1); setText('ei-sub-1', t.eiSub1);
+  setText('ei-label-2', t.eiLabel2); setText('ei-sub-2', t.eiSub2);
+  setText('ei-label-3', t.eiLabel3); setText('ei-sub-3', t.eiSub3);
+  setText('ei-label-4', t.eiLabel4); setText('ei-sub-4', t.eiSub4);
+  setText('examBtnText', `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5,3 19,12 5,21"/></svg> ${t.examLaunch}`);
+  document.getElementById('examBtnText').innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5,3 19,12 5,21"/></svg> ${t.examLaunch}`;
+  setText('examCTANote', t.examNote);
+  // Update last result if present
+  const lrEl = document.getElementById('lr-text');
+  {% if lastExam %}
+  if (lrEl) lrEl.textContent = t.lrText({{ lastExam.score_pct }}, {{ lastExam.nb_correct }}, {{ lastExam.nb_total }}, {{ lastExam.passed ? 'true' : 'false' }});
+  {% endif %}
+  const langBadge = document.getElementById('eiLangBadge');
+  if (langBadge) langBadge.textContent = lang === 'fr' ? '🇫🇷 FR' : '🇬🇧 EN';
+}
+function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+
+// ── Translate a batch of questions via MyMemory API ───────────────────────
+async function translateText(text) {
+  if (examTranslated[text]) return examTranslated[text];
+  try {
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=fr|en&de=humania@rh.dev`;
+    const r = await fetch(url);
+    const d = await r.json();
+    if (d.responseStatus === 200 && d.responseData?.translatedText && !d.responseData.translatedText.startsWith('MYMEMORY')) {
+      examTranslated[text] = d.responseData.translatedText;
+      return d.responseData.translatedText;
+    }
+    return text;
+  } catch { return text; }
+}
+
+async function translateQuestions(questions) {
+  const translated = [];
+  for (const q of questions) {
+    await new Promise(r => setTimeout(r, 200));
+    const tq = await translateText(q.question);
+    const ta = await translateText(q.option_a || '');
+    const tb = await translateText(q.option_b || '');
+    const tc = await translateText(q.option_c || '');
+    const td = await translateText(q.option_d || '');
+    translated.push({ ...q, question: tq, option_a: ta, option_b: tb, option_c: tc, option_d: td });
+  }
+  return translated;
+}
+
+// ── Launch exam ────────────────────────────────────────────────────────────
+async function launchExam() {
+  const t = TRANSLATIONS[examLang];
+  const launchBtn = document.getElementById('examLaunchBtn');
+  launchBtn.disabled = true;
+  launchBtn.innerHTML = `<span class="mp-spinner mp-spinner-white"></span> ${t.loading}`;
+
+  const res = await fetch(`/mes-lecons/formation/${FORMATION_ID}/progress/final-exam/questions`);
+  const data = await res.json();
+
+  if (!data.ok || !data.questions || data.questions.length === 0) {
+    launchBtn.disabled = false;
+    launchBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5,3 19,12 5,21"/></svg> ${t.examLaunch}`;
+    showExamError(data.error || t.noQ);
+    return;
+  }
+
+  examQuestions = data.questions;
+  examAnswers = {};
+
+  // Translate if EN
+  let questions = examQuestions;
+  if (examLang === 'en') {
+    launchBtn.innerHTML = `<span class="mp-spinner mp-spinner-white"></span> ${t.translating}`;
+    questions = await translateQuestions(examQuestions);
+  }
+
+  // Show exam interface
+  document.getElementById('examInterface').style.display = 'block';
+  document.getElementById('examInterface').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.getElementById('ei-q-total').textContent = questions.length;
+  document.getElementById('ei-exam-title-bar').textContent = t.examBarTitle;
+  document.getElementById('eiLangBadge').textContent = examLang === 'fr' ? '🇫🇷 FR' : '🇬🇧 EN';
+
+  launchBtn.disabled = false;
+  launchBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5,3 19,12 5,21"/></svg> ${t.examLaunch}`;
+
+  renderExamQuestions(questions, t);
+}
+
+function renderExamQuestions(questions, t) {
+  const body = document.getElementById('eiBody');
+  let html = `<div class="ei-questions-wrap">`;
+
+  questions.forEach((q, i) => {
+    html += `<div class="ei-question" id="eiq-${i}" data-idx="${i}">
+      <div class="ei-q-header">
+        <span class="ei-q-num">${t.qLabel} ${i + 1}</span>
+        <span class="ei-q-module">${q.module_ref || ''}</span>
+      </div>
+      <div class="ei-q-text">${q.question}</div>
+      <div class="ei-q-opts">`;
+
+    ['a','b','c','d'].forEach(opt => {
+      const key = 'option_' + opt;
+      if (q[key]) {
+        html += `<label class="ei-opt" id="opt-${i}-${opt.toUpperCase()}" onclick="pickAnswer(${i}, '${opt.toUpperCase()}', this)">
+          <span class="ei-opt-letter">${opt.toUpperCase()}</span>
+          <span class="ei-opt-text">${q[key]}</span>
+        </label>`;
+      }
+    });
+
+    html += `</div></div>`;
+  });
+
+  html += `<div class="ei-submit-section">
+    <div class="ei-answered-info">
+      <span id="ei-answered-count">0</span>/${questions.length} ${examLang === 'fr' ? 'réponses données' : 'answers given'}
+    </div>
+    <button class="ei-submit-btn" id="eiSubmitBtn" onclick="submitExam()" style="--accent:{{ accent }}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>
+      ${t.submit}
+    </button>
+  </div>`;
+
+  html += `</div>`;
+  body.innerHTML = html;
+  updateProgress(0, questions.length);
+}
+
+function pickAnswer(idx, letter, labelEl) {
+  // Remove previous selection for this question
+  document.querySelectorAll(`#eiq-${idx} .ei-opt`).forEach(l => l.classList.remove('selected'));
+  labelEl.classList.add('selected');
+  examAnswers[idx] = letter;
+  // Update answered count
+  const count = Object.keys(examAnswers).length;
+  const total = document.getElementById('ei-q-total').textContent;
+  document.getElementById('ei-answered-count').textContent = count;
+  document.getElementById('ei-q-current').textContent = count;
+  updateProgress(count, parseInt(total));
+}
+
+function updateProgress(done, total) {
+  const pct = total > 0 ? Math.round(done / total * 100) : 0;
+  document.getElementById('eiProgressFill').style.width = pct + '%';
+}
+
+async function submitExam() {
+  const t = TRANSLATIONS[examLang];
+  const btn = document.getElementById('eiSubmitBtn');
+  btn.disabled = true;
+  btn.innerHTML = `<span class="mp-spinner mp-spinner-white"></span>`;
+
+  // Build FormData with original question IDs
+  const fd = new FormData();
+  examQuestions.forEach((q, i) => {
+    if (examAnswers[i]) fd.append(`answers[${q.id}]`, examAnswers[i]);
+  });
+
+  try {
+    const res  = await fetch(`/mes-lecons/formation/${FORMATION_ID}/progress/final-exam/submit`, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.ok) renderExamResult(data, t);
+    else {
+      btn.disabled = false;
+      btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg> ${t.submit}`;
+    }
+  } catch(e) {
+    btn.disabled = false;
+    btn.innerHTML = t.submit;
+  }
+}
+
+function renderExamResult(data, t) {
+  const passed = data.passed;
+  const body = document.getElementById('eiBody');
+  const color = passed ? '#059669' : '#DC2626';
+  const bg    = passed ? '#ECFDF5' : '#FEF2F2';
+  const border= passed ? '#6EE7B7' : '#FCA5A5';
+
+  body.innerHTML = `
+    <div class="ei-result" style="--rc:${color};--rb:${bg};--rbd:${border}">
+      <div class="ei-result-icon">${passed ? '🏆' : '📚'}</div>
+      <div class="ei-result-score" style="color:${color}">${data.score_pct}%</div>
+      <div class="ei-result-detail">${data.nb_correct}/${data.nb_total} ${examLang === 'fr' ? 'bonnes réponses' : 'correct answers'}</div>
+      <div class="ei-result-title" style="color:${color}">${passed ? t.resultPassed : t.resultFailed}</div>
+      <div class="ei-result-sub">${passed ? t.resultPassedSub : t.resultFailedSub}</div>
+      ${data.niveau_delta ? `<div class="ei-result-delta" style="background:${bg};color:${color};border-color:${border}">${data.niveau_delta > 0 ? '+' : ''}${data.niveau_delta} ${examLang === 'fr' ? 'niveau(x) de compétence' : 'skill level(s)'}</div>` : ''}
+      <div class="ei-result-btns">
+        <button class="ei-result-btn ei-btn-retake" onclick="retakeExam()" style="border-color:{{ accent }};color:{{ accent }}">${t.retake}</button>
+        <button class="ei-result-btn ei-btn-back" onclick="closeExam()" style="background:{{ accent }}">${t.backToProgress}</button>
+      </div>
+    </div>`;
+
+  // Update last result badge if exists
+  const lrEl = document.getElementById('lr-text');
+  if (lrEl) lrEl.textContent = t.lrText(data.score_pct, data.nb_correct, data.nb_total, data.passed);
+  const lrWrap = document.querySelector('.mp-last-result');
+  if (lrWrap) {
+    lrWrap.className = 'mp-last-result ' + (passed ? 'lr-passed' : 'lr-failed');
+    lrWrap.querySelector('.lr-icon').textContent = passed ? '✓' : '✗';
+  }
+}
+
+function retakeExam() {
+  document.getElementById('eiBody').innerHTML = '';
+  examAnswers = {};
+  launchExam();
+}
+
+function closeExam() {
+  document.getElementById('examInterface').style.display = 'none';
+  document.getElementById('examLaunchBtn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function showExamError(msg) {
+  const body = document.getElementById('eiBody');
+  if (body) body.innerHTML = `<div class="ei-error">${msg}</div>`;
+  document.getElementById('examInterface').style.display = 'block';
+}
+
+// ── AI ─────────────────────────────────────────────────────────────────────
+async function callAI(action) {
+  const panel   = document.getElementById('aiPanel');
+  const status  = document.getElementById('aiPanelStatus');
+  const content = document.getElementById('aiPanelContent');
+  const title   = document.getElementById('aiPanelTitle');
+  title.textContent = action === 'skills_gap' ? '🔍 Analyse des compétences' : '📋 Plan de Développement';
+  panel.style.display  = 'block';
+  status.style.display = 'flex';
+  content.style.display = 'none';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  const url = action === 'skills_gap'
+    ? `/mes-lecons/formation/${FORMATION_ID}/progress/skills-gap`
+    : `/mes-lecons/formation/${FORMATION_ID}/progress/pdi`;
+  try {
+    const res  = await fetch(url, { method: 'POST' });
+    const data = await res.json();
+    status.style.display  = 'none';
+    content.style.display = 'block';
+    if (data.ok) {
+      const html = data.result
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/^### (.+)$/gm, '<div class="ai-h3">$1</div>')
+        .replace(/^## (.+)$/gm,  '<div class="ai-h2">$1</div>')
+        .replace(/^- (.+)$/gm,   '<div class="ai-li">$1</div>')
+        .replace(/\n/g, '<br>');
+      content.innerHTML = `<div class="ai-result-text">${html}</div>`;
+    } else {
+      content.innerHTML = `<div class="ai-error-text">❌ ${data.error}</div>`;
+    }
+  } catch(e) {
+    status.style.display = 'none';
+    content.style.display = 'block';
+    content.innerHTML = `<div class="ai-error-text">❌ ${e.message}</div>`;
+  }
+}
+
+// ── YouTube ───────────────────────────────────────────────────────────────
+async function loadYoutube() {
+  const panel   = document.getElementById('ytPanel');
+  const status  = document.getElementById('ytStatus');
+  const results = document.getElementById('ytResults');
+  panel.style.display  = 'block';
+  status.style.display = 'flex';
+  results.innerHTML    = '';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  try {
+    const res  = await fetch(`/mes-lecons/formation/${FORMATION_ID}/progress/youtube`);
+    const data = await res.json();
+    status.style.display = 'none';
+    if (data.ok && data.videos?.length > 0) {
+      results.innerHTML = data.videos.map(v => `
+        <a class="yt-card" href="${v.url}" target="_blank">
+          <img src="${v.thumbnail}" class="yt-thumb" alt="${v.title}">
+          <div class="yt-info">
+            <div class="yt-title">${v.title}</div>
+            <div class="yt-channel">${v.channelName}</div>
+          </div>
+        </a>`).join('');
+    } else {
+      results.innerHTML = `<div class="yt-empty">❌ ${data.error || 'Aucune vidéo trouvée.'}</div>`;
+    }
+  } catch(e) {
+    status.style.display = 'none';
+    results.innerHTML = `<div class="yt-empty">❌ ${e.message}</div>`;
+  }
+}
+</script>
+
+<style>
+:root {
+  --ink:    #0f172a;
+  --ink2:   #475569;
+  --ink3:   #94a3b8;
+  --bg:     #f8fafc;
+  --surface:#ffffff;
+  --border: #e2e8f0;
+  --radius: 16px;
+}
+*, *::before, *::after { box-sizing: border-box; }
+.mp-page { max-width: 900px; margin: 0 auto; padding: 0 0 3rem; font-family: 'DM Sans', sans-serif; }
+
+/* ── HERO ── */
+.mp-hero {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+  position: relative;
+}
+.mp-hero-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 60% 80% at 85% 50%, color-mix(in srgb, var(--accent) 8%, transparent), transparent);
+  pointer-events: none;
+}
+.mp-hero-inner { padding: 1.75rem 2rem; position: relative; z-index: 1; }
+.mp-back-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--accent); text-decoration: none; font-size: .82rem; font-weight: 700;
+  padding: 6px 14px; border: 1.5px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 8px; background: color-mix(in srgb, var(--accent) 6%, transparent);
+  transition: all .15s; margin-bottom: 1.5rem; display: inline-flex;
+}
+.mp-back-btn:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.mp-hero-body { display: flex; align-items: center; justify-content: space-between; gap: 2rem; }
+.mp-hero-left { flex: 1; min-width: 0; }
+.mp-cat-chip {
+  display: inline-block; font-size: .7rem; font-weight: 800; text-transform: uppercase;
+  letter-spacing: .1em; color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  padding: 4px 12px; border-radius: 20px; margin-bottom: .75rem;
+}
+.mp-formation-title {
+  font-size: 1.75rem; font-weight: 800; color: var(--ink); line-height: 1.15;
+  letter-spacing: -.02em; margin: 0 0 .75rem;
+}
+.mp-formation-meta { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.mp-meta-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: .75rem; color: var(--ink2); background: var(--bg);
+  border: 1px solid var(--border); padding: 4px 10px; border-radius: 20px;
+}
+.mp-type-pill { font-weight: 700; color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); border-color: color-mix(in srgb, var(--accent) 20%, transparent); }
+
+/* Action buttons */
+.mp-action-row { display: flex; gap: .5rem; flex-wrap: wrap; }
+.mp-action-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: 9px; font-size: .8rem; font-weight: 700;
+  border: none; cursor: pointer; transition: all .15s; text-decoration: none;
+}
+.mp-btn-ai { background: linear-gradient(135deg, #4F46E5, #7C3AED); color: white; box-shadow: 0 3px 10px rgba(79,70,229,.25); }
+.mp-btn-ai:hover { box-shadow: 0 5px 18px rgba(79,70,229,.4); transform: translateY(-1px); }
+.mp-btn-yt { background: linear-gradient(135deg, #DC2626, #EF4444); color: white; box-shadow: 0 3px 10px rgba(220,38,38,.2); }
+.mp-btn-yt:hover { transform: translateY(-1px); }
+.mp-btn-pdf { background: white; color: var(--ink2); border: 1px solid var(--border); }
+.mp-btn-pdf:hover { background: var(--bg); border-color: var(--ink3); }
+
+/* Progress ring */
+.mp-ring-wrap { position: relative; width: 110px; height: 110px; flex-shrink: 0; }
+.mp-ring-svg { width: 110px; height: 110px; }
+.mp-ring-bg { stroke: #f1f5f9; }
+.mp-ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.mp-ring-pct { font-size: 1.5rem; font-weight: 800; line-height: 1; }
+.mp-ring-label { font-size: .72rem; color: var(--ink3); margin-top: 2px; }
+
+/* Progress strip */
+.mp-progress-strip { margin-top: 1.5rem; }
+.mp-progress-track { height: 6px; background: #f1f5f9; border-radius: 99px; overflow: hidden; margin-bottom: 6px; }
+.mp-progress-fill { height: 100%; border-radius: 99px; transition: width 1s cubic-bezier(.4,0,.2,1); }
+.mp-progress-labels { display: flex; justify-content: space-between; font-size: .72rem; color: var(--ink3); }
+
+/* ── PANELS ── */
+.mp-panel {
+  background: white; border: 1px solid var(--border); border-radius: var(--radius);
+  margin-bottom: 1.5rem; overflow: hidden;
+}
+.mp-panel-ai  { border-left: 3px solid #6366F1; }
+.mp-panel-yt  { border-left: 3px solid #DC2626; }
+.mp-panel-header {
+  display: flex; align-items: center; gap: .75rem;
+  padding: 1rem 1.25rem; border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+.mp-panel-icon {
+  width: 32px; height: 32px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.mp-icon-ai  { background: #EEF2FF; color: #6366F1; }
+.mp-icon-yt  { background: #FEF2F2; color: #DC2626; }
+.mp-panel-title { font-size: .9rem; font-weight: 800; color: var(--ink); flex: 1; }
+.mp-panel-status { display: flex; align-items: center; gap: .5rem; font-size: .8rem; color: var(--ink2); }
+.mp-panel-close {
+  background: none; border: none; cursor: pointer; color: var(--ink3);
+  padding: 4px; border-radius: 6px; transition: all .12s; display: flex;
+}
+.mp-panel-close:hover { background: #FEF2F2; color: #DC2626; }
+.mp-panel-content { padding: 1.25rem; }
+.ai-result-text { font-size: .87rem; color: var(--ink); line-height: 1.75; }
+.ai-result-text .ai-h2 { font-size: .9rem; font-weight: 700; color: var(--ink); margin: .75rem 0 .2rem; }
+.ai-result-text .ai-h3 { font-size: .85rem; font-weight: 700; color: #6366F1; margin: .5rem 0 .1rem; }
+.ai-result-text .ai-li { padding-left: .75rem; margin: .1rem 0; }
+.ai-error-text { color: #DC2626; font-size: .85rem; }
+
+/* YouTube grid */
+.mp-yt-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: .75rem; padding: 1rem; }
+.yt-card { text-decoration: none; color: inherit; border-radius: 10px; border: 1px solid var(--border); overflow: hidden; transition: all .15s; display: block; }
+.yt-card:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0,0,0,.09); border-color: #DC2626; }
+.yt-thumb { width: 100%; height: 90px; object-fit: cover; display: block; }
+.yt-info { padding: .5rem .65rem; }
+.yt-title { font-size: .73rem; font-weight: 600; color: var(--ink); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.yt-channel { font-size: .65rem; color: var(--ink3); margin-top: 3px; }
+.yt-empty { padding: 1rem; font-size: .85rem; color: var(--ink3); }
+
+/* ── SECTION ── */
+.mp-section { margin-bottom: 1.5rem; }
+.mp-section-label {
+  font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .1em;
+  color: var(--ink3); margin-bottom: 1rem;
+}
+
+/* ── MODULES TIMELINE ── */
+.mp-modules { position: relative; padding-left: 42px; }
+.mp-mod { position: relative; display: flex; align-items: flex-start; gap: 1rem; padding: .85rem 0; }
+.mp-mod-line {
+  position: absolute; left: -30px; top: 28px; bottom: -28px; width: 2px;
+  background: #f1f5f9;
+}
+.mp-mod:last-child .mp-mod-line { display: none; }
+.line-done { background: linear-gradient(to bottom, #10B981, #f1f5f9); }
+.mp-mod-node {
+  position: absolute; left: -39px; top: 14px;
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; z-index: 1; border: 2px solid;
+}
+.node-done {
+  background: #D1FAE5; border-color: #6EE7B7; color: #059669;
+}
+.node-ready {
+  background: color-mix(in srgb, var(--accent, #4F46E5) 8%, white);
+  border-color: color-mix(in srgb, var(--accent, #4F46E5) 35%, transparent);
+  color: var(--accent, #4F46E5);
+}
+.node-locked { background: var(--bg); border-color: var(--border); color: var(--ink3); }
+
+.mp-mod-content { flex: 1; min-width: 0; }
+.mp-mod { background: white; border: 1px solid var(--border); border-radius: 12px; padding: .9rem 1.1rem .9rem 1.25rem; transition: all .15s; }
+.mp-mod:hover { box-shadow: 0 2px 10px rgba(0,0,0,.07); border-color: #cbd5e1; }
+.mp-mod-done { border-color: #BBF7D0; background: #F0FDF4; }
+.mp-mod-locked { opacity: .6; }
+
+.mp-mod-top { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.mp-mod-info { flex: 1; min-width: 0; }
+.mp-mod-title-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; margin-bottom: .2rem; }
+.mp-mod-title { font-size: .92rem; font-weight: 700; color: var(--ink); }
+.title-done { color: #059669; }
+.mp-mod-desc { font-size: .78rem; color: var(--ink2); margin-bottom: .4rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 480px; }
+
+.mp-badge { font-size: .65rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+.mp-badge-done { background: #D1FAE5; color: #059669; }
+.mp-badge-locked { background: #F3F4F6; color: #6B7280; }
+
+.mp-mod-chips { display: flex; gap: .35rem; flex-wrap: wrap; }
+.mp-chip {
+  font-size: .65rem; font-weight: 700; padding: 2px 8px; border-radius: 6px;
+  background: var(--bg); color: var(--ink2); border: 1px solid var(--border);
+}
+.mp-chip-score { background: #EFF6FF; color: #2563EB; border-color: #BFDBFE; }
+.mp-chip-type { text-transform: uppercase; letter-spacing: .04em; }
+.mp-chip-video   { background: #DBEAFE; color: #1D4ED8; border-color: #BFDBFE; }
+.mp-chip-quiz    { background: #EDE9FE; color: #7C3AED; border-color: #DDD6FE; }
+.mp-chip-exercice{ background: #FEF3C7; color: #D97706; border-color: #FDE68A; }
+
+.mp-mod-action { flex-shrink: 0; }
+.mp-btn-module {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 16px; border-radius: 9px; font-size: .78rem; font-weight: 700;
+  text-decoration: none; border: none; cursor: pointer; transition: all .15s;
+}
+.mp-btn-start { background: var(--accent, #4F46E5); color: white; }
+.mp-btn-start:hover { opacity: .88; transform: translateY(-1px); }
+.mp-btn-revoir { background: var(--bg); color: var(--ink2); border: 1px solid var(--border); }
+.mp-btn-revoir:hover { background: #EFF6FF; border-color: #4F46E5; color: #4F46E5; }
+.mp-btn-locked-label { display: flex; align-items: center; gap: 4px; font-size: .76rem; color: var(--ink3); }
+
+/* ── FINAL EXAM CARD ── */
+.mp-exam-card {
+  background: white; border: 1px solid var(--border); border-radius: 20px;
+  overflow: hidden; position: relative; box-shadow: 0 4px 24px rgba(0,0,0,.07);
+  margin-bottom: 1rem;
+}
+.mp-exam-glow {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 70% 60% at 90% 30%, color-mix(in srgb, var(--accent) 6%, transparent), transparent);
+}
+.mp-exam-inner { padding: 1.75rem 2rem; position: relative; z-index: 1; }
+
+.mp-exam-header {
+  display: flex; align-items: center; gap: 1rem;
+  padding-bottom: 1.25rem; border-bottom: 1px solid var(--border); margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+.mp-exam-trophy { font-size: 2.2rem; flex-shrink: 0; }
+.mp-exam-header-text { flex: 1; min-width: 0; }
+.mp-exam-title { font-size: 1.1rem; font-weight: 800; color: var(--ink); margin: 0 0 .2rem; }
+.mp-exam-subtitle { font-size: .8rem; color: var(--ink2); margin: 0; }
+
+/* Language toggle */
+.mp-lang-toggle { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
+.mp-lang-label { font-size: .72rem; font-weight: 700; color: var(--ink2); }
+.mp-lang-btns { display: flex; border: 1.5px solid var(--border); border-radius: 10px; overflow: hidden; }
+.mp-lang-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 14px; border: none; background: white;
+  font-size: .78rem; font-weight: 700; color: var(--ink2); cursor: pointer;
+  transition: all .15s; border-radius: 0;
+}
+.mp-lang-btn + .mp-lang-btn { border-left: 1.5px solid var(--border); }
+.mp-lang-btn.active { background: var(--accent); color: white; }
+.mp-lang-btn:hover:not(.active) { background: var(--bg); }
+.mp-lang-flag { font-size: .9rem; }
+
+/* Exam info grid */
+.mp-exam-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: .85rem; margin-bottom: 1.25rem;
+}
+.mp-exam-info-item {
+  display: flex; align-items: flex-start; gap: .65rem;
+  background: var(--bg); border-radius: 10px; padding: .85rem 1rem;
+  border: 1px solid var(--border);
+}
+.ei-label { font-size: .82rem; font-weight: 700; color: var(--ink); }
+.ei-sub   { font-size: .72rem; color: var(--ink3); margin-top: 1px; }
+
+/* Last result */
+.mp-last-result {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .65rem 1rem; border-radius: 9px; border: 1px solid;
+  margin-bottom: 1.25rem; font-size: .82rem;
+}
+.lr-passed { background: #F0FDF4; border-color: #BBF7D0; }
+.lr-failed { background: #FEF2F2; border-color: #FECACA; }
+.lr-icon { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 800; flex-shrink: 0; }
+.lr-passed .lr-icon { background: #D1FAE5; color: #059669; }
+.lr-failed .lr-icon { background: #FEE2E2; color: #DC2626; }
+.lr-text { color: var(--ink2); }
+
+/* CTA */
+.mp-exam-cta { text-align: center; }
+.mp-exam-launch-btn {
+  display: inline-flex; align-items: center; gap: .65rem;
+  padding: 14px 40px; border-radius: 14px; border: none;
+  background: var(--accent); color: white;
+  font-size: 1rem; font-weight: 800; cursor: pointer;
+  transition: all .2s;
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.mp-exam-launch-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px color-mix(in srgb, var(--accent) 45%, transparent); }
+.mp-exam-launch-btn:disabled { opacity: .7; cursor: not-allowed; transform: none; }
+.mp-exam-cta-note { font-size: .75rem; color: var(--ink3); margin-top: .65rem; }
+
+/* ── EXAM INTERFACE ── */
+.mp-exam-interface {
+  background: white; border: 1px solid var(--border); border-radius: 16px;
+  overflow: hidden; margin-top: 1rem;
+}
+.ei-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .85rem 1.25rem; background: var(--bg); border-bottom: 1px solid var(--border);
+}
+.ei-topbar-left { display: flex; align-items: center; gap: .5rem; }
+.ei-title-sm { font-size: .8rem; font-weight: 700; color: var(--ink); }
+.ei-separator { color: var(--ink3); font-size: .8rem; }
+#ei-exam-title-bar { font-size: .8rem; color: var(--ink2); }
+.ei-topbar-right { display: flex; align-items: center; gap: .65rem; }
+.ei-progress-pill { font-size: .75rem; font-weight: 700; background: white; border: 1px solid var(--border); padding: 3px 10px; border-radius: 20px; color: var(--ink2); }
+.ei-lang-badge { font-size: .72rem; font-weight: 700; background: #EEF2FF; color: #4F46E5; padding: 3px 10px; border-radius: 20px; }
+.ei-close-btn { background: none; border: none; cursor: pointer; color: var(--ink3); padding: 4px; border-radius: 6px; display: flex; transition: all .12s; }
+.ei-close-btn:hover { background: #FEF2F2; color: #DC2626; }
+.ei-progress-bar { height: 4px; background: #f1f5f9; }
+.ei-progress-fill { height: 100%; transition: width .4s; }
+.ei-body { padding: 1.5rem; }
+
+/* Questions */
+.ei-questions-wrap { display: flex; flex-direction: column; gap: 1.5rem; }
+.ei-question { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; }
+.ei-q-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .5rem; }
+.ei-q-num { font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--ink3); }
+.ei-q-module { font-size: .65rem; color: var(--ink3); font-style: italic; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ei-q-text { font-size: .9rem; font-weight: 700; color: var(--ink); line-height: 1.45; margin-bottom: .85rem; }
+.ei-q-opts { display: flex; flex-direction: column; gap: .4rem; }
+.ei-opt {
+  display: flex; align-items: center; gap: .65rem;
+  padding: .65rem .85rem; border-radius: 9px; border: 1.5px solid var(--border);
+  background: white; cursor: pointer; transition: all .12s;
+}
+.ei-opt:hover { border-color: #C7D2FE; background: #EEF2FF; }
+.ei-opt.selected { border-color: #6366F1; background: #EEF2FF; }
+.ei-opt-letter { font-size: .75rem; font-weight: 800; color: #6366F1; width: 20px; flex-shrink: 0; }
+.ei-opt-text { font-size: .85rem; color: var(--ink); }
+
+/* Submit section */
+.ei-submit-section { display: flex; align-items: center; justify-content: space-between; padding-top: 1.5rem; border-top: 1px solid var(--border); margin-top: 1.5rem; }
+.ei-answered-info { font-size: .82rem; color: var(--ink2); }
+.ei-submit-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 11px 28px; border-radius: 11px; border: none;
+  background: var(--accent); color: white;
+  font-size: .88rem; font-weight: 700; cursor: pointer; transition: all .15s;
+}
+.ei-submit-btn:hover { transform: translateY(-1px); opacity: .9; }
+.ei-submit-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+/* Result */
+.ei-result {
+  text-align: center; padding: 2.5rem 1.5rem;
+  background: var(--rb); border: 1.5px solid var(--rbd); border-radius: 14px;
+  display: flex; flex-direction: column; align-items: center; gap: .5rem;
+}
+.ei-result-icon { font-size: 3rem; }
+.ei-result-score { font-size: 3rem; font-weight: 800; line-height: 1; }
+.ei-result-detail { font-size: .88rem; font-weight: 600; color: var(--rc); }
+.ei-result-title { font-size: 1.1rem; font-weight: 800; }
+.ei-result-sub { font-size: .85rem; color: var(--ink2); max-width: 400px; }
+.ei-result-delta { font-size: .8rem; font-weight: 700; padding: 5px 14px; border-radius: 20px; border: 1px solid; margin-top: .25rem; }
+.ei-result-btns { display: flex; gap: .75rem; margin-top: .75rem; }
+.ei-result-btn { padding: 10px 22px; border-radius: 10px; font-size: .85rem; font-weight: 700; cursor: pointer; transition: all .15s; }
+.ei-btn-retake { background: transparent; border: 1.5px solid; }
+.ei-btn-retake:hover { opacity: .8; }
+.ei-btn-back { color: white; border: none; }
+.ei-btn-back:hover { opacity: .88; }
+.ei-error { color: #DC2626; background: #FEF2F2; border-radius: 10px; padding: 1rem; font-size: .85rem; }
+
+/* ── COMPLETION BANNER ── */
+.mp-completion-banner {
+  display: flex; align-items: center; gap: 1.25rem;
+  background: white; border: 2px solid var(--accent); border-radius: var(--radius);
+  padding: 1.5rem; flex-wrap: wrap; margin-top: 1.5rem;
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+.completion-emoji { font-size: 2rem; flex-shrink: 0; }
+.completion-text { flex: 1; min-width: 0; }
+.completion-title { font-size: 1rem; font-weight: 800; color: var(--accent); }
+.completion-sub   { font-size: .82rem; color: var(--ink2); margin-top: 2px; }
+.completion-btn { padding: 10px 22px; border-radius: 10px; border: none; color: white; font-weight: 700; text-decoration: none; font-size: .85rem; transition: opacity .15s; }
+.completion-btn:hover { opacity: .88; }
+
+/* ── SPINNER ── */
+.mp-spinner {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid #E2E8F0; border-top-color: #6366F1;
+  animation: spin .7s linear infinite; flex-shrink: 0; display: inline-block;
+}
+.mp-spinner-red { border-top-color: #DC2626; }
+.mp-spinner-white { border-color: rgba(255,255,255,.3); border-top-color: white; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 640px) {
+  .mp-hero-body { flex-direction: column; }
+  .mp-ring-wrap { align-self: center; }
+  .mp-exam-grid { grid-template-columns: 1fr; }
+  .mp-exam-header { flex-direction: column; align-items: flex-start; }
+  .mp-yt-grid { grid-template-columns: 1fr 1fr; }
+  .mp-modules { padding-left: 32px; }
+  .mp-mod-node { left: -31px; }
+  .mp-mod-line { left: -22px; }
+  .ei-result-btns { flex-direction: column; width: 100%; }
+}
+</style>
+{% endblock %}

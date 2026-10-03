@@ -1,0 +1,750 @@
+{% extends 'base.html.twig' %}
+{% block title %}Matrice des Compétences – Humania{% endblock %}
+
+{% block body %}
+<div class="sm-wrapper">
+
+  {# ══ HEADER ══════════════════════════════════════════════════════════════ #}
+  <div class="sm-header">
+    <div>
+      <h1 class="sm-title">Skills Matrix</h1>
+      <p class="sm-sub">Team competency overview with gap analysis</p>
+    </div>
+    <div class="sm-header-actions">
+      <a href="{{ path('skills_matrix_export_csv') }}" class="btn-export">
+        ⬇ Export CSV
+      </a>
+    </div>
+  </div>
+
+  {# ══ FLASH ═══════════════════════════════════════════════════════════════ #}
+  {% for msg in app.flashes('success') %}
+    <div class="flash-ok">{{ msg }}</div>
+  {% endfor %}
+  {% for msg in app.flashes('error') %}
+    <div class="flash-err">{{ msg }}</div>
+  {% endfor %}
+
+  {# ══ STAT CARDS ══════════════════════════════════════════════════════════ #}
+  <div class="sm-stats">
+
+    <div class="stat-card" style="--accent:#3B82F6">
+      <div class="stat-top" style="--accent:#3B82F6">
+        <div class="stat-icon" style="background:#EFF6FF;color:#3B82F6">👥</div>
+        <div>
+          <div class="stat-number">{{ stats.teamMembers }}</div>
+          <div class="stat-label">Team Members</div>
+        </div>
+      </div>
+      <div class="stat-hint" style="color:#3B82F6">🏢 Employés évalués</div>
+    </div>
+
+    <div class="stat-card" style="--accent:#F59E0B">
+      <div class="stat-top">
+        <div class="stat-icon" style="background:#FEF3C7;color:#D97706">🚨</div>
+        <div>
+          <div class="stat-number" style="color:#DC2626">{{ stats.gaps }}</div>
+          <div class="stat-label">Critical Gaps</div>
+        </div>
+      </div>
+      <div class="stat-hint" style="color:#F59E0B">🔻 Compétences sous niveau 3</div>
+    </div>
+
+    <div class="stat-card" style="--accent:#10B981">
+      <div class="stat-top">
+        <div class="stat-icon" style="background:#D1FAE5;color:#059669">📈</div>
+        <div>
+          <div class="stat-number">{{ stats.avgLevel }}</div>
+          <div class="stat-label">Avg. Level</div>
+        </div>
+      </div>
+      <div class="stat-hint" style="color:#10B981">⭐ Niveau moyen de l'équipe</div>
+    </div>
+
+    <div class="stat-card" style="--accent:#8B5CF6">
+      <div class="stat-top">
+        <div class="stat-icon" style="background:#EDE9FE;color:#7C3AED">🎯</div>
+        <div>
+          <div class="stat-number">{{ stats.totalSkills }}</div>
+          <div class="stat-label">Total Skills</div>
+        </div>
+      </div>
+      <div class="stat-hint" style="color:#8B5CF6">🗂 Compétences référencées</div>
+    </div>
+
+  </div>
+
+  {# ══ FILTRES ════════════════════════════════════════════════════════════ #}
+  <form method="get" action="{{ path('skills_matrix_index') }}" class="sm-filters" id="filtersForm">
+    <input type="hidden" name="emp_page"    value="1">
+    <input type="hidden" name="skill_page"  value="1">
+    <input type="hidden" name="emp_per_page"  value="{{ empPerPage }}">
+    <input type="hidden" name="skill_per_page" value="{{ skillPerPage }}">
+
+    <div class="filter-group">
+      <label class="filter-lbl">🔍 Filter Employees</label>
+      <input type="text" name="search" value="{{ search }}"
+             placeholder="Search employees or roles…" class="filter-input"
+             oninput="if(!this.value) this.form.submit()">
+    </div>
+
+    <div class="filter-group">
+      <label class="filter-lbl">🎯 Filter Skills</label>
+      <input type="text" name="skill" value="{{ skillSearch }}"
+             placeholder="Search skills…" class="filter-input"
+             oninput="if(!this.value) this.form.submit()">
+    </div>
+
+    <div class="filter-group">
+      <label class="filter-lbl">📁 Category</label>
+      <select name="categorie" class="filter-select" onchange="this.form.submit()">
+        <option value="">Toutes catégories</option>
+        {% for cat in categories %}
+          <option value="{{ cat.libelle }}" {{ filterCat == cat.libelle ? 'selected' : '' }}>
+            {{ cat.libelle }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <label class="filter-checkbox">
+      <input type="checkbox" name="gaps_only" value="1"
+             {{ gapsOnly ? 'checked' : '' }} onchange="this.form.submit()">
+      Gaps only
+    </label>
+
+    <div style="flex:1"></div>
+
+    <button type="submit" class="btn-filter">Filtrer</button>
+
+    {% if search or skillSearch or filterCat or gapsOnly %}
+      <a href="{{ path('skills_matrix_index') }}" class="btn-reset">✕ Reset</a>
+    {% endif %}
+
+    <button type="button" class="btn-add" onclick="openAddModal()">
+      ＋ Add Assessment
+    </button>
+  </form>
+
+  {# ══ MATRICE ════════════════════════════════════════════════════════════ #}
+  <div class="matrix-card">
+
+    <div class="matrix-header">
+      <div>
+        <span class="matrix-title">Team Competency Matrix</span>
+        <span class="matrix-hint">Double-clic pour modifier · Pagination Skills en haut · Pagination Employés en bas</span>
+      </div>
+    </div>
+
+    {% if pageEmployees|length == 0 or pageCompetences|length == 0 %}
+      <div class="matrix-empty">
+        <div style="font-size:2.5rem;margin-bottom:.5rem">📊</div>
+        <p>Aucune donnée à afficher. Ajustez vos filtres ou ajoutez des évaluations.</p>
+      </div>
+    {% else %}
+
+      {# ── Pagination Skills (haut) via KnpPaginator ── #}
+      {% set sp = skillPagination %}
+      {% set spCurrent = sp.currentPageNumber %}
+      {% set spTotal   = sp.pageCount %}
+      {% set spItems   = sp.totalItemCount %}
+      {% set spPer     = sp.itemNumberPerPage %}
+      <div class="pag-bar pag-skills">
+        <span class="pag-info">
+          Skills {{ skillOffset + 1 }}–{{ skillOffset + pageCompetences|length }} / {{ spItems }}
+        </span>
+        <div class="pag-perpage">
+          <span>Skills / page :</span>
+          {% for n in [4, 6, 8, 10, 12] %}
+            <a href="{{ path('skills_matrix_index', app.request.query.all|merge({skill_per_page: n, skill_page: 1})) }}"
+               class="pag-pp {{ spPer == n ? 'pag-pp-active' : '' }}">{{ n }}</a>
+          {% endfor %}
+        </div>
+        <div class="pag-pages">
+          {% if spCurrent > 1 %}
+            <a href="{{ path('skills_matrix_index', app.request.query.all|merge({skill_page: spCurrent - 1})) }}" class="pag-btn pag-arrow">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg>
+            </a>
+          {% else %}
+            <span class="pag-btn pag-btn-disabled pag-arrow">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg>
+            </span>
+          {% endif %}
+
+          {% set spWinStart = max(1, spCurrent - 2) %}
+          {% set spWinEnd   = min(spTotal, spCurrent + 2) %}
+          {% if spWinStart > 1 %}
+            <a href="{{ path('skills_matrix_index', app.request.query.all|merge({skill_page: 1})) }}" class="pag-btn">1</a>
+            {% if spWinStart > 2 %}<span class="pag-ellipsis">…</span>{% endif %}
+          {% endif %}
+          {% for p in spWinStart..spWinEnd %}
+            <a href="{{ path('skills_matrix_index', app.request.query.all|merge({skill_page: p})) }}"
+               class="pag-btn {{ p == spCurrent ? 'pag-btn-active' : '' }}">{{ p }}</a>
+          {% endfor %}
+          {% if spWinEnd < spTotal %}
+            {% if spWinEnd < spTotal - 1 %}<span class="pag-ellipsis">…</span>{% endif %}
+            <a href="{{ path('skills_matrix_index', app.request.query.all|merge({skill_page: spTotal})) }}" class="pag-btn">{{ spTotal }}</a>
+          {% endif %}
+
+          {% if spCurrent < spTotal %}
+            <a href="{{ path('skills_matrix_index', app.request.query.all|merge({skill_page: spCurrent + 1})) }}" class="pag-btn pag-arrow">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9,18 15,12 9,6"/></svg>
+            </a>
+          {% else %}
+            <span class="pag-btn pag-btn-disabled pag-arrow">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9,18 15,12 9,6"/></svg>
+            </span>
+          {% endif %}
+        </div>
+      </div>
+
+      {# ── Tableau ── #}
+      {% set dotColors = ['#F59E0B','#06B6D4','#3B82F6','#22C55E','#6366F1','#F97316','#A855F7','#EC4899','#14B8A6','#EF4444'] %}
+      {% set pillBg   = ['#F1F5F9','#FEE2E2','#FEF3C7','#FEF9C3','#DCFCE7','#BFDBFE'] %}
+      {% set pillFg   = ['#94A3B8','#DC2626','#D97706','#CA8A04','#16A34A','#2563EB'] %}
+      {% set avatarBg = ['#BFDBFE','#BBF7D0','#FDE68A','#FECACA','#DDD6FE','#BAE6FD','#FCE7F3'] %}
+      {% set avatarFg = ['#1D4ED8','#065F46','#92400E','#991B1B','#5B21B6','#0369A1','#9D174D'] %}
+
+      <div class="matrix-scroll-wrap">
+        <table class="matrix-table">
+          <thead>
+            <tr>
+              <th class="th-emp">
+                {% if role == 'EMPLOYE' %}Mes compétences{% elseif role == 'MANAGER' %}Mon équipe{% else %}Tous les employés{% endif %}
+              </th>
+              {% for ci, comp in pageCompetences %}
+                <th class="th-skill">
+                  <div class="skill-dot" style="background:{{ dotColors[ci % dotColors|length] }}"></div>
+                  <span class="skill-name" title="{{ comp.libelle }}">{{ comp.libelle }}</span>
+                </th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for ri, emp in pageEmployees %}
+              {% set aci = (emp.fullName|length) % (avatarBg|length) %}
+              <tr class="{{ ri % 2 == 0 ? 'row-even' : 'row-odd' }}">
+
+                {# Colonne employé #}
+                <td class="td-emp">
+                  <div class="emp-cell">
+                    <div class="emp-avatar"
+                         style="background:{{ avatarBg[aci] }};color:{{ avatarFg[aci] }}">
+                      {{ emp.fullName|split(' ')|map(w => w|first)|join('')|upper|slice(0,2) }}
+                    </div>
+                    <div class="emp-info">
+                      <div class="emp-name">{{ emp.fullName }}</div>
+                      <div class="emp-poste">{{ emp.poste }}</div>
+                    </div>
+                    <button class="btn-radar"
+                            onclick="openRadar({{ emp.id }}, '{{ emp.fullName|e('html_attr') }}')"
+                            title="Radar de compétences">📊</button>
+                  </div>
+                </td>
+
+                {# Colonnes compétences #}
+                {% for ci, comp in pageCompetences %}
+                  {% set sl = emp.skills[comp.libelle] ?? null %}
+                  <td class="td-skill"
+                      ondblclick="openEditModal({{ emp.id }}, {{ comp.id }}, '{{ comp.libelle|e('html_attr') }}', {{ sl ? sl.niveau : 0 }}, {{ sl ? sl.valide ? 1 : 0 : 0 }})"
+                      title="{{ comp.libelle }}{% if sl %} — Niveau {{ sl.niveau }}/{{ sl.niveauMax }}{% if sl.valide %} ✓{% endif %}{% endif %}">
+                    {% if sl %}
+                      {% set lv = sl.niveau %}
+                      {% set isGap = lv < 3 %}
+                      <div class="skill-pill {{ isGap ? 'pill-gap' : '' }}"
+                           style="background:{{ pillBg[lv] ?? pillBg[0] }};color:{{ pillFg[lv] ?? pillFg[0] }}">
+                        {{ lv }}
+                      </div>
+                      {% if isGap %}
+                        <div class="gap-badge">− {{ 3 - lv }}</div>
+                      {% endif %}
+                    {% else %}
+                      <span class="skill-empty">–</span>
+                    {% endif %}
+                  </td>
+                {% endfor %}
+
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {# ── Pagination Employés (bas) via KnpPaginator ── #}
+      {% set ep = empPagination %}
+      {% set epCurrent = ep.currentPageNumber %}
+      {% set epTotal   = ep.pageCount %}
+      {% set epItems   = ep.totalItemCount %}
+      {% set epPer     = ep.itemNumberPerPage %}
+      {% set epStart   = (epCurrent - 1) * epPer + 1 %}
+      {% set epEnd     = min(epCurrent * epPer, epItems) %}
+      <div class="pag-bar pag-emp">
+        <div class="pag-perpage">
+          <span>Employés / page :</span>
+          {% for n in [5, 10, 15, 20, 25, 50] %}
+            <a href="{{ path('skills_matrix_index', app.request.query.all|merge({emp_per_page: n, emp_page: 1})) }}"
+               class="pag-pp {{ epPer == n ? 'pag-pp-active' : '' }}">{{ n }}</a>
+          {% endfor %}
+        </div>
+        <span class="pag-info">{{ epStart }}–{{ epEnd }} / {{ epItems }}</span>
+        <div class="pag-pages">
+          {% if epCurrent > 1 %}
+            <a href="{{ path('skills_matrix_index', app.request.query.all|merge({emp_page: epCurrent - 1})) }}" class="pag-btn pag-arrow">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg>
+            </a>
+          {% else %}
+            <span class="pag-btn pag-btn-disabled pag-arrow">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg>
+            </span>
+          {% endif %}
+
+          {% set epWinStart = max(1, epCurrent - 2) %}
+          {% set epWinEnd   = min(epTotal, epCurrent + 2) %}
+          {% if epWinStart > 1 %}
+            <a href="{{ path('skills_matrix_index', app.request.query.all|merge({emp_page: 1})) }}" class="pag-btn">1</a>
+            {% if epWinStart > 2 %}<span class="pag-ellipsis">…</span>{% endif %}
+          {% endif %}
+          {% for p in epWinStart..epWinEnd %}
+            <a href="{{ path('skills_matrix_index', app.request.query.all|merge({emp_page: p})) }}"
+               class="pag-btn {{ p == epCurrent ? 'pag-btn-active' : '' }}">{{ p }}</a>
+          {% endfor %}
+          {% if epWinEnd < epTotal %}
+            {% if epWinEnd < epTotal - 1 %}<span class="pag-ellipsis">…</span>{% endif %}
+            <a href="{{ path('skills_matrix_index', app.request.query.all|merge({emp_page: epTotal})) }}" class="pag-btn">{{ epTotal }}</a>
+          {% endif %}
+
+          {% if epCurrent < epTotal %}
+            <a href="{{ path('skills_matrix_index', app.request.query.all|merge({emp_page: epCurrent + 1})) }}" class="pag-btn pag-arrow">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9,18 15,12 9,6"/></svg>
+            </a>
+          {% else %}
+            <span class="pag-btn pag-btn-disabled pag-arrow">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9,18 15,12 9,6"/></svg>
+            </span>
+          {% endif %}
+        </div>
+      </div>
+
+    {% endif %}
+  </div>
+
+  {# ══ LÉGENDE ════════════════════════════════════════════════════════════ #}
+  <div class="sm-legend">
+    <span class="legend-lbl">Niveaux :</span>
+    {% set lvls = [
+      {lv:'1', bg:'#FEE2E2', fg:'#DC2626', label:'Beginner'},
+      {lv:'2', bg:'#FEF3C7', fg:'#D97706', label:'Elementary'},
+      {lv:'3', bg:'#FEF9C3', fg:'#CA8A04', label:'Intermediate'},
+      {lv:'4', bg:'#DCFCE7', fg:'#16A34A', label:'Advanced'},
+      {lv:'5', bg:'#BFDBFE', fg:'#2563EB', label:'Expert'},
+    ] %}
+    {% for l in lvls %}
+      <div class="legend-item">
+        <span class="legend-pill" style="background:{{ l.bg }};color:{{ l.fg }}">{{ l.lv }}</span>
+        <span class="legend-text">{{ l.label }}</span>
+      </div>
+    {% endfor %}
+    <div style="flex:1"></div>
+    <div class="legend-gap"><span style="color:#DC2626;font-weight:700">− N</span> Gap critique</div>
+    <div class="legend-gap"><span style="color:#16A34A;font-weight:700">✓</span> Niveau validé</div>
+  </div>
+
+</div>
+
+{# ══ MODAL — Add Assessment ══════════════════════════════════════════════ #}
+<div id="modalAdd" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeAddModal()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 class="modal-title">➕ Ajouter une évaluation</h3>
+      <button class="modal-close" onclick="closeAddModal()">✕</button>
+    </div>
+    <form id="formAdd" class="modal-form">
+      <div class="mf-group">
+        <label class="mf-lbl">Employé <span class="req">*</span></label>
+        <select name="employe_id" id="add_employe" class="mf-input" required>
+          <option value="">— Choisir un employé —</option>
+          {# Chargé dynamiquement via JS si besoin, ou pré-rempli #}
+          {% for emp in pageEmployees %}
+            <option value="{{ emp.id }}">{{ emp.fullName }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="mf-group">
+        <label class="mf-lbl">Compétence <span class="req">*</span></label>
+        <select name="competence_id" id="add_comp" class="mf-input" required>
+          <option value="">— Choisir une compétence —</option>
+          {% for comp in allCompetences %}
+            <option value="{{ comp.id }}">{{ comp.libelle }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="mf-row">
+        <div class="mf-group">
+          <label class="mf-lbl">Niveau (1–5) <span class="req">*</span></label>
+          <div class="level-picker" id="add_level_picker">
+            {% for n in 1..5 %}
+              <button type="button" class="lv-btn" data-lv="{{ n }}" onclick="pickLevel('add', {{ n }})">{{ n }}</button>
+            {% endfor %}
+          </div>
+          <input type="hidden" name="niveau" id="add_niveau" value="1">
+        </div>
+        <div class="mf-group">
+          <label class="mf-lbl">Date</label>
+          <input type="date" name="date" id="add_date" class="mf-input" value="{{ 'now'|date('Y-m-d') }}">
+        </div>
+      </div>
+      <div class="mf-group">
+        <label class="mf-checkbox">
+          <input type="checkbox" name="valide" id="add_valide"> Niveau validé
+        </label>
+      </div>
+      <div id="add_gap_hint" class="gap-hint" style="display:none">
+        ⚠️ Gap identifié : niveau &lt; 3
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="closeAddModal()">Annuler</button>
+        <button type="submit" class="btn-save">✅ Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ══ MODAL — Edit Assessment ═════════════════════════════════════════════ #}
+<div id="modalEdit" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeEditModal()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 class="modal-title" id="edit_title">✏ Modifier le niveau</h3>
+      <button class="modal-close" onclick="closeEditModal()">✕</button>
+    </div>
+    <form id="formEdit" class="modal-form">
+      <input type="hidden" name="employe_id"    id="edit_employe_id">
+      <input type="hidden" name="competence_id" id="edit_comp_id">
+      <div class="mf-row">
+        <div class="mf-group">
+          <label class="mf-lbl">Niveau (1–5)</label>
+          <div class="level-picker" id="edit_level_picker">
+            {% for n in 1..5 %}
+              <button type="button" class="lv-btn" data-lv="{{ n }}" onclick="pickLevel('edit', {{ n }})">{{ n }}</button>
+            {% endfor %}
+          </div>
+          <input type="hidden" name="niveau" id="edit_niveau">
+        </div>
+        <div class="mf-group">
+          <label class="mf-lbl">Date</label>
+          <input type="date" name="date" id="edit_date" class="mf-input" value="{{ 'now'|date('Y-m-d') }}">
+        </div>
+      </div>
+      <div class="mf-group">
+        <label class="mf-checkbox">
+          <input type="checkbox" name="valide" id="edit_valide"> Niveau validé
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-delete-sm" onclick="deleteAssessment()">🗑 Supprimer</button>
+        <div style="flex:1"></div>
+        <button type="button" class="btn-cancel" onclick="closeEditModal()">Annuler</button>
+        <button type="submit" class="btn-save">💾 Sauvegarder</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ══ MODAL — Radar ═══════════════════════════════════════════════════════ #}
+<div id="modalRadar" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeRadar()">
+  <div class="modal-box modal-radar">
+    <div class="modal-head">
+      <h3 class="modal-title" id="radar_title">📊 Radar de compétences</h3>
+      <button class="modal-close" onclick="closeRadar()">✕</button>
+    </div>
+    <div style="padding:1.5rem;position:relative;min-height:360px">
+      <canvas id="radarCanvas" width="500" height="360"></canvas>
+      <div id="radarLoader" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:white">
+        <span style="color:#6B7280;font-size:.9rem">Chargement…</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// ── Level picker ──────────────────────────────────────────────────────────
+const PILL_FG = ['','#DC2626','#D97706','#CA8A04','#16A34A','#2563EB'];
+const PILL_BG = ['','#FEE2E2','#FEF3C7','#FEF9C3','#DCFCE7','#BFDBFE'];
+
+function pickLevel(prefix, lv) {
+  document.getElementById(prefix + '_niveau').value = lv;
+  document.querySelectorAll('#' + prefix + '_level_picker .lv-btn').forEach(b => {
+    const n = parseInt(b.dataset.lv);
+    if (n === lv) {
+      b.style.background = PILL_BG[lv];
+      b.style.color      = PILL_FG[lv];
+      b.style.fontWeight = '800';
+      b.style.boxShadow  = '0 0 0 2px ' + PILL_FG[lv];
+    } else {
+      b.style.background = '#F1F5F9';
+      b.style.color      = '#64748B';
+      b.style.fontWeight = '600';
+      b.style.boxShadow  = 'none';
+    }
+  });
+  if (prefix === 'add') {
+    const hint = document.getElementById('add_gap_hint');
+    hint.style.display = lv < 3 ? 'flex' : 'none';
+  }
+}
+
+// ── Modal Add ─────────────────────────────────────────────────────────────
+function openAddModal() {
+  document.getElementById('modalAdd').style.display = 'flex';
+  pickLevel('add', 1);
+}
+function closeAddModal() {
+  document.getElementById('modalAdd').style.display = 'none';
+  document.getElementById('formAdd').reset();
+}
+
+document.getElementById('formAdd').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const res = await fetch('{{ path('skills_matrix_save') }}', { method: 'POST', body: fd });
+  const data = await res.json();
+  if (data.ok) { closeAddModal(); location.reload(); }
+  else alert('Erreur : ' + data.error);
+});
+
+// ── Modal Edit ────────────────────────────────────────────────────────────
+function openEditModal(empId, compId, compName, niveau, valide) {
+  document.getElementById('edit_employe_id').value = empId;
+  document.getElementById('edit_comp_id').value    = compId;
+  document.getElementById('edit_title').textContent = '✏ ' + compName;
+  document.getElementById('edit_valide').checked   = valide === 1;
+  document.getElementById('modalEdit').style.display = 'flex';
+  pickLevel('edit', niveau || 1);
+}
+function closeEditModal() {
+  document.getElementById('modalEdit').style.display = 'none';
+}
+
+document.getElementById('formEdit').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  if (document.getElementById('edit_valide').checked) fd.append('valide', '1');
+  const res = await fetch('{{ path('skills_matrix_save') }}', { method: 'POST', body: fd });
+  const data = await res.json();
+  if (data.ok) { closeEditModal(); location.reload(); }
+  else alert('Erreur : ' + data.error);
+});
+
+async function deleteAssessment() {
+  if (!confirm('Supprimer cette évaluation ?')) return;
+  const fd = new FormData();
+  fd.append('employe_id',    document.getElementById('edit_employe_id').value);
+  fd.append('competence_id', document.getElementById('edit_comp_id').value);
+  const res = await fetch('{{ path('skills_matrix_delete') }}', { method: 'POST', body: fd });
+  const data = await res.json();
+  if (data.ok) { closeEditModal(); location.reload(); }
+  else alert('Erreur : ' + data.error);
+}
+
+// ── Radar Chart ───────────────────────────────────────────────────────────
+let radarChart = null;
+async function openRadar(empId, empName) {
+  document.getElementById('radar_title').textContent = '📊 ' + empName;
+  document.getElementById('radarLoader').style.display = 'flex';
+  document.getElementById('modalRadar').style.display  = 'flex';
+
+  const res  = await fetch('/competences/matrice/radar/' + empId);
+  const data = await res.json();
+  document.getElementById('radarLoader').style.display = 'none';
+
+  const labels = data.skills.map(s => s.libelle);
+  const vals   = data.skills.map(s => s.niveauActuel);
+  const maxs   = data.skills.map(s => s.niveauMax || 5);
+  const avgs   = data.skills.map(s => data.avgMap[s.libelle] || 0);
+
+  if (radarChart) radarChart.destroy();
+  const ctx = document.getElementById('radarCanvas').getContext('2d');
+  radarChart = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: empName,
+          data: vals,
+          backgroundColor: 'rgba(99,102,241,.2)',
+          borderColor: '#6366F1',
+          pointBackgroundColor: vals.map(v => v < 3 ? '#EF4444' : '#6366F1'),
+          pointRadius: 5,
+          borderWidth: 2,
+        },
+        {
+          label: 'Moy. équipe',
+          data: avgs,
+          backgroundColor: 'rgba(16,185,129,.1)',
+          borderColor: '#10B981',
+          borderDash: [5, 4],
+          pointRadius: 3,
+          borderWidth: 1.5,
+        }
+      ]
+    },
+    options: {
+      scales: { r: { min: 0, max: 5, ticks: { stepSize: 1, font: { size: 10 } }, pointLabels: { font: { size: 11 } } } },
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+      animation: { duration: 600 },
+    }
+  });
+}
+function closeRadar() {
+  document.getElementById('modalRadar').style.display = 'none';
+  if (radarChart) { radarChart.destroy(); radarChart = null; }
+}
+</script>
+
+<style>
+:root{--p:#4F46E5;--g50:#F8FAFC;--g100:#F1F5F9;--g200:#E2E8F0;--g500:#64748B;--g900:#0F172A}
+*{box-sizing:border-box}
+.sm-wrapper{padding:2rem;max-width:1400px;margin:0 auto}
+
+/* Header */
+.sm-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem}
+.sm-title{font-size:2rem;font-weight:800;color:var(--g900);margin:0}
+.sm-sub{color:var(--g500);font-size:.95rem;margin:4px 0 0}
+.btn-export{background:white;color:#2563EB;border:2px solid #2563EB;padding:10px 22px;border-radius:10px;text-decoration:none;font-weight:700;font-size:.9rem}
+.btn-export:hover{background:#EFF6FF}
+
+/* Flash */
+.flash-ok{background:#D1FAE5;color:#065F46;padding:12px 16px;border-radius:10px;font-weight:600;margin-bottom:1rem}
+.flash-err{background:#FEE2E2;color:#991B1B;padding:12px 16px;border-radius:10px;font-weight:600;margin-bottom:1rem}
+
+/* Stats */
+.sm-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
+.stat-card{background:white;border-radius:14px;border:1px solid var(--g200);overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.stat-card::before{content:'';display:block;height:4px;background:var(--accent)}
+.stat-top{display:flex;align-items:center;gap:1rem;padding:1.1rem 1.25rem .25rem}
+.stat-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+.stat-number{font-size:2rem;font-weight:800;color:var(--g900);line-height:1}
+.stat-label{font-size:.8rem;color:var(--g500);margin-top:2px}
+.stat-hint{font-size:.72rem;font-weight:700;padding:.5rem 1.25rem 1rem}
+
+/* Filtres */
+.sm-filters{display:flex;gap:.75rem;align-items:flex-end;flex-wrap:wrap;background:white;padding:1rem 1.25rem;border-radius:14px;border:1px solid var(--g200);margin-bottom:1.5rem}
+.filter-group{display:flex;flex-direction:column;gap:4px}
+.filter-lbl{font-size:.7rem;font-weight:800;color:var(--g500);text-transform:uppercase;letter-spacing:.06em}
+.filter-input,.filter-select{padding:9px 12px;border:1px solid var(--g200);border-radius:8px;font-size:.88rem;outline:none;background:var(--g50)}
+.filter-input:focus,.filter-select:focus{border-color:var(--p);box-shadow:0 0 0 3px #4F46E520}
+.filter-input{min-width:190px}
+.filter-select{min-width:160px}
+.filter-checkbox{display:flex;align-items:center;gap:6px;font-size:.88rem;color:#374151;cursor:pointer;padding-bottom:9px}
+.btn-filter{padding:9px 18px;border-radius:8px;border:none;background:var(--p);color:white;font-weight:700;cursor:pointer}
+.btn-reset{padding:9px 14px;border-radius:8px;text-decoration:none;color:var(--g500);font-size:.85rem;background:var(--g100)}
+.btn-add{padding:9px 18px;border-radius:8px;border:none;background:#2563EB;color:white;font-weight:700;cursor:pointer;font-size:.88rem}
+
+/* Matrix card */
+.matrix-card{background:white;border-radius:16px;border:1px solid var(--g200);box-shadow:0 2px 8px rgba(0,0,0,.07);overflow:hidden;margin-bottom:1.5rem}
+.matrix-header{display:flex;align-items:center;padding:1rem 1.25rem;border-bottom:1px solid var(--g100);gap:1rem}
+.matrix-title{font-size:1.05rem;font-weight:800;color:var(--g900)}
+.matrix-hint{font-size:.78rem;color:#9CA3AF;margin-left:.5rem}
+.matrix-empty{text-align:center;padding:4rem 2rem;color:var(--g500)}
+
+/* Pagination */
+.pag-bar{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;padding:.85rem 1.25rem;background:var(--g50)}
+.pag-skills{border-bottom:1px solid var(--g100)}
+.pag-emp{border-top:1px solid var(--g100);justify-content:flex-end}
+.pag-info{font-size:.78rem;color:var(--g500);white-space:nowrap}
+.pag-perpage{display:flex;align-items:center;gap:.3rem;font-size:.75rem;color:var(--g500)}
+.pag-pp{
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:3px 8px;border-radius:6px;border:1.5px solid var(--g200);
+  text-decoration:none;font-size:.75rem;font-weight:600;color:#374151;
+  transition:all .12s;min-width:24px;
+}
+.pag-pp-active,.pag-pp:hover{background:var(--p);color:white;border-color:var(--p)}
+.pag-pages{display:flex;gap:.3rem;align-items:center;flex:1;justify-content:flex-end}
+.pag-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:34px;height:34px;padding:0 .4rem;
+  border-radius:9px;border:1.5px solid var(--g200);
+  text-decoration:none;font-size:.8rem;font-weight:600;color:#374151;background:white;
+  transition:all .15s;
+}
+.pag-btn:not(.pag-btn-disabled):not(.pag-btn-active):hover{
+  border-color:var(--p);color:var(--p);background:#EEF2FF;
+}
+.pag-btn-active{background:var(--p)!important;color:white!important;border-color:var(--p)!important;font-weight:700;box-shadow:0 2px 8px rgba(79,70,229,.3)}
+.pag-btn-disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
+.pag-arrow{color:var(--g500)}
+.pag-ellipsis{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:28px;height:34px;font-size:.85rem;color:var(--g500);letter-spacing:.12em;
+}
+
+/* Table */
+.matrix-scroll-wrap{overflow-x:auto}
+.matrix-table{width:100%;border-collapse:collapse;min-width:600px}
+.matrix-table thead tr{background:#F8FAFC}
+.th-emp{padding:12px 16px;text-align:left;font-size:.8rem;font-weight:700;color:#475569;white-space:nowrap;border-bottom:2px solid var(--g200);min-width:240px;position:sticky;left:0;background:#F8FAFC;z-index:2}
+.th-skill{padding:10px 6px;text-align:center;font-size:.78rem;font-weight:700;color:#374151;border-bottom:2px solid var(--g200);border-left:1px solid var(--g100);min-width:110px;vertical-align:bottom}
+.th-skill .skill-dot{width:12px;height:12px;border-radius:50%;margin:0 auto 6px}
+.th-skill .skill-name{display:block;font-size:.72rem;word-break:break-word;line-height:1.3}
+.row-even{background:white}
+.row-odd{background:#F8FAFC}
+.td-emp{padding:0;position:sticky;left:0;z-index:1}
+.row-even .td-emp{background:white}
+.row-odd  .td-emp{background:#F8FAFC}
+.td-skill{padding:8px 6px;text-align:center;border-left:1px solid var(--g100);border-bottom:1px solid var(--g100);cursor:pointer;transition:background .15s}
+.td-skill:hover{background:#F0F9FF}
+
+/* Employee cell */
+.emp-cell{display:flex;align-items:center;gap:10px;padding:8px 12px 8px 16px;min-height:72px}
+.emp-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:800;flex-shrink:0}
+.emp-info{flex:1;min-width:0}
+.emp-name{font-size:.88rem;font-weight:700;color:#1E293B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.emp-poste{font-size:.75rem;color:#94A3B8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn-radar{background:#EEF2FF;color:#4F46E5;border:none;padding:5px 7px;border-radius:7px;cursor:pointer;font-size:.9rem;flex-shrink:0}
+.btn-radar:hover{background:#6366F1;color:white}
+
+/* Skill cells */
+.skill-pill{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:14px;font-size:1.1rem;font-weight:800}
+.pill-gap{outline:2px solid #FCA5A5}
+.gap-badge{font-size:.68rem;font-weight:800;color:#DC2626;margin-top:2px}
+.skill-empty{font-size:1.2rem;color:#CBD5E1}
+
+/* Légende */
+.sm-legend{display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;background:white;padding:1rem 1.5rem;border-radius:12px;border:1px solid var(--g200)}
+.legend-lbl{font-size:.8rem;font-weight:700;color:#64748B}
+.legend-item{display:flex;align-items:center;gap:.4rem}
+.legend-pill{display:inline-block;padding:3px 10px;border-radius:6px;font-size:.8rem;font-weight:700}
+.legend-text{font-size:.8rem;color:#64748B}
+.legend-gap{font-size:.8rem;color:#64748B;display:flex;align-items:center;gap:.35rem}
+
+/* Modals */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem}
+.modal-box{background:white;border-radius:20px;width:100%;max-width:500px;box-shadow:0 20px 60px rgba(0,0,0,.25);animation:modalIn .2s ease}
+.modal-radar{max-width:560px}
+@keyframes modalIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.modal-head{display:flex;justify-content:space-between;align-items:center;padding:1.25rem 1.5rem;border-bottom:1px solid var(--g100)}
+.modal-title{font-size:1.1rem;font-weight:800;color:var(--g900);margin:0}
+.modal-close{background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--g500);padding:4px 8px;border-radius:6px}
+.modal-close:hover{background:var(--g100)}
+.modal-form{padding:1.25rem 1.5rem}
+.mf-group{margin-bottom:1rem}
+.mf-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.mf-lbl{display:block;font-size:.72rem;font-weight:800;color:var(--g500);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.mf-input{width:100%;padding:9px 12px;border:1px solid var(--g200);border-radius:8px;font-size:.9rem;outline:none;background:var(--g50)}
+.mf-input:focus{border-color:var(--p);box-shadow:0 0 0 3px #4F46E518}
+.mf-checkbox{display:flex;align-items:center;gap:.5rem;font-size:.9rem;cursor:pointer}
+.req{color:#DC2626}
+.level-picker{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:4px}
+.lv-btn{width:40px;height:40px;border-radius:10px;border:1px solid var(--g200);background:var(--g100);color:#64748B;font-size:.95rem;font-weight:600;cursor:pointer;transition:all .15s}
+.gap-hint{display:flex;align-items:center;gap:.5rem;font-size:.82rem;color:#DC2626;background:#FEF2F2;padding:8px 12px;border-radius:8px;margin-bottom:1rem}
+.modal-footer{display:flex;align-items:center;gap:.75rem;padding-top:1rem;border-top:1px solid var(--g100);margin-top:.5rem}
+.btn-cancel{padding:9px 18px;border-radius:8px;background:var(--g100);color:var(--g500);font-weight:700;border:none;cursor:pointer;text-decoration:none}
+.btn-save{padding:9px 22px;border-radius:8px;background:var(--p);color:white;font-weight:700;border:none;cursor:pointer}
+.btn-delete-sm{padding:9px 14px;border-radius:8px;background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;font-weight:700;cursor:pointer}
+
+@media(max-width:1024px){.sm-stats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.sm-stats{grid-template-columns:1fr}.mf-row{grid-template-columns:1fr}.sm-header{flex-direction:column;gap:1rem}}
+</style>
+{% endblock %}

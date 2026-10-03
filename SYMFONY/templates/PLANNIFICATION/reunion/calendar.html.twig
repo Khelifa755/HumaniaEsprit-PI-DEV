@@ -1,0 +1,867 @@
+{# templates/PLANNIFICATION/reunion/calendar.html.twig #}
+{% extends 'base.html.twig' %}
+
+{% block title %}Calendrier des Réunions{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{{ asset('css/reunion_modal.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/planification/boarding.css') }}">
+    <style>
+        /* ── Layout ───────────────────────────────────────────── */
+        .calendar-wrapper {
+            display: flex;
+            gap: 1.25rem;
+            height: calc(100vh - 150px);
+            min-height: 580px;
+        }
+
+        .calendar-sidebar {
+            width: 270px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: .85rem;
+        }
+
+        .sidebar-card {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1rem 1.1rem;
+            box-shadow: 0 1px 4px rgba(0,0,0,.04);
+        }
+
+        .sidebar-card h6 {
+            font-size: .68rem;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: #9ca3af;
+            margin: 0 0 .75rem;
+        }
+
+        /* ── Legend ───────────────────────────────────────────── */
+        .legend-group { margin-bottom: .6rem; }
+        .legend-group-title {
+            font-size: .62rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .07em;
+            color: #c4c9d4;
+            margin-bottom: .3rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            font-size: .82rem;
+            color: #374151;
+            margin-bottom: .3rem;
+            padding: .25rem .4rem;
+            border-radius: 6px;
+            transition: background .12s;
+        }
+        .legend-item:hover { background: #f9fafb; }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .legend-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            font-size: .72rem;
+            flex-shrink: 0;
+        }
+
+        .dot-meeting     { background: #ef4444; }
+        .dot-event       { background: #8b5cf6; }
+        .dot-reservation { background: #3b82f6; }
+        .dot-onboarding  { background: #22c55e; }
+        .dot-offboarding { background: #f97316; }
+        .dot-cancelled   { background: #94a3b8; }
+        .dot-online      { background: #ef4444; border: 2px solid #b91c1c; }
+        .dot-presentiel  { background: #ef4444; }
+
+        .legend-divider {
+            height: 1px;
+            background: #f3f4f6;
+            margin: .5rem 0;
+        }
+
+        /* ── Calendar main ────────────────────────────────────── */
+        .calendar-main {
+            flex: 1;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1.1rem;
+            overflow: hidden;
+            box-shadow: 0 1px 4px rgba(0,0,0,.04);
+        }
+
+        #reunion-calendar { height: 100%; }
+
+        /* ── FullCalendar overrides ────────────────────────────── */
+        .fc .fc-toolbar-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .fc .fc-button-primary {
+            background: #7F77DD;
+            border-color: #7F77DD;
+            border-radius: 6px;
+            font-size: .78rem;
+        }
+
+        .fc .fc-button-primary:hover,
+        .fc .fc-button-primary:not(:disabled):active,
+        .fc .fc-button-primary.fc-button-active {
+            background: #534AB7;
+            border-color: #534AB7;
+        }
+
+        .fc .fc-daygrid-day-number,
+        .fc .fc-col-header-cell-cushion {
+            color: #374151;
+            text-decoration: none;
+            font-size: .8rem;
+        }
+
+        .fc .fc-col-header-cell-cushion {
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
+
+        .fc .fc-event {
+            border-radius: 5px;
+            font-size: .74rem;
+            padding: 2px 5px;
+            cursor: pointer;
+            transition: opacity .15s, transform .1s;
+            border: none !important;
+        }
+
+        .fc .fc-event:hover { opacity: .86; transform: scale(1.01); }
+        .fc .fc-daygrid-day.fc-day-today { background: #EEEDFE; }
+
+        /* Event type indicators */
+        .fc .fc-event.fc-reunion-online::before {
+            content: '🎥 ';
+            font-size: .7rem;
+        }
+        .fc .fc-event.fc-reunion-cancelled {
+            opacity: .6;
+            text-decoration: line-through;
+        }
+
+        /* Time display in events */
+        .fc-event-time {
+            font-weight: 600;
+            opacity: .9;
+        }
+
+        /* ── Popover ──────────────────────────────────────────── */
+        #event-popover {
+            position: fixed;
+            z-index: 9999;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            box-shadow: 0 24px 64px rgba(0,0,0,.16), 0 4px 16px rgba(0,0,0,.08);
+            width: 310px;
+            display: none;
+            animation: popIn .15s ease;
+            overflow: hidden;
+        }
+
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(.95) translateY(6px); }
+            to   { opacity: 1; transform: scale(1)  translateY(0); }
+        }
+
+        .pop-color-bar {
+            height: 4px;
+            width: 100%;
+        }
+
+        .pop-inner { padding: 1rem 1.1rem 1rem; }
+
+        .pop-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: .5rem;
+        }
+
+        .pop-title {
+            font-weight: 700;
+            font-size: .95rem;
+            color: #111827;
+            flex: 1;
+            margin-right: .5rem;
+            line-height: 1.35;
+        }
+
+        .pop-close {
+            background: #f3f4f6;
+            border: none;
+            cursor: pointer;
+            color: #6b7280;
+            font-size: .9rem;
+            line-height: 1;
+            padding: 4px 7px;
+            border-radius: 6px;
+            transition: background .12s;
+            flex-shrink: 0;
+        }
+        .pop-close:hover { background: #e5e7eb; color: #374151; }
+
+        .pop-badges { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .7rem; }
+
+        .pop-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: .22rem .6rem;
+            border-radius: 999px;
+            font-size: .68rem;
+            font-weight: 700;
+            letter-spacing: .02em;
+        }
+
+        .badge-meeting     { background: rgba(239,68,68,.1);  color: #dc2626; }
+        .badge-event       { background: rgba(139,92,246,.1); color: #7c3aed; }
+        .badge-reservation { background: rgba(59,130,246,.1); color: #2563eb; }
+        .badge-onboarding  { background: rgba(34,197,94,.12); color: #16a34a; }
+        .badge-offboarding { background: rgba(249,115,22,.12);color: #ea580c; }
+        .badge-cancelled   { background: #f1f5f9; color: #475569; }
+        .badge-online      { background: rgba(239,68,68,.08); color: #dc2626; border: 1px solid rgba(239,68,68,.2); }
+        .badge-presentiel  { background: rgba(107,114,128,.08); color: #6b7280; }
+
+        .pop-meta-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: .25rem;
+            margin-bottom: .6rem;
+        }
+
+        .pop-meta {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: .78rem;
+            color: #6b7280;
+            background: #f9fafb;
+            padding: .3rem .5rem;
+            border-radius: 6px;
+        }
+        .pop-meta i { color: #9ca3af; font-size: .8rem; flex-shrink: 0; }
+        .pop-meta strong { color: #374151; font-weight: 600; }
+
+        .pop-desc {
+            font-size: .78rem;
+            color: #4b5563;
+            margin: .5rem 0 .8rem;
+            line-height: 1.55;
+            max-height: 60px;
+            overflow-y: auto;
+            background: #f9fafb;
+            border-radius: 6px;
+            padding: .4rem .5rem;
+        }
+        .pop-desc:empty { display: none; }
+
+        .pop-divider { height: 1px; background: #f3f4f6; margin: .7rem 0; }
+
+        .pop-actions {
+            display: flex;
+            gap: .5rem;
+        }
+        .pop-actions .btn {
+            flex: 1;
+            font-size: .76rem;
+            border-radius: 7px;
+            padding: .42rem .6rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            font-weight: 600;
+        }
+
+        .btn-pop-edit {
+            background: #0F6E56;
+            color: #fff;
+            border: none;
+        }
+        .btn-pop-edit:hover { background: #085041; color: #fff; }
+
+        .btn-pop-show {
+            background: #f3f4f6;
+            color: #374151;
+            border: none;
+        }
+        .btn-pop-show:hover { background: #e5e7eb; }
+
+        .btn-pop-delete {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+        .btn-pop-delete:hover { background: #fee2e2; }
+
+        /* ── Delete confirmation inline ───────────────────────── */
+        #pop-delete-confirm {
+            margin-top: .6rem;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            padding: .6rem .8rem;
+            display: none;
+        }
+        #pop-delete-confirm p {
+            font-size: .76rem;
+            color: #b91c1c;
+            margin: 0 0 .5rem;
+            font-weight: 600;
+        }
+        #pop-delete-confirm .d-flex { gap: .4rem; }
+        #pop-delete-confirm .btn { font-size: .73rem; padding: .32rem .7rem; border-radius: 6px; }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-4 py-3">
+
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+            <h1 class="h4 mb-0 fw-bold">Calendrier des Réunions</h1>
+            <p class="text-muted small mb-0">Vue interactive — cliquez sur un événement pour le gérer</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ path('app_reunion_index') }}" class="btn btn-outline-secondary btn-sm rounded-3">
+                <i class="bi bi-list-ul me-1"></i>Vue liste
+            </a>
+            <button type="button" class="btn btn-sm rounded-3 fw-medium"
+                    style="background:#7F77DD;color:#fff;border:none"
+                    data-rm-open>
+                <i class="bi bi-plus-lg me-1"></i>Nouvelle réunion
+            </button>
+        </div>
+    </div>
+
+    <div class="calendar-wrapper">
+
+        {# ── Sidebar ──────────────────────────────────────────────────── #}
+        <aside class="calendar-sidebar">
+
+            {# Légende #}
+            <div class="sidebar-card">
+                <h6>Légende</h6>
+
+                <div class="legend-group">
+                    <div class="legend-group-title">Types</div>
+                    <div class="legend-item" id="leg-meeting">
+                        <span class="legend-dot dot-meeting"></span>
+                        <span>📅 Réunion</span>
+                    </div>
+                    <div class="legend-item" id="leg-event">
+                        <span class="legend-dot dot-event"></span>
+                        <span>🎉 Événement</span>
+                    </div>
+                    <div class="legend-item" id="leg-reservation">
+                        <span class="legend-dot dot-reservation"></span>
+                        <span>🪑 Réservation</span>
+                    </div>
+                    <div class="legend-item" id="leg-onboarding">
+                        <span class="legend-dot dot-onboarding"></span>
+                        <span>🟢 Onboarding</span>
+                    </div>
+                    <div class="legend-item" id="leg-offboarding">
+                        <span class="legend-dot dot-offboarding"></span>
+                        <span>🔴 Offboarding</span>
+                    </div>
+                </div>
+
+                <div class="legend-divider"></div>
+
+                <div class="legend-group">
+                    <div class="legend-group-title">Modalité</div>
+                    <div class="legend-item">
+                        <span class="legend-dot dot-online"></span>
+                        <span>🎥 En ligne (Zoom)</span>
+                    </div>
+                    <div class="legend-item">
+                        <span style="width:10px;height:10px;border-radius:3px;background:#ef4444;flex-shrink:0;display:inline-block;"></span>
+                        <span>🏢 Présentiel</span>
+                    </div>
+                </div>
+
+                <div class="legend-divider"></div>
+
+                <div class="legend-group">
+                    <div class="legend-group-title">Statut</div>
+                    <div class="legend-item" id="leg-cancelled">
+                        <span class="legend-dot dot-cancelled"></span>
+                        <span>Annulée</span>
+                    </div>
+                </div>
+            </div>
+
+            {# Actions #}
+            <div class="sidebar-card">
+                <h6>Actions</h6>
+                <button class="btn btn-sm w-100 mb-2 rounded-3 fw-medium"
+                        style="background:#7F77DD;color:#fff;border:none"
+                        data-rm-open>
+                    <i class="bi bi-plus-lg me-1"></i>Nouvelle réunion
+                </button>
+                <button id="btn-today" class="btn btn-sm btn-outline-secondary w-100 mb-2 rounded-3">
+                    <i class="bi bi-calendar-check me-1"></i>Aujourd'hui
+                </button>
+                <button id="btn-toggle-view" class="btn btn-sm btn-outline-secondary w-100 rounded-3">
+                    <i class="bi bi-grid-3x3-gap me-1"></i>Changer la vue
+                </button>
+            </div>
+
+            {# Cette semaine #}
+            <div class="sidebar-card flex-grow-1" style="overflow-y:auto;">
+                <h6>Cette semaine</h6>
+                <div id="sidebar-week-events" class="text-muted" style="font-size:.8rem">
+                    Chargement…
+                </div>
+            </div>
+        </aside>
+
+        {# ── Calendar main ─────────────────────────────────────────────── #}
+        <div class="calendar-main position-relative">
+            <div id="reunion-calendar"></div>
+        </div>
+    </div>
+</div>
+
+{# ── Event detail popover ───────────────────────────────────────────────── #}
+<div id="event-popover">
+    <div class="pop-color-bar" id="pop-color-bar"></div>
+    <div class="pop-inner">
+        <div class="pop-header">
+            <span class="pop-title" id="pop-title"></span>
+            <button class="pop-close" id="pop-close" title="Fermer">×</button>
+        </div>
+
+        <div class="pop-badges">
+            <span class="pop-badge" id="pop-type-badge"></span>
+            <span class="pop-badge" id="pop-mode-badge"></span>
+        </div>
+
+        <div class="pop-meta-grid">
+            <div class="pop-meta">
+                <i class="bi bi-clock"></i>
+                <span id="pop-datetime"></span>
+            </div>
+            <div class="pop-meta" id="pop-duration-row">
+                <i class="bi bi-hourglass-split"></i>
+                <span id="pop-duration"></span>
+            </div>
+            <div class="pop-meta" id="pop-salle-row" style="display:none">
+                <i class="bi bi-geo-alt"></i>
+                <span id="pop-salle"></span>
+            </div>
+            <div class="pop-meta" id="pop-zoom-row" style="display:none">
+                <i class="bi bi-camera-video"></i>
+                <a id="pop-zoom-link" href="#" target="_blank" rel="noopener" style="color:#2563eb;font-weight:600;text-decoration:none;">
+                    Rejoindre Zoom
+                </a>
+            </div>
+            <div class="pop-meta" id="pop-organiser-row" style="display:none">
+                <i class="bi bi-person"></i>
+                <span id="pop-organiser"></span>
+            </div>
+        </div>
+
+        <div class="pop-desc" id="pop-desc"></div>
+
+        <div class="pop-divider"></div>
+
+        <div class="pop-actions">
+            <a href="#" id="pop-show-btn" class="btn btn-pop-show">
+                <i class="bi bi-eye"></i>Voir
+            </a>
+            <button type="button" id="pop-edit-btn" class="btn btn-pop-edit"
+                    onclick="if(window._currentEditUrl && window.rmOpenEdit) window.rmOpenEdit(window._currentEditUrl)">
+                <i class="bi bi-pencil"></i>Modifier
+            </button>
+            <button type="button" id="pop-delete-btn" class="btn btn-pop-delete">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+
+        {# Delete confirmation #}
+        <div id="pop-delete-confirm">
+            <p>⚠️ Supprimer cette réunion ?</p>
+            <div class="d-flex">
+                <button type="button" id="pop-delete-cancel" class="btn btn-outline-secondary btn-sm flex-fill">Annuler</button>
+                <form id="pop-delete-form" method="POST" action="" style="flex:1;margin-left:.4rem">
+                    <input type="hidden" name="_method" value="DELETE">
+                    <input type="hidden" name="_token" id="pop-delete-token" value="">
+                    <button type="submit" class="btn btn-danger btn-sm w-100">Confirmer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── New reunion modal ─────────────────────────────────────────────────── #}
+{% include 'PLANNIFICATION/reunion/_modal_nouvelle_reunion.html.twig' with {
+    form_create: form_create,
+    open_reunion_modal: open_reunion_modal
+} %}
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+    <script src="{{ asset('js/reunion_modal.js') }}"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+        /* ── Helpers ──────────────────────────────────────────────────── */
+        const fmtTime = iso => iso ? new Intl.DateTimeFormat('fr-FR', {
+            hour: '2-digit', minute: '2-digit'
+        }).format(new Date(iso)) : '—';
+
+        const fmtDate = iso => iso ? new Intl.DateTimeFormat('fr-FR', {
+            weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        }).format(new Date(iso)) : '—';
+
+        const fmtDuration = (startStr, endStr) => {
+            if (!startStr || !endStr) return null;
+            const diff = (new Date(endStr) - new Date(startStr)) / 60000;
+            if (diff <= 0) return null;
+            const h = Math.floor(diff / 60);
+            const m = diff % 60;
+            if (h === 0) return `${m} min`;
+            if (m === 0) return `${h}h`;
+            return `${h}h ${m}min`;
+        };
+
+        /* ── Popover ──────────────────────────────────────────────────── */
+        const popover  = document.getElementById('event-popover');
+        let   popOpen  = false;
+        let   currentEventId = null;
+
+        const hidePopover = () => {
+            popover.style.display = 'none';
+            popOpen = false;
+            document.getElementById('pop-delete-confirm').style.display = 'none';
+        };
+
+        document.getElementById('pop-close').addEventListener('click', hidePopover);
+        document.addEventListener('click', e => {
+            if (popOpen && !popover.contains(e.target)) hidePopover();
+        });
+
+        /* Delete flow */
+        document.getElementById('pop-delete-btn').addEventListener('click', () => {
+            const conf = document.getElementById('pop-delete-confirm');
+            conf.style.display = conf.style.display === 'none' ? 'block' : 'none';
+        });
+        document.getElementById('pop-delete-cancel').addEventListener('click', () => {
+            document.getElementById('pop-delete-confirm').style.display = 'none';
+        });
+
+        const showPopover = (info) => {
+            const p   = info.event.extendedProps || {};
+            const id  = info.event.id;
+            currentEventId = id;
+            const rec = info.el.getBoundingClientRect();
+            const color = info.event.backgroundColor || '#ef4444';
+
+            /* Color bar */
+            document.getElementById('pop-color-bar').style.background = color;
+
+            /* Title */
+            document.getElementById('pop-title').textContent = info.event.title;
+
+            /* Type badge */
+            const typeBadge = document.getElementById('pop-type-badge');
+            if (!p.statut) {
+                typeBadge.textContent = '🚫 Annulée';
+                typeBadge.className = 'pop-badge badge-cancelled';
+            } else {
+                const typeKey = (p.typeKey || 'MEETING').toLowerCase();
+                typeBadge.textContent = (p.typeIcon || '') + ' ' + (p.typeLabel || 'Réunion');
+                typeBadge.className   = 'pop-badge badge-' + typeKey;
+            }
+
+            /* Mode badge (en ligne / présentiel) */
+            const modeBadge = document.getElementById('pop-mode-badge');
+            if (p.enLigne) {
+                modeBadge.textContent  = '🎥 En ligne';
+                modeBadge.className    = 'pop-badge badge-online';
+                modeBadge.style.display = '';
+            } else {
+                modeBadge.textContent  = '🏢 Présentiel';
+                modeBadge.className    = 'pop-badge badge-presentiel';
+                modeBadge.style.display = '';
+            }
+
+            /* Date & time */
+            const startDate = new Date(info.event.startStr);
+            const endDate   = new Date(info.event.endStr);
+            const sameDay   = startDate.toDateString() === endDate.toDateString();
+            let datetimeText;
+            if (sameDay) {
+                datetimeText = new Intl.DateTimeFormat('fr-FR', {
+                    weekday: 'short', day: 'numeric', month: 'short'
+                }).format(startDate)
+                + ' · ' + fmtTime(info.event.startStr) + ' → ' + fmtTime(info.event.endStr);
+            } else {
+                datetimeText = fmtDate(info.event.startStr) + ' → ' + fmtDate(info.event.endStr);
+            }
+            document.getElementById('pop-datetime').textContent = datetimeText;
+
+            /* Duration */
+            const dur = fmtDuration(info.event.startStr, info.event.endStr);
+            const durRow = document.getElementById('pop-duration-row');
+            if (dur) {
+                document.getElementById('pop-duration').textContent = dur;
+                durRow.style.display = '';
+            } else {
+                durRow.style.display = 'none';
+            }
+
+            /* Salle */
+            const salleRow = document.getElementById('pop-salle-row');
+            if (p.salle && !p.enLigne) {
+                document.getElementById('pop-salle').textContent = p.salle;
+                salleRow.style.display = '';
+            } else {
+                salleRow.style.display = 'none';
+            }
+
+            /* Zoom link */
+            const zoomRow = document.getElementById('pop-zoom-row');
+            if (p.enLigne && p.zoomJoinUrl) {
+                document.getElementById('pop-zoom-link').href = p.zoomJoinUrl;
+                zoomRow.style.display = '';
+            } else {
+                zoomRow.style.display = 'none';
+            }
+
+            /* Organiser */
+            const orgRow = document.getElementById('pop-organiser-row');
+            if (p.organisateur) {
+                document.getElementById('pop-organiser').textContent = p.organisateur;
+                orgRow.style.display = '';
+            } else {
+                orgRow.style.display = 'none';
+            }
+
+            /* Description */
+            const descEl = document.getElementById('pop-desc');
+            let rawDesc = p.description || '';
+            // Remove type prefix tags from display
+            rawDesc = rawDesc.replace(/^\[(EVENT|ONBOARDING|OFFBOARDING|RESERVATION|MEETING)\]\s*/i, '');
+            descEl.textContent = rawDesc || '';
+
+            /* Action buttons */
+            document.getElementById('pop-show-btn').href = `/reunion/${id}`;
+
+            const editBtn = document.getElementById('pop-edit-btn');
+            window._currentEditUrl = `/reunion/${id}/edit`;
+            // also keep dataset for compatibility
+            editBtn.dataset.rmEditUrl = window._currentEditUrl;
+
+            /* Delete form */
+            const deleteForm = document.getElementById('pop-delete-form');
+            deleteForm.action = `/reunion/${id}`;
+            // CSRF token: pass from Twig if available, otherwise skip
+            const tokenInput = document.getElementById('pop-delete-token');
+            if (tokenInput && window._csrfTokens && window._csrfTokens['delete' + id]) {
+                tokenInput.value = window._csrfTokens['delete' + id];
+            }
+            document.getElementById('pop-delete-confirm').style.display = 'none';
+
+            /* Position popover */
+            const vw   = window.innerWidth;
+            const vh   = window.innerHeight;
+            let   left = rec.right + 12;
+            let   top  = rec.top;
+            if (left + 320 > vw) left = rec.left - 322;
+            if (left < 8) left = 8;
+            if (top  + 360 > vh) top = vh - 368;
+            if (top  < 8)        top = 8;
+
+            Object.assign(popover.style, { left: left+'px', top: top+'px', display: 'block' });
+            popOpen = true;
+        };
+
+        /* ── FullCalendar ─────────────────────────────────────────────── */
+        const views   = ['dayGridMonth','timeGridWeek','timeGridDay','listWeek'];
+        let   viewIdx = 0;
+
+        const calendar = new FullCalendar.Calendar(
+            document.getElementById('reunion-calendar'), {
+            locale: 'fr',
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left:   'prev,next today',
+                center: 'title',
+                right:  'dayGridMonth,timeGridWeek,timeGridDay,listWeek',
+            },
+            buttonText: {
+                today: "Aujourd'hui", month: 'Mois', week: 'Semaine',
+                day: 'Jour', list: 'Liste',
+            },
+            height: '100%',
+            nowIndicator: true,
+            dayMaxEvents: 4,
+            eventTimeFormat: {
+                hour: '2-digit',
+                minute: '2-digit',
+                meridiem: false,
+                hour12: false,
+            },
+            /* Show time + title in month view */
+            eventContent: function(arg) {
+                const props = arg.event.extendedProps || {};
+                const isOnline = props.enLigne;
+                const icon = isOnline ? '🎥' : '🏢';
+                if (arg.view.type === 'dayGridMonth') {
+                    const timeStr = arg.timeText ? `<span class="fc-event-time">${arg.timeText}</span> ` : '';
+                    return {
+                        html: `<div style="display:flex;align-items:center;gap:3px;padding:1px 3px;overflow:hidden">
+                            <span style="font-size:.7rem;flex-shrink:0">${icon}</span>
+                            ${timeStr}<span class="fc-event-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${arg.event.title}</span>
+                        </div>`
+                    };
+                }
+                // Week/day/list views — show full info
+                const dur = fmtDuration(arg.event.startStr, arg.event.endStr);
+                return {
+                    html: `<div style="padding:2px 4px;line-height:1.35">
+                        <div style="font-weight:700;font-size:.76rem;display:flex;align-items:center;gap:4px">
+                            <span>${icon}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${arg.event.title}</span>
+                        </div>
+                        ${dur ? `<div style="font-size:.68rem;opacity:.8">${arg.timeText}  (${dur})</div>` : ''}
+                    </div>`
+                };
+            },
+
+            eventDidMount: function(info) {
+                const p = info.event.extendedProps;
+                if (p.enLigne) info.el.classList.add('fc-reunion-online');
+                if (!p.statut) info.el.classList.add('fc-reunion-cancelled');
+            },
+
+            events: '{{ path("api_reunions") }}',
+
+            eventClick: (info) => {
+                info.jsEvent.preventDefault();
+                info.jsEvent.stopPropagation();
+                showPopover(info);
+            },
+
+            dateClick: (info) => {
+                if (window.rmPreFillDate) window.rmPreFillDate(info.dateStr.substring(0,10));
+                if (window.rmOpenModal)   window.rmOpenModal();
+            },
+
+            datesSet: function() {
+                updateSidebar();
+                updateLegend();
+            },
+            eventsSet: function() {
+                updateSidebar();
+                updateLegend();
+            },
+        });
+
+        calendar.render();
+
+        /* ── Legend visibility ────────────────────────────────────────── */
+        function updateLegend() {
+            const events = calendar.getEvents();
+            const show = (id, cond) => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = cond ? '' : 'none';
+            };
+            show('leg-meeting',     events.some(ev => (ev.extendedProps.typeKey || 'MEETING') === 'MEETING' && ev.extendedProps.statut));
+            show('leg-event',       events.some(ev => ev.extendedProps.typeKey === 'EVENT' && ev.extendedProps.statut));
+            show('leg-reservation', events.some(ev => ev.extendedProps.typeKey === 'RESERVATION' && ev.extendedProps.statut));
+            show('leg-onboarding',  events.some(ev => ev.extendedProps.typeKey === 'ONBOARDING' && ev.extendedProps.statut));
+            show('leg-offboarding', events.some(ev => ev.extendedProps.typeKey === 'OFFBOARDING' && ev.extendedProps.statut));
+            show('leg-cancelled',   events.some(ev => !ev.extendedProps.statut));
+        }
+
+        /* ── Sidebar "Cette semaine" ──────────────────────────────────── */
+        function updateSidebar() {
+            const now   = new Date();
+            const start = new Date(now);
+            start.setDate(now.getDate() - ((now.getDay() + 6) % 7)); // Monday
+            start.setHours(0,0,0,0);
+            const end = new Date(start);
+            end.setDate(start.getDate() + 6);
+            end.setHours(23,59,59,999);
+
+            const week = calendar.getEvents().filter(ev => ev.start >= start && ev.start <= end);
+            const box  = document.getElementById('sidebar-week-events');
+
+            if (!week.length) {
+                box.innerHTML = '<span style="color:#9ca3af;font-size:.78rem">Aucune réunion cette semaine.</span>';
+                return;
+            }
+
+            box.innerHTML = week
+                .sort((a,b) => a.start - b.start)
+                .map(ev => {
+                    const p    = ev.extendedProps;
+                    const icon = p.enLigne ? '🎥' : '🏢';
+                    const dur  = fmtDuration(ev.startStr, ev.endStr);
+                    return `<div class="mb-2 ps-2" style="border-left:3px solid ${ev.backgroundColor};padding-top:2px">
+                        <div style="font-weight:700;font-size:.78rem;color:#111827;display:flex;gap:4px;align-items:center">
+                            <span>${icon}</span><span>${ev.title}</span>
+                        </div>
+                        <div style="font-size:.7rem;color:#9ca3af">
+                            ${new Intl.DateTimeFormat('fr-FR',{weekday:'short',hour:'2-digit',minute:'2-digit'}).format(ev.start)}
+                            ${dur ? '· ' + dur : ''}
+                        </div>
+                    </div>`;
+                }).join('');
+        }
+
+        /* ── Control buttons ──────────────────────────────────────────── */
+        document.getElementById('btn-today').addEventListener('click', () => calendar.today());
+        document.getElementById('btn-toggle-view').addEventListener('click', () => {
+            viewIdx = (viewIdx + 1) % views.length;
+            calendar.changeView(views[viewIdx]);
+        });
+
+        /* Refresh after modal close */
+        const overlay = document.getElementById('rm-overlay');
+        if (overlay) {
+            const observer = new MutationObserver(() => {
+                if (!overlay.classList.contains('rm-overlay--open')) {
+                    calendar.refetchEvents();
+                }
+            });
+            observer.observe(overlay, { attributes: true, attributeFilter: ['class'] });
+        }
+    });
+    </script>
+{% endblock %}

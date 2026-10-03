@@ -1,0 +1,554 @@
+{# Publication Card Component - Reusable across Main Feed and Group Feed #}
+{# Parameters: pub, pubId, author, myReact, isSaved, userShares, currentUserId, publicationComments, currentUser, reactionStats, shareCount #}
+
+{% set authorFirst = author ? (author.firstName|default('')) : '' %}
+{% set authorLast = author ? (author.lastName|default('')) : '' %}
+{% set authorDept = author and author.departement ? author.departement : '' %}
+<div id="post-{{ pubId }}" data-publication="{{ pub.contenu|lower }} {{ authorFirst|lower }} {{ authorLast|lower }}{% if authorDept %} {{ authorDept|lower }}{% endif %}{% if pub.groupId %} {{ pub.groupId.name|lower }}{% endif %}" data-department="{% if authorDept %}{{ authorDept|lower }}{% endif %}" data-group="{% if pub.groupId %}{{ pub.groupId.name|lower }}{% endif %}" style="background:#fff;border-radius:16px;border:1.5px solid #E8EAF6;box-shadow:0 2px 12px rgba(108,92,231,0.05);margin-bottom:16px;overflow:hidden">
+
+    {# ── HEADER ── #}
+    {% if author %}
+    <div style="display:flex;align-items:center;gap:11px;padding:14px 16px 10px">
+
+        {# Avatar auteur #}
+        <div style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#74b9ff,#0984e3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:700;overflow:hidden;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
+            {% if author.avatarUrl %}
+                <img src="{{ author.avatarUrl }}" style="width:100%;height:100%;object-fit:cover">
+            {% else %}
+                {{ author.firstName|slice(0, 1)|upper }}{{ author.lastName|slice(0, 1)|upper }}
+            {% endif %}
+        </div>
+
+        {# Infos #}
+        <div style="flex:1;min-width:0">
+            <div style="font-size:13.5px;font-weight:700;color:#1A1D2E">
+                <a href="{{ path('social_profile_show', {id: author.id}) }}" style="color:#1A1D2E;text-decoration:none;cursor:pointer;transition:color 0.2s;border-bottom:2px solid transparent" onmouseover="this.style.color='#6C5CE7'; this.style.borderColor='#6C5CE7'" onmouseout="this.style.color='#1A1D2E'; this.style.borderColor='transparent'">
+                    {{ author.firstName }} {{ author.lastName }}
+                </a>
+                <span style="font-size:9px;font-weight:600;background:rgba(108,92,231,0.10);color:#6C5CE7;border-radius:20px;padding:2px 7px;margin-left:5px">
+                    {{ pub.visibility }}
+                </span>
+            </div>
+            <div style="font-size:11px;color:#A0A8CC;margin-top:1px">
+                {% if pub.groupId %}
+                    {% set colors = ['#3D7EE8', '#2DAA63', '#F5A623', '#E8392A'] %}
+                    {% set groupColor = colors[pub.groupId.id % 4] %}
+                    <span style="display:inline-flex;align-items:center;gap:5px;padding:2px 8px;background:rgba(0,0,0,0.04);border-radius:12px;border:1px solid {{ groupColor }};color:{{ groupColor }};font-size:10px;font-weight:600;margin-right:8px">
+                        🏘️ {{ pub.groupId.name }}
+                    </span>
+                {% endif %}
+                {{ author.bio ?? '' }}{% if author.bio %} · {% endif %}{{ pub.dateCreation|date('d/m/Y H:i') }}
+            </div>
+        </div>
+
+        {# Éditer & Supprimer (si auteur = user courant OU admin) #}
+        {% if (author and author.getId() == currentUserId) or currentUser.role == 'ADMIN' %}
+            <div style="position:relative">
+                <button type="button"
+                        onclick="togglePostMenu({{ pubId }})"
+                        style="background:none;border:none;font-size:20px;color:#A0A8CC;cursor:pointer;padding:4px 6px;border-radius:7px">⋮</button>
+                <div id="post-menu-{{ pubId }}" style="display:none;position:absolute;right:0;top:100%;background:#fff;border:1.5px solid #E8EAF6;border-radius:9px;box-shadow:0 4px 12px rgba(108,92,231,0.15);z-index:10;min-width:140px">
+                    {% if author and author.getId() == currentUserId %}
+                        <button type="button"
+                                onclick="openEditModal({{ pubId }}, '{{ pub.contenu|escape('js') }}', '{{ pub.visibility }}', {{ pub.groupId.id ?? 'null' }}); closePostMenu({{ pubId }})"
+                                style="width:100%;text-align:left;padding:10px 14px;border:none;background:none;cursor:pointer;font-size:13px;color:#4A5080;border-bottom:1px solid #F4F5FB;font-family:inherit">
+                            ✏️ Éditer
+                        </button>
+                        <button type="button"
+                                onclick="summarizePublishedPost('{{ pub.contenu|escape('js') }}'); closePostMenu({{ pubId }})"
+                                style="width:100%;text-align:left;padding:10px 14px;border:none;background:none;cursor:pointer;font-size:13px;color:#F5A623;border-bottom:1px solid #F4F5FB;font-family:inherit">
+                            📝 Résumer
+                        </button>
+                    {% endif %}
+                    <form action="{% if pub.groupId %}{{ path('social_groups_delete_post', { id: pub.groupId.id, postId: pubId }) }}{% else %}{{ path('social_feed_delete', { id: pubId }) }}{% endif %}" method="post"
+                          onsubmit="closePostMenu({{ pubId }}); return confirm('Supprimer cette publication ?')"
+                          style="display:block">
+                        <input type="hidden" name="returnUrl" value="{{ app.request.uri }}">
+                        <button type="submit" style="width:100%;text-align:left;padding:10px 14px;border:none;background:none;cursor:pointer;font-size:13px;color:#e57373;font-family:inherit">
+                            🗑️ Supprimer
+                        </button>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <div style="display:flex;align-items:center;gap:11px;padding:14px 16px 10px">
+        {% if pub.relatedEvent is not null %}
+        <div style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#f093fb,#f5576c);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:700">
+            📅
+        </div>
+        <div style="flex:1">
+            <div style="font-size:13.5px;font-weight:700;color:#1A1D2E">Événements</div>
+            <div style="font-size:11px;color:#A0A8CC;margin-top:1px">{{ pub.dateCreation|date('d/m/Y H:i') }}</div>
+        </div>
+        {% else %}
+        <div style="width:44px;height:44px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#74b9ff,#0984e3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700">
+            ?
+        </div>
+        <div style="flex:1">
+            <div style="font-size:13.5px;font-weight:700;color:#1A1D2E">Humania Bot</div>
+            <div style="font-size:11px;color:#A0A8CC;margin-top:1px">{{ pub.dateCreation|date('d/m/Y H:i') }}</div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {# ── CONTENU ── #}
+    <div style="padding:0 16px 12px">
+        {% if pub.relatedEvent is not null %}
+            {% set ev = pub.relatedEvent %}
+            <div style="background:linear-gradient(135deg,#fdfcfb,#e2d1c3);border-radius:14px;padding:18px 20px;margin-bottom:10px;border:1.5px solid #e8d5c4">
+                <div style="font-size:16px;font-weight:800;color:#1A1D2E;margin-bottom:10px">📢 {{ ev.titre }}</div>
+                <p style="font-size:13px;color:#4A5080;line-height:1.65;margin:0 0 14px 0">{{ ev.description }}</p>
+                <div style="display:flex;flex-wrap:wrap;gap:10px">
+                    <div style="display:inline-flex;align-items:center;gap:6px;background:#fff;border-radius:10px;padding:7px 12px;font-size:12px;color:#4A5080;border:1px solid #E8EAF6">
+                        📍 <strong>{{ ev.lieu }}</strong>
+                    </div>
+                    <div style="display:inline-flex;align-items:center;gap:6px;background:#fff;border-radius:10px;padding:7px 12px;font-size:12px;color:#4A5080;border:1px solid #E8EAF6">
+                        🗓️ <strong>{{ ev.dateHeureDebut|date('d/m/Y H:i') }}</strong>
+                    </div>
+                    <div style="display:inline-flex;align-items:center;gap:6px;background:#fff;border-radius:10px;padding:7px 12px;font-size:12px;color:#4A5080;border:1px solid #E8EAF6">
+                        🕐 <strong>{{ ev.dateHeureFin|date('d/m/Y H:i') }}</strong>
+                    </div>
+                    <div style="display:inline-flex;align-items:center;gap:6px;background:#fff;border-radius:10px;padding:7px 12px;font-size:12px;color:#4A5080;border:1px solid #E8EAF6">
+                        👥 <strong>{{ ev.nbParticipantsMax }} participants max</strong>
+                    </div>
+                </div>
+                <div style="margin-top:14px;display:flex;justify-content:flex-end;">
+                    <a href="{{ path('app_part_evenement_index') }}#event-{{ ev.id }}"
+                       style="display:inline-flex;align-items:center;gap:8px;
+                              padding:10px 20px;background:linear-gradient(135deg,#f5576c,#f093fb);
+                              color:#fff;border-radius:12px;font-weight:700;font-size:.88rem;
+                              text-decoration:none;box-shadow:0 4px 14px rgba(245,87,108,.35);
+                              transition:opacity .2s,transform .15s;"
+                       onmouseover="this.style.opacity='.88';this.style.transform='scale(1.03)'"
+                       onmouseout="this.style.opacity='1';this.style.transform='scale(1)'">
+                        📅 Rejoindre l'événement
+                    </a>
+                </div>
+            </div>
+        {% else %}
+            <p style="font-size:13.5px;color:#1A1D2E;line-height:1.65;margin:0">{{ pub.contenu|replace({'&#039;': "'", '&quot;': '"', '&lt;': '<', '&gt;': '>', '&amp;': '&'}) }}</p>
+        {% endif %}
+
+        {# Image (nullable !) #}
+        {% if pub.imageUrl is not null and pub.imageUrl != '' %}
+            <img src="{{ pub.imageUrl }}" alt=""
+                 style="width:100%;max-height:400px;object-fit:cover;border-radius:11px;margin-top:11px">
+        {% endif %}
+
+        {# GIF (nullable !) #}
+        {% if pub.gifUrl is not null and pub.gifUrl != '' %}
+            <img src="{{ pub.gifUrl }}" alt="GIF"
+                 style="width:100%;max-height:400px;object-fit:cover;border-radius:11px;margin-top:11px">
+        {% endif %}
+
+        {# Publication partagée (nested shared post) #}
+        {% if pub.sharedFromId is not null %}
+            {% set originalPub = pub.sharedFromId %}
+            {% set originalAuthor = originalPub.authorId %}
+            
+            {# Vérifier si la pub originale est supprimée #}
+            {% if originalPub.statut == 'SUPPRIME' %}
+                <div style="margin-top:12px;padding:13px 14px;background:#F3F4F6;border-radius:11px;border-left:4px solid #e57373;text-align:center">
+                    <div style="font-size:11px;color:#A0A8CC;font-style:italic">🗑️ Publication originale supprimée</div>
+                </div>
+            {% else %}
+                <div style="margin-top:12px;padding:13px 14px;background:#F3F4F6;border-radius:11px;border-left:4px solid #6C5CE7">
+                    
+                    {# Original author header #}
+                    <div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">
+                        <div style="width:32px;height:32px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#74b9ff,#0984e3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700;border:1px solid #E8EAF6">
+                            {% if originalAuthor %}
+                                {% if originalAuthor.avatarUrl %}
+                                    <img src="{{ originalAuthor.avatarUrl }}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">
+                                {% else %}
+                                    {{ originalAuthor.firstName|slice(0, 1)|upper }}{{ originalAuthor.lastName|slice(0, 1)|upper }}
+                                {% endif %}
+                            {% else %}👤{% endif %}
+                        </div>
+                        <div style="flex:1">
+                            <div style="font-size:12px;font-weight:700;color:#1A1D2E">
+                                {% if originalAuthor %}{{ originalAuthor.firstName }} {{ originalAuthor.lastName }}{% else %}Humania Bot{% endif %}
+                            </div>
+                            <div style="font-size:10px;color:#A0A8CC">{{ originalPub.dateCreation|date('d/m/Y H:i') }}</div>
+                        </div>
+                    </div>
+
+                    {# Original post content #}
+                    <div style="font-size:13px;color:#4A5080;line-height:1.6;margin-bottom:9px">
+                        {{ originalPub.contenu|replace({'&#039;': "'", '&quot;': '"', '&lt;': '<', '&gt;': '>', '&amp;': '&'})|slice(0, 300) }}{% if originalPub.contenu|length > 300 %}...{% endif %}
+                    </div>
+
+                    {# Original image (if exists) #}
+                    {% if originalPub.imageUrl is not null and originalPub.imageUrl != '' %}
+                        <img src="{{ originalPub.imageUrl }}" alt=""
+                             style="width:100%;max-height:250px;object-fit:cover;border-radius:8px">
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% endif %}
+    </div>
+
+    {# ── STATS ── #}
+    <div style="padding:5px 16px;border-top:1px solid #F4F5FB;display:flex;gap:14px;justify-content:space-between;align-items:center">
+        <div style="display:flex;gap:10px;font-size:11.5px;color:#A0A8CC;cursor:pointer;user-select:none" onclick="openReactionsModal({{ pubId }})">
+            {# Emoji cluster - show top reactions #}
+            {% set reactionCounts = reactionStats[pubId] ?? {} %}
+            {% set reactionEmojis = {'LIKE': '👍', 'LOVE': '❤️', 'LAUGH': '😂', 'WOW': '😮', 'SAD': '😢', 'ANGRY': '😠'} %}
+            <span style="display:flex;gap:2px;transition:opacity 0.2s" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">
+                {% for type, count in reactionCounts %}
+                    {% if loop.index0 < 3 %}
+                        <span title="{{ type }}: {{ count }}">{{ reactionEmojis[type] ?? '👍' }}</span>
+                    {% endif %}
+                {% endfor %}
+                {% if reactionCounts|length > 3 %}
+                    <span>+{{ reactionCounts|length - 3 }}</span>
+                {% endif %}
+            </span>
+            <span style="transition:opacity 0.2s" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">{{ pub.nombreReactions }}</span>
+        </div>
+        
+        <div style="display:flex;gap:10px;font-size:11.5px;color:#A0A8CC">
+            <span>💬 {{ pub.nombreCommentaires }}</span>
+            <span>📤 {{ shareCount[pubId] ?? 0 }}</span>
+        </div>
+    </div>
+
+    {# ── ACTIONS ── #}
+    <div style="display:flex;border-top:1px solid #F4F5FB;padding:3px 6px">
+
+        {# J'aime avec Reaction Picker #}
+        <div style="flex:1;position:relative" onmouseover="showReactionPicker({{ pubId }})" onmouseout="hideReactionPicker({{ pubId }})">
+            <button type="button" 
+                    onclick="submitReaction({{ pubId }}, '{{ myReact ?? 'LIKE' }}')"
+                    style="width:100%;padding:8px;border:none;border-radius:9px;background:transparent;cursor:pointer;font-size:12.5px;font-weight:{{ myReact ? '700' : '500' }};color:{{ myReact ? '#6C5CE7' : '#4A5080' }};font-family:inherit">
+                {{ {'LIKE': '👍', 'LOVE': '❤️', 'LAUGH': '😂', 'WOW': '😮', 'SAD': '😢', 'ANGRY': '😠'}[myReact] ?? '👍' }} J'aime
+            </button>
+            
+            {# Reaction Picker Popup #}
+            <div id="picker-{{ pubId }}" style="display:none;position:absolute;bottom:100%;left:0;background:#fff;border:1.5px solid #E8EAF6;border-radius:12px;box-shadow:0 -4px 16px rgba(108,92,231,0.2);padding:8px;margin-bottom:4px;z-index:100;gap:6px;flex-wrap:wrap;width:max-content">
+                <button type="button" onclick="submitReaction({{ pubId }}, 'LIKE')" style="background:none;border:none;font-size:28px;cursor:pointer;transition:all 0.2s;padding:4px;border-radius:8px" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">👍</button>
+                <button type="button" onclick="submitReaction({{ pubId }}, 'LOVE')" style="background:none;border:none;font-size:28px;cursor:pointer;transition:all 0.2s;padding:4px;border-radius:8px" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">❤️</button>
+                <button type="button" onclick="submitReaction({{ pubId }}, 'LAUGH')" style="background:none;border:none;font-size:28px;cursor:pointer;transition:all 0.2s;padding:4px;border-radius:8px" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">😂</button>
+                <button type="button" onclick="submitReaction({{ pubId }}, 'WOW')" style="background:none;border:none;font-size:28px;cursor:pointer;transition:all 0.2s;padding:4px;border-radius:8px" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">😮</button>
+                <button type="button" onclick="submitReaction({{ pubId }}, 'SAD')" style="background:none;border:none;font-size:28px;cursor:pointer;transition:all 0.2s;padding:4px;border-radius:8px" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">😢</button>
+                <button type="button" onclick="submitReaction({{ pubId }}, 'ANGRY')" style="background:none;border:none;font-size:28px;cursor:pointer;transition:all 0.2s;padding:4px;border-radius:8px" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">😠</button>
+            </div>
+        </div>
+
+        {# Commenter #}
+        <button onclick="toggleComments({{ pubId }})"
+            style="flex:1;padding:8px;border:none;border-radius:9px;background:transparent;cursor:pointer;font-size:12.5px;font-weight:500;color:#4A5080;font-family:inherit">
+            💬 Commenter
+        </button>
+
+        {# Partager #}
+        <button type="button"
+                onclick="openShareModal({{ pubId }}, '{{ pub.contenu|escape('js')|slice(0, 50) }}')"
+                style="flex:1;padding:8px;border:none;border-radius:9px;background:transparent;cursor:pointer;font-size:12.5px;font-weight:{{ userShares[pubId] ? '700' : '500' }};color:{{ userShares[pubId] ? '#10b981' : '#4A5080' }};font-family:inherit">
+            📤 {{ userShares[pubId] ? 'Partagé' : 'Partager' }}
+        </button>
+
+        {# Sauvegarder #}
+        <form action="{{ path('social_feed_save', { id: pubId }) }}" method="post" style="flex:1">
+            <input type="hidden" name="returnUrl" value="{{ app.request.uri }}">
+            <button type="submit" style="width:100%;padding:8px;border:none;border-radius:9px;background:transparent;cursor:pointer;font-size:12.5px;font-weight:{{ isSaved ? '700' : '500' }};color:{{ isSaved ? '#f59e0b' : '#4A5080' }};font-family:inherit">
+                🔖 {{ isSaved ? 'Sauvé' : 'Sauver' }}
+            </button>
+        </form>
+
+    </div>
+
+    {# ── COMMENTAIRES (toggle) ── #}
+    <div id="comments-{{ pubId }}" style="display:none;padding:0 14px 13px;border-top:1px solid #F4F5FB">
+
+        {# Formulaire #}
+        <form action="{{ path('social_feed_comment', { id: pubId }) }}" method="post"
+              style="display:flex;gap:9px;align-items:center;margin:11px 0;flex-wrap:wrap" id="commentForm-{{ pubId }}">
+            <input type="hidden" name="gifUrl" value="" id="commentGifUrl-{{ pubId }}">
+            <input type="hidden" name="returnUrl" value="{{ app.request.uri }}">
+            <div style="width:30px;height:30px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#A29BFE,#6C5CE7);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700;overflow:hidden;border:1.5px solid #fff">
+                {% if currentUser %}
+                    {% if currentUser.avatarUrl %}
+                        <img src="{{ currentUser.avatarUrl }}" style="width:100%;height:100%;object-fit:cover;">
+                    {% else %}
+                        {{ currentUser.firstName|slice(0, 1)|upper }}{{ currentUser.lastName|slice(0, 1)|upper }}
+                    {% endif %}
+                {% endif %}
+            </div>
+            <input type="text" name="contenu" placeholder="Écrire un commentaire..." required
+                   oninput="validateCommentInput(this)"
+                   style="flex:1;border:1.5px solid #E8EAF6;border-radius:24px;padding:8px 15px;font-size:12.5px;outline:none;font-family:inherit;background:#F4F5FB;min-width:150px">
+            <button type="button" onclick="openGifPickerModal('comment', {{ pubId }})" title="Ajouter un GIF"
+                    style="width:32px;height:32px;border-radius:50%;background:#6C5CE7;border:none;color:#fff;font-size:13px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">🎬</button>
+            <button type="submit" class="commentSubmitBtn" style="width:32px;height:32px;border-radius:50%;background:#6C5CE7;border:none;color:#fff;font-size:13px;cursor:pointer;flex-shrink:0;opacity:0.5">➤</button>
+        </form>
+        
+        {# GIF Preview for comment #}
+        <div id="commentGifPreview-{{ pubId }}" style="display:none;margin:8px 0 8px 40px;padding:8px;background:#F4F5FB;border-radius:8px;border:1.5px solid #E8EAF6"></div>
+
+        {# Liste commentaires (pré-chargés côté contrôleur pour éviter N+1) #}
+        {% set comments = publicationComments ?? [] %}
+        {% for comment in comments %}
+            {% set commentId = comment.getId() %}
+            {% set ca = comment.authorId %}
+            <div style="display:flex;gap:9px;margin-bottom:9px">
+                <div style="width:30px;height:30px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#74b9ff,#0984e3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700;overflow:hidden">
+                    {% if ca %}
+                        {% if ca.avatarUrl %}
+                            <img src="{{ ca.avatarUrl }}" style="width:100%;height:100%;object-fit:cover">
+                        {% else %}
+                            {{ ca.firstName|slice(0, 1)|upper }}{{ ca.lastName|slice(0, 1)|upper }}
+                        {% endif %}
+                    {% else %}👤{% endif %}
+                </div>
+                <div style="background:#F4F5FB;border-radius:13px 13px 13px 3px;padding:9px 13px;flex:1">
+                    <div style="font-size:11.5px;font-weight:700;color:#1A1D2E">{% if ca %}{{ ca.firstName }} {{ ca.lastName }}{% else %}Humania Bot{% endif %}</div>
+                    <div style="font-size:12.5px;color:#4A5080;margin-top:2px;line-height:1.5">{{ comment.contenu|replace({'&#039;': "'", '&quot;': '"', '&lt;': '<', '&gt;': '>', '&amp;': '&'}) }}</div>
+
+                    {# gifUrl nullable #}
+                    {% if comment.gifUrl is not null and comment.gifUrl != '' %}
+                        <img src="{{ comment.gifUrl }}" alt="gif" style="max-width:200px;border-radius:8px;margin-top:6px">
+                    {% endif %}
+
+                    <div style="font-size:10px;color:#A0A8CC;margin-top:4px">
+                        {{ comment.dateCreation|date('d/m H:i') }}
+                    </div>
+
+                    {# Reactions to comments #}
+                    <div style="display:flex;gap:6px;margin-top:6px;padding-top:6px;border-top:1px solid #E8EAF6">
+                        <form action="{{ path('social_feed_react_comment', { id: commentId }) }}" method="post" style="display:inline">
+                            <input type="hidden" name="type" value="LIKE">
+                            <input type="hidden" name="returnUrl" value="{{ app.request.uri }}">
+                            <button type="submit" style="background:none;border:none;font-size:11px;color:#A0A8CC;cursor:pointer;padding:2px 6px;border-radius:4px;font-weight:500">👍 {{ comment.nombreReactions }}</button>
+                        </form>
+
+                        {# Edit/Delete menu (authorized users only) #}
+                        {% if ca and (ca.getId() == currentUserId or currentUser.role == 'ADMIN') %}
+                        <div style="position:relative;margin-left:auto">
+                            <button type="button"
+                                    onclick="toggleCommentMenu({{ commentId }})"
+                                    style="background:none;border:none;font-size:13px;color:#A0A8CC;cursor:pointer;padding:2px 4px;border-radius:4px">⋮</button>
+                            <div id="comment-menu-{{ commentId }}" style="display:none;position:absolute;right:0;top:100%;background:#fff;border:1.5px solid #E8EAF6;border-radius:7px;box-shadow:0 2px 8px rgba(108,92,231,0.1);z-index:10;min-width:120px">
+                                {% if ca.getId() == currentUserId %}
+                                <button type="button"
+                                        onclick="openEditCommentModal({{ commentId }}, '{{ comment.contenu|escape('js') }}'); closeCommentMenu({{ commentId }})"
+                                        style="width:100%;text-align:left;padding:8px 12px;border:none;background:none;cursor:pointer;font-size:12px;color:#4A5080;border-bottom:1px solid #F4F5FB;font-family:inherit">
+                                        ✏️ Éditer
+                                </button>
+                                {% endif %}
+                                <form action="{{ path('social_feed_delete_comment', { id: commentId }) }}" method="post"
+                                      onsubmit="closeCommentMenu({{ commentId }}); return confirm('Supprimer ce commentaire ?')"
+                                      style="display:block">
+                                    <input type="hidden" name="returnUrl" value="{{ app.request.uri }}">
+                                    <button type="submit" style="width:100%;text-align:left;padding:8px 12px;border:none;background:none;cursor:pointer;font-size:12px;color:#e57373;font-family:inherit">
+                                        🗑️ Supprimer
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+
+    </div>
+
+</div>{# /post card #}
+
+{# ════════════════════════════════════════════════════════════════ #}
+{# REACTIONS MODAL                                                  #}
+{# ════════════════════════════════════════════════════════════════ #}
+<div id="reactionsModal-{{ pubId }}" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:14px;width:100%;max-width:500px;margin:0 16px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden;display:flex;flex-direction:column;max-height:70vh">
+        
+        {# Header #}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1.5px solid #E8EAF6;flex-shrink:0">
+            <h3 style="margin:0;font-size:15px;font-weight:700;color:#1A1D2E">Réactions</h3>
+            <button type="button" onclick="closeReactionsModal({{ pubId }})" style="background:none;border:none;font-size:24px;color:#A0A8CC;cursor:pointer;padding:0;line-height:1">×</button>
+        </div>
+
+        {# Tabs #}
+        <div style="display:flex;gap:8px;padding:12px 16px;border-bottom:1.5px solid #E8EAF6;overflow-x:auto;flex-shrink:0" id="reactions-tabs-{{ pubId }}">
+            <button type="button" class="reaction-tab active" onclick="filterReactions('{{ pubId }}', 'ALL')" style="padding:8px 14px;background:#F4F5FB;border:none;border-radius:20px;font-size:12px;font-weight:600;color:#6C5CE7;cursor:pointer;white-space:nowrap;transition:all 0.2s">
+                Toutes
+            </button>
+        </div>
+
+        {# Users List #}
+        <div style="flex:1;overflow-y:auto;padding:12px 16px" id="reactions-list-{{ pubId }}">
+            <div style="text-align:center;padding:20px;color:#A0A8CC">⏳ Chargement des réactions...</div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+// Store reactions data globally for filtering
+window.reactionsData = window.reactionsData || {};
+
+function openReactionsModal(pubId) {
+    console.log('Opening reactions modal for pubId:', pubId);
+    const modal = document.getElementById('reactionsModal-' + pubId);
+    if (!modal) {
+        console.error('Modal not found for pubId:', pubId);
+        return;
+    }
+    
+    // Fetch reactions data using direct URL
+    const url = '/social/feed/reactions/' + pubId;
+    console.log('Fetching from URL:', url);
+    
+    fetch(url)
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Reactions data:', data);
+            window.reactionsData[pubId] = data.reactions || {};
+            
+            // Build tabs
+            const tabsContainer = document.getElementById('reactions-tabs-' + pubId);
+            if (!tabsContainer) {
+                console.error('Tabs container not found');
+                return;
+            }
+            
+            // Clear existing tabs (keep "Toutes")
+            const tabs = tabsContainer.querySelectorAll('.reaction-tab');
+            tabs.forEach((tab, idx) => {
+                if (idx > 0) tab.remove();
+            });
+            
+            // Add tabs for each reaction type
+            Object.entries(data.reactions || {}).forEach(([type, info]) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'reaction-tab';
+                btn.textContent = info.emoji + ' ' + info.count;
+                btn.style.cssText = 'padding:8px 14px;background:#F4F5FB;border:none;border-radius:20px;font-size:12px;font-weight:600;color:#666;cursor:pointer;white-space:nowrap;transition:all 0.2s';
+                btn.onclick = (e) => filterReactions(pubId, type, e);
+                tabsContainer.appendChild(btn);
+            });
+            
+            // Display all reactions
+            filterReactions(pubId, 'ALL', null);
+            
+            // Show modal
+            modal.style.display = 'flex';
+        })
+        .catch(error => {
+            console.error('Error loading reactions:', error);
+            const listContainer = document.getElementById('reactions-list-' + pubId);
+            if (listContainer) {
+                listContainer.innerHTML = '<div style="text-align:center;padding:20px;color:#E74C3C">⚠️ Erreur: ' + error.message + '</div>';
+            }
+        });
+}
+
+function closeReactionsModal(pubId) {
+    const modal = document.getElementById('reactionsModal-' + pubId);
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function filterReactions(pubId, type, event) {
+    const reactions = window.reactionsData[pubId] || {};
+    const listContainer = document.getElementById('reactions-list-' + pubId);
+    const tabsContainer = document.getElementById('reactions-tabs-' + pubId);
+    
+    if (!listContainer) {
+        console.error('List container not found');
+        return;
+    }
+    
+    // Update active tab
+    tabsContainer.querySelectorAll('.reaction-tab').forEach(tab => {
+        tab.style.background = '#F4F5FB';
+        tab.style.color = '#666';
+    });
+    if (event && event.target) {
+        event.target.style.background = '#6C5CE7';
+        event.target.style.color = '#fff';
+    }
+    
+    // Build users list
+    let users = [];
+    
+    if (type === 'ALL') {
+        // Combine all users from all reaction types
+        Object.values(reactions).forEach(info => {
+            users = users.concat(info.users || []);
+        });
+    } else {
+        users = reactions[type]?.users || [];
+    }
+    
+    if (users.length === 0) {
+        listContainer.innerHTML = '<div style="text-align:center;padding:20px;color:#A0A8CC">Aucune réaction</div>';
+        return;
+    }
+    
+    // Render users
+    listContainer.innerHTML = '';
+    users.forEach(user => {
+        const userDiv = document.createElement('div');
+        userDiv.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px;margin:8px 0;background:#F4F5FB;border-radius:10px;cursor:pointer;transition:all 0.2s';
+        
+        // Avatar
+        const avatarDiv = document.createElement('div');
+        avatarDiv.style.cssText = 'width:44px;height:44px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#74b9ff,#0984e3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;overflow:hidden';
+        
+        if (user.avatarUrl && user.avatarUrl.trim()) {
+            const img = document.createElement('img');
+            img.src = user.avatarUrl;
+            img.style.cssText = 'width:100%;height:100%;object-fit:cover';
+            avatarDiv.appendChild(img);
+        } else {
+            avatarDiv.textContent = (user.firstName?.charAt(0) || 'U') + (user.lastName?.charAt(0) || 'U');
+        }
+        
+        // User info
+        const infoDiv = document.createElement('div');
+        infoDiv.style.cssText = 'flex:1;min-width:0';
+        infoDiv.innerHTML = `
+            <a href="/social/profile/${user.id}" style="text-decoration:none;color:inherit;cursor:pointer">
+                <div style="font-size:13px;font-weight:600;color:#1A1D2E;transition:color 0.2s">${user.firstName} ${user.lastName}</div>
+                <div style="font-size:11px;color:#A0A8CC">@${user.username || 'user'}</div>
+            </a>
+        `;
+        infoDiv.querySelector('a').style.cssText = 'text-decoration:none;color:inherit';
+        infoDiv.querySelector('a').addEventListener('mouseover', function() {
+            this.querySelector('div').style.color = '#6C5CE7';
+        });
+        infoDiv.querySelector('a').addEventListener('mouseout', function() {
+            this.querySelector('div').style.color = '#1A1D2E';
+        });
+        
+        userDiv.addEventListener('mouseover', function() {
+            this.style.background = '#EFEFFF';
+        });
+        userDiv.addEventListener('mouseout', function() {
+            this.style.background = '#F4F5FB';
+        });
+        
+        userDiv.appendChild(avatarDiv);
+        userDiv.appendChild(infoDiv);
+        listContainer.appendChild(userDiv);
+    });
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(e) {
+    document.querySelectorAll('[id^="reactionsModal-"]').forEach(modal => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+});
+</script>

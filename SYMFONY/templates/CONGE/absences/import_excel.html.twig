@@ -1,0 +1,117 @@
+{# templates/absence/import_excel.html.twig #}
+{% extends 'base.html.twig' %}
+
+{% block title %}Import Excel - Absences collectives{% endblock %}
+
+{% block body %}
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white;">
+            <h4 class="mb-0">📊 Import Excel - Absences collectives</h4>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <strong>Format du fichier Excel attendu :</strong>
+                <hr>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm">
+                        <thead class="table-primary">
+                            <tr>
+                                <th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>F</th><th>G</th>
+                            </tr>
+                            <tr>
+                                <th>Employé ID</th><th>Date Début</th><th>Date Fin</th><th>Heure Début</th><th>Heure Fin</th><th>Type ID</th><th>Motif</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>1</td><td>2025-03-10</td><td>2025-03-10</td><td>09:00</td><td>12:00</td><td>1</td><td>Formation</td></tr>
+                            <tr><td>2</td><td>2025-03-11</td><td>2025-03-11</td><td>14:00</td><td>17:00</td><td>2</td><td>Réunion</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="mb-0 text-muted">
+                    <small>📌 Les champs marqués en bleu sont obligatoires (A, B, F).<br>
+                    📌 Les heures au format HH:MM (24h).<br>
+                    📌 Le type ID correspond à l'id du type d'absence dans votre base.</small>
+                </p>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col">
+                    <a href="{{ path('app_absence_download_template') }}" class="btn btn-success">
+                        <i class="fas fa-download"></i> Télécharger le template Excel
+                    </a>
+                </div>
+            </div>
+
+            <form method="post" enctype="multipart/form-data" id="importForm">
+                <div class="mb-3">
+                    <label for="excel_file" class="form-label">Fichier Excel (.xlsx, .xls)</label>
+                    <input type="file" class="form-control" id="excel_file" name="excel_file" accept=".xlsx,.xls" required>
+                    <div class="form-text">Téléchargez un fichier Excel contenant les absences à importer.</div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="skip_first_row" name="skip_first_row" checked>
+                        <label class="form-check-label" for="skip_first_row">
+                            Ignorer la première ligne (en-têtes)
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="send_notifications" name="send_notifications">
+                        <label class="form-check-label" for="send_notifications">
+                            Envoyer les notifications par email
+                        </label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="submitBtn">
+                    <i class="fas fa-upload"></i> Importer les absences
+                </button>
+                <a href="{{ path('app_absence_index') }}" class="btn btn-secondary">Annuler</a>
+            </form>
+
+            <div id="progressBar" class="mt-3" style="display:none;">
+                <div class="progress">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%">0%</div>
+                </div>
+                <p class="mt-2 text-muted" id="progressText">Traitement en cours...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('importForm').addEventListener('submit', function() {
+        const submitBtn = document.getElementById('submitBtn');
+        const progressBar = document.getElementById('progressBar');
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importation...';
+        progressBar.style.display = 'block';
+        
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += 10;
+            if (progress <= 90) {
+                document.querySelector('.progress-bar').style.width = progress + '%';
+                document.querySelector('.progress-bar').innerHTML = progress + '%';
+            }
+        }, 500);
+        
+        setTimeout(() => clearInterval(interval), 5000);
+    });
+</script>
+
+<style>
+    .card { border-radius: 15px; overflow: hidden; }
+    .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); border: none; }
+    .btn-primary:hover { opacity: 0.9; }
+    .alert-info { background-color: #e8f4f8; border-color: #b8daf0; }
+</style>
+{% endblock %}

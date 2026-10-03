@@ -1,0 +1,303 @@
+{% extends 'base.html.twig' %}
+{% block title %}Mes Leçons – Humania{% endblock %}
+
+{% block body %}
+<div class="ml-wrapper">
+
+  {% set catAccents = {
+    'Technical Training':   '#2563EB',
+    'Management Training':  '#059669',
+    'Soft Skills':          '#7C3AED',
+    'DevOps':               '#D97706',
+    'Frontend':             '#0284C7',
+    'Cloud':                '#4F46E5',
+    'Soft Skills Avancées': '#DB2777',
+    'Autre':                '#6B7280',
+  } %}
+  {% set catEmojis = {
+    'Technical Training':   '🛠',
+    'Management Training':  '📊',
+    'Soft Skills':          '🤝',
+    'DevOps':               '☁️',
+    'Frontend':             '🎨',
+    'Cloud':                '☁️',
+    'Soft Skills Avancées': '💬',
+    'Autre':                '📘',
+  } %}
+
+  {# ══ HEADER ══════════════════════════════════════════════════════════════ #}
+  <div class="ml-header">
+    <div>
+      <h1 class="ml-title">Mon apprentissage</h1>
+      <p class="ml-sub">Suivez votre progression et continuez là où vous vous êtes arrêté</p>
+    </div>
+    <a href="{{ path('formation_catalog') }}" class="btn-catalog">Parcourir le catalogue →</a>
+  </div>
+
+  {# ══ FLASH ═══════════════════════════════════════════════════════════════ #}
+  {% for msg in app.flashes('success') %}<div class="flash-ok">{{ msg }}</div>{% endfor %}
+  {% for msg in app.flashes('error')   %}<div class="flash-err">{{ msg }}</div>{% endfor %}
+
+  {# ══ STAT CARDS ══════════════════════════════════════════════════════════ #}
+  <div class="ml-stats">
+
+    <div class="stat-card" style="--accent:#3B82F6">
+      <div class="stat-top">
+        <div class="stat-icon" style="background:#EFF6FF;color:#3B82F6">▶</div>
+        <div>
+          <div class="stat-num">{{ stats.inProgress }}</div>
+          <div class="stat-lbl">En cours</div>
+        </div>
+      </div>
+      <div class="stat-hint" style="color:#3B82F6">📚 Formations en cours</div>
+    </div>
+
+    <div class="stat-card" style="--accent:#10B981">
+      <div class="stat-top">
+        <div class="stat-icon" style="background:#D1FAE5;color:#059669">✓</div>
+        <div>
+          <div class="stat-num">{{ stats.completed }}</div>
+          <div class="stat-lbl">Terminées</div>
+        </div>
+      </div>
+      <div class="stat-hint" style="color:#10B981">🎓 Formations terminées</div>
+    </div>
+
+    <div class="stat-card" style="--accent:#F59E0B">
+      <div class="stat-top">
+        <div class="stat-icon" style="background:#FEF3C7;color:#D97706">⏱</div>
+        <div>
+          <div class="stat-num">{{ stats.totalHours }}h</div>
+          <div class="stat-lbl">Heures totales</div>
+        </div>
+      </div>
+      <div class="stat-hint" style="color:#F59E0B">⏰ Heures de formation cumulées</div>
+    </div>
+
+    <div class="stat-card" style="--accent:#8B5CF6">
+      <div class="stat-top">
+        <div class="stat-icon" style="background:#EDE9FE;color:#7C3AED">🏆</div>
+        <div>
+          <div class="stat-num">{{ stats.certificates }}</div>
+          <div class="stat-lbl">Certificats</div>
+        </div>
+      </div>
+      <div class="stat-hint" style="color:#8B5CF6">🎖 Certificats obtenus</div>
+    </div>
+
+  </div>
+
+  {# ══ FILTRES ════════════════════════════════════════════════════════════ #}
+  <form method="get" action="{{ path('mes_lecons_index') }}" class="ml-filters">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" name="search" value="{{ search }}"
+             placeholder="Search trainings…" class="search-input"
+             oninput="if(!this.value) this.form.submit()">
+    </div>
+    <select name="status" class="filter-select" onchange="this.form.submit()">
+      <option value="">Toutes </option>
+      <option value="In Progress" {{ filterStatus == 'In Progress' ? 'selected' : '' }}>En cours</option>
+      <option value="Completed"   {{ filterStatus == 'Completed'   ? 'selected' : '' }}>Terminées</option>
+    </select>
+    <select name="categorie" class="filter-select" onchange="this.form.submit()">
+      <option value="">All Categories</option>
+      {% for cat in categories %}
+        <option value="{{ cat }}" {{ filterCategory == cat ? 'selected' : '' }}>{{ cat }}</option>
+      {% endfor %}
+    </select>
+    {% if search or filterStatus or filterCategory %}
+      <a href="{{ path('mes_lecons_index') }}" class="btn-clear">✕ Clear</a>
+    {% endif %}
+  </form>
+
+  {# ══ CONTINUE LEARNING ══════════════════════════════════════════════════ #}
+  <div class="ml-section">
+    <div class="section-head">
+      <h2 class="section-title">Continuer l'apprentissage</h2>
+      <p class="section-sub">Reprendre là où vous vous êtes arrêté</p>
+    </div>
+
+    {% if inProgressList|length == 0 %}
+      <div class="empty-state">
+        <div style="font-size:2.5rem;margin-bottom:.5rem">📚</div>
+        <p>Vous n'avez aucune formation en cours. Commencez votre parcours d'apprentissage dès aujourd'hui !</p>
+          <a href="{{ path('formation_catalog') }}" class="link-catalog">Browse the catalog →</a>
+        </p>
+      </div>
+    {% else %}
+      <div class="cards-list">
+        {% for item in inProgressList %}
+          {% set cat    = item.categorie ?? 'Autre' %}
+          {% set accent = catAccents[cat] ?? '#4F46E5' %}
+          {% set pct    = item.progression_dynamic %}
+          {% set elapsed = (item.duree * 60 * pct / 100)|round %}
+
+          <div class="training-card" onclick="window.location='{{ path('mes_lecons_formation', {id: item.formation_id}) }}'">
+
+            <div class="card-thumb" style="background: linear-gradient(135deg, {{ catAccents[cat] ?? '#4F46E5' }}33 0%, transparent 100%)">
+              <span class="cat-emoji">{{ catEmojis[cat] ?? '📘' }}</span>
+            </div>
+
+            <div class="card-body">
+              <div class="cat-badge" style="background:{{ accent }}30;color:{{ accent }}">{{ cat }}</div>
+              <div class="card-title">{{ item.titre }}</div>
+
+              <div class="prog-row">
+                <span class="prog-lbl">Progress</span>
+                <span class="prog-pct">{{ pct }}%</span>
+              </div>
+              <div class="prog-track">
+                <div class="prog-fill" style="width:{{ pct }}%;background:{{ accent }}"></div>
+              </div>
+
+              <div class="meta-row">
+                <span>⏱ {{ (elapsed / 60)|round }}h {{ elapsed % 60 }}m / {{ item.duree }}h</span>
+                <span>☰ {{ item.done_modules }}/{{ item.total_modules }} modules</span>
+                {% if item.dateInscription %}
+                  <span>📅 {{ item.dateInscription|date('d/m/Y') }}</span>
+                {% endif %}
+              </div>
+
+              <div class="card-footer">
+                <span class="next-hint">Next: continue training</span>
+                <a href="{{ path('mes_lecons_formation', {id: item.formation_id}) }}"
+                   class="btn-resume" style="background:{{ accent }}"
+                   onclick="event.stopPropagation()">▶ Resume</a>
+              </div>
+            </div>
+
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+
+  {# ══ COMPLETED COURSES ══════════════════════════════════════════════════ #}
+  <div class="ml-section">
+    <div class="section-head">
+      <h2 class="section-title">Formations terminées</h2>
+    </div>
+
+    {% if completedList|length == 0 %}
+      <p class="empty-small">Aucune formation terminée.</p>
+    {% else %}
+      <div class="completed-list">
+        {% for item in completedList %}
+          {% set cat    = item.categorie ?? 'Autre' %}
+          {% set accent = catAccents[cat] ?? '#4F46E5' %}
+          {% set note   = item.noteFinale %}
+          {% set gc = note >= 90 ? '#059669' : (note >= 70 ? '#2563EB' : '#DC2626') %}
+          {% set gb = note >= 90 ? '#D1FAE5' : (note >= 70 ? '#DBEAFE' : '#FEE2E2') %}
+          {% set mention = note >= 90 ? 'Excellent' : (note >= 80 ? 'Very Good' : (note >= 70 ? 'Good' : (note >= 60 ? 'Pass' : 'Insufficient'))) %}
+
+          <div class="completed-row">
+            <div class="check-circle">✓</div>
+            <div class="completed-info">
+              <div class="completed-title">{{ item.titre }}</div>
+              <div class="completed-meta">
+                <span class="cat-badge-sm" style="background:{{ accent }}18;color:{{ accent }}">{{ cat }}</span>
+                {% if item.dateInscription %}
+                  <span>📅 {{ item.dateInscription|date('d/m/Y') }}</span>
+                {% endif %}
+              </div>
+            </div>
+            <div class="grade-box" style="background:{{ gb }};color:{{ gc }}">
+              <span class="grade-pct">{{ note|round }}%</span>
+              <span class="grade-mention">{{ mention }}</span>
+            </div>
+            <a href="{{ path('mes_lecons_formation', {id: item.formation_id}) }}"
+               class="btn-cert" style="border-color:{{ accent }};color:{{ accent }}">
+              🏆 Certificate
+            </a>
+          </div>
+
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<style>
+:root{--p:#4F46E5;--g50:#F8FAFC;--g100:#F1F5F9;--g200:#E2E8F0;--g500:#64748B;--g900:#0F172A}
+*{box-sizing:border-box}
+.ml-wrapper{padding:2rem;max-width:1200px;margin:0 auto}
+
+/* Header */
+.ml-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.75rem}
+.ml-title{font-size:2rem;font-weight:800;color:var(--g900);margin:0}
+.ml-sub{color:var(--g500);font-size:.95rem;margin:4px 0 0}
+.btn-catalog{background:#2563EB;color:white;padding:11px 24px;border-radius:12px;text-decoration:none;font-weight:700;font-size:.9rem}
+.btn-catalog:hover{background:#1D4ED8;color:white}
+.flash-ok{background:#D1FAE5;color:#065F46;padding:12px 16px;border-radius:10px;font-weight:600;margin-bottom:1rem}
+.flash-err{background:#FEE2E2;color:#991B1B;padding:12px 16px;border-radius:10px;font-weight:600;margin-bottom:1rem}
+
+/* Stats */
+.ml-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
+.stat-card{background:white;border-radius:14px;border:1px solid var(--g200);overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.stat-card::before{content:'';display:block;height:4px;background:var(--accent)}
+.stat-top{display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem .25rem}
+.stat-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:800;flex-shrink:0}
+.stat-num{font-size:2rem;font-weight:800;color:var(--g900);line-height:1}
+.stat-lbl{font-size:.8rem;color:var(--g500);margin-top:2px}
+.stat-hint{font-size:.72rem;font-weight:700;padding:.4rem 1.25rem .9rem}
+
+/* Filtres */
+.ml-filters{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;background:white;padding:1rem 1.25rem;border-radius:14px;border:1px solid var(--g200);margin-bottom:1.75rem}
+.search-wrap{position:relative;flex:1;min-width:200px}
+.search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%)}
+.search-input{width:100%;padding:9px 12px 9px 34px;border:1px solid var(--g200);border-radius:8px;font-size:.88rem;outline:none;background:var(--g50)}
+.search-input:focus{border-color:var(--p);box-shadow:0 0 0 3px #4F46E520}
+.filter-select{padding:9px 12px;border:1px solid var(--g200);border-radius:8px;font-size:.88rem;min-width:140px;outline:none;background:var(--g50)}
+.btn-clear{padding:9px 14px;border-radius:8px;text-decoration:none;color:var(--g500);font-size:.85rem;background:var(--g100)}
+
+/* Sections */
+.ml-section{margin-bottom:2.5rem}
+.section-head{margin-bottom:1.25rem}
+.section-title{font-size:1.3rem;font-weight:800;color:var(--g900);margin:0}
+.section-sub{font-size:.88rem;color:var(--g500);margin:3px 0 0}
+.empty-state{text-align:center;padding:3rem;background:white;border-radius:14px;border:2px dashed var(--g200);color:var(--g500)}
+.empty-small{color:var(--g500);font-size:.9rem;padding:.5rem 0}
+.link-catalog{color:var(--p);font-weight:600;text-decoration:none}
+
+/* Training cards */
+.cards-list{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem}
+.training-card{display:flex;flex-direction:column;background:white;border-radius:16px;border:1px solid var(--g200);overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.06);cursor:pointer;transition:box-shadow .2s,transform .2s}
+.training-card:hover{box-shadow:0 6px 20px rgba(0,0,0,.12);transform:translateY(-2px)}
+.card-thumb{width:100%;min-width:unset;height:160px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:.5rem}
+.cat-emoji{font-size:2.5rem}
+.card-body{flex:1;padding:1.25rem 1.5rem;display:flex;flex-direction:column;gap:.4rem}
+.cat-badge{display:inline-block;font-size:.72rem;font-weight:800;padding:3px 10px;border-radius:6px;align-self:flex-start;margin-bottom:.15rem}
+.card-title{font-size:1.05rem;font-weight:800;color:var(--g900)}
+.prog-row{display:flex;justify-content:space-between;align-items:center;margin-top:.25rem}
+.prog-lbl{font-size:.8rem;color:var(--g500)}
+.prog-pct{font-size:.85rem;font-weight:700;color:var(--g900)}
+.prog-track{height:7px;background:var(--g100);border-radius:4px;overflow:hidden;margin:.3rem 0 .5rem}
+.prog-fill{height:100%;border-radius:4px;transition:width .4s}
+.meta-row{display:flex;gap:1rem;font-size:.78rem;color:var(--g500);flex-wrap:wrap}
+.card-footer{display:flex;align-items:center;margin-top:auto;padding-top:.5rem}
+.next-hint{font-size:.78rem;color:#9CA3AF;flex:1}
+.btn-resume{color:white;text-decoration:none;padding:9px 22px;border-radius:20px;font-size:.85rem;font-weight:700;white-space:nowrap}
+.btn-resume:hover{opacity:.88;color:white}
+
+/* Completed */
+.completed-list{display:flex;flex-direction:column;gap:.75rem}
+.completed-row{display:flex;align-items:center;gap:1rem;background:white;border-radius:14px;border:1px solid var(--g200);padding:1.1rem 1.25rem;box-shadow:0 1px 4px rgba(0,0,0,.05);transition:box-shadow .2s}
+.completed-row:hover{box-shadow:0 4px 14px rgba(0,0,0,.09)}
+.check-circle{width:40px;height:40px;border-radius:50%;background:#D1FAE5;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:800;color:#059669;flex-shrink:0}
+.completed-info{flex:1;min-width:0}
+.completed-title{font-size:.95rem;font-weight:700;color:var(--g900)}
+.completed-meta{display:flex;gap:.75rem;font-size:.78rem;color:var(--g500);margin-top:4px;flex-wrap:wrap;align-items:center}
+.cat-badge-sm{font-size:.7rem;font-weight:800;padding:2px 8px;border-radius:5px}
+.grade-box{padding:8px 16px;border-radius:10px;text-align:center;flex-shrink:0}
+.grade-pct{display:block;font-size:1rem;font-weight:800}
+.grade-mention{display:block;font-size:.68rem;font-weight:600}
+.btn-cert{padding:8px 16px;border-radius:10px;border:1.5px solid;background:transparent;font-size:.8rem;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0}
+.btn-cert:hover{opacity:.8}
+
+@media(max-width:1024px){.ml-stats{grid-template-columns:repeat(2,1fr)}.cards-list{grid-template-columns:1fr}}
+@media(max-width:768px){.ml-header{flex-direction:column;gap:1rem}}
+@media(max-width:480px){.ml-stats{grid-template-columns:1fr}}
+</style>
+{% endblock %}

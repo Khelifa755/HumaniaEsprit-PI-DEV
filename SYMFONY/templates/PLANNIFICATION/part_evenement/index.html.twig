@@ -1,0 +1,395 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mes Événements — Humania{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+/* ── Page header ─────────────────────────────────────────────────────────── */
+.page-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 24px; gap: 1rem; flex-wrap: wrap;
+}
+.page-header-text h1 { font-size: 1.75rem; font-weight: 700; margin: 0 0 4px; color: #0f172a; }
+.page-header-text p  { margin: 0; color: #94a3b8; font-size: .9rem; }
+
+/* ── Flash messages ──────────────────────────────────────────────────────── */
+.flash { padding: .72rem 1rem; border-radius: 10px; font-size: .9rem; font-weight: 500; margin-bottom: 14px; }
+.flash-success { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+.flash-error   { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+/* ── Search bar ──────────────────────────────────────────────────────────── */
+.search-bar {
+    display: flex; align-items: center; gap: 10px;
+    background: #fff; border: 1.5px solid #e2e8f0; border-radius: 14px;
+    padding: 10px 16px; margin-bottom: 20px; max-width: 420px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.search-bar input {
+    border: none; outline: none; font-size: .9rem;
+    font-family: inherit; color: #0f172a; background: transparent; flex: 1;
+}
+.search-bar input::placeholder { color: #94a3b8; }
+
+/* ── Cards grid ──────────────────────────────────────────────────────────── */
+.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 18px; }
+
+/* ── Event card ──────────────────────────────────────────────────────────── */
+.event-card {
+    background: #fff; border-radius: 14px; border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08); padding: 20px;
+    display: flex; flex-direction: column; gap: .85rem;
+    transition: box-shadow .18s, transform .18s;
+}
+.event-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,.09); transform: translateY(-1px); }
+.event-card.is-joined { border-left: 4px solid #10b981; }
+
+.card-header { display: flex; justify-content: space-between; gap: .5rem; align-items: flex-start; }
+.card-title  { font-weight: 700; margin: 0 0 .25rem; font-size: 1rem; color: #0f172a; line-height: 1.35; }
+.card-desc   { margin: 0; color: #94a3b8; font-size: .84rem; line-height: 1.45; }
+
+.badge            { padding: .2rem .6rem; border-radius: 99px; font-size: .72rem; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+.badge-upcoming   { background: #2563eb; color: #fff; }
+.badge-joined     { background: #10b981; color: #fff; }
+.badge-full       { background: #64748b; color: #fff; }
+
+.card-meta   { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 8px; }
+.meta-item   { display: flex; align-items: center; gap: 5px; font-size: .8rem; color: #64748b; }
+
+.capacity-label { display: flex; justify-content: space-between; font-size: .78rem; color: #64748b; margin-bottom: 5px; }
+.capacity-bar   { height: 6px; background: #f1f5f9; border-radius: 99px; overflow: hidden; }
+.capacity-fill  { height: 100%; border-radius: 99px; background: #2563eb; }
+.capacity-fill.is-full { background: #ef4444; }
+
+/* ── Card footer ─────────────────────────────────────────────────────────── */
+.card-footer {
+    display: flex; gap: 8px; align-items: stretch;
+    padding-top: 14px; border-top: 1px solid #f1f5f9; margin-top: auto;
+    flex-wrap: wrap;
+}
+
+.btn-details {
+    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+    flex: 1; padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 10px;
+    background: #fff; color: #1e293b; font-size: .82rem; font-weight: 600;
+    cursor: pointer; font-family: inherit; transition: background .15s, border-color .15s;
+    white-space: nowrap;
+}
+.btn-details:hover { background: #f8fafc; border-color: #cbd5e1; }
+
+.btn-join {
+    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+    flex: 1; padding: 8px 10px; border-radius: 10px; font-size: .82rem; font-weight: 700;
+    border: none; background: #2563eb; color: #fff; cursor: pointer;
+    font-family: inherit; transition: background .18s;
+    white-space: nowrap;
+}
+.btn-join:hover { background: #1d4ed8; }
+.btn-join:disabled { background: #94a3b8; cursor: not-allowed; opacity: .7; }
+
+.btn-cancel-part {
+    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+    flex: 1; padding: 8px 10px; border-radius: 10px; font-size: .82rem; font-weight: 700;
+    background: #fff; color: #ef4444; border: 2px solid #ef4444;
+    cursor: pointer; font-family: inherit; transition: background .18s, color .18s;
+    white-space: nowrap;
+}
+.btn-cancel-part:hover { background: #ef4444; color: #fff; }
+
+.btn-badge {
+    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+    flex: 1; padding: 8px 10px; border-radius: 10px; font-size: .82rem; font-weight: 700;
+    background: #10b981; color: #fff; border: none;
+    cursor: pointer; font-family: inherit; text-decoration: none;
+    transition: background .18s; white-space: nowrap;
+}
+.btn-badge:hover { background: #059669; }
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+.empty-grid {
+    grid-column: 1 / -1; text-align: center; padding: 3.5rem 2rem;
+    color: #94a3b8; background: #fff; border-radius: 14px;
+    border: 1.5px dashed #e2e8f0;
+}
+.empty-grid p:first-child { font-size: 2.5rem; margin: 0 0 .75rem; }
+
+/* ══ Details Modal ════════════════════════════════════════════════════════════ */
+.modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(15,23,42,.5);
+    display: none; align-items: center; justify-content: center;
+    z-index: 900;
+}
+.modal-overlay.is-open { display: flex; }
+
+.modal-box {
+    background: #fff; border-radius: 16px;
+    box-shadow: 0 12px 48px rgba(15,23,42,.18);
+    width: 520px; max-width: 95vw; max-height: 90vh; overflow-y: auto;
+    animation: moUp .18s ease;
+}
+@keyframes moUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+.modal-head {
+    position: relative; padding: 1.1rem 1.5rem 1rem;
+    border-bottom: 1.5px solid #f1f5f9;
+}
+.modal-title { font-size: 1.1rem; font-weight: 800; color: #0f172a; margin: 0; }
+.modal-close {
+    position: absolute; top: .9rem; right: 1.1rem;
+    background: none; border: none; font-size: 1.1rem;
+    color: #94a3b8; cursor: pointer; line-height: 1; transition: color .15s;
+}
+.modal-close:hover { color: #0f172a; }
+
+.modal-body { padding: 1.25rem 1.5rem 1.5rem; }
+
+.detail-row {
+    display: flex; gap: .75rem; align-items: flex-start;
+    padding: .65rem 0; border-bottom: 1px solid #f8fafc;
+    font-size: .9rem; color: #374151;
+}
+.detail-row:last-child { border-bottom: none; }
+.detail-row strong { min-width: 130px; color: #0f172a; font-weight: 700; }
+
+.detail-section-title {
+    font-size: .75rem; font-weight: 700; color: #94a3b8;
+    text-transform: uppercase; letter-spacing: .06em;
+    margin: 1rem 0 .4rem;
+}
+</style>
+{% endblock %}
+
+{% block body %}
+<div id="part-evenement-root">
+
+{# ── Flash ── #}
+{% for msg in app.flashes('success') %}
+    <div class="flash flash-success">✅ {{ msg }}</div>
+{% endfor %}
+{% for msg in app.flashes('error') %}
+    <div class="flash flash-error">⚠ {{ msg }}</div>
+{% endfor %}
+
+{# ── Page header ── #}
+<div class="page-header">
+    <div class="page-header-text">
+        <h1>📅 Événements à venir</h1>
+        <p>Inscrivez-vous aux événements et téléchargez votre badge de participation</p>
+    </div>
+</div>
+
+{# ── Search ── #}
+<div class="search-bar">
+    <span aria-hidden="true">🔍</span>
+    <input type="search" id="searchEv" placeholder="Rechercher un événement…"
+           autocomplete="off" oninput="filterCards()">
+</div>
+
+{# ── Cards grid ── #}
+<div class="cards-grid" id="cardsGrid">
+{% for evenement in evenements %}
+
+    {% set isJoined  = joinedIds[evenement.id] is defined %}
+    {% set confirmed = countsByEvent[evenement.id]|default(0) %}
+    {% set isFull    = evenement.nbParticipantsMax > 0 and confirmed >= evenement.nbParticipantsMax %}
+    {% set pct       = evenement.nbParticipantsMax > 0 ? ((confirmed / evenement.nbParticipantsMax) * 100)|round : 0 %}
+
+    <div class="event-card{{ isJoined ? ' is-joined' : '' }}"
+         data-title="{{ evenement.titre|lower }}">
+
+        {# ── Header ── #}
+        <div class="card-header">
+            <div>
+                <p class="card-title">{{ evenement.titre }}</p>
+                <p class="card-desc">
+                    {{ evenement.description|slice(0, 100) }}{% if evenement.description|length > 100 %}…{% endif %}
+                </p>
+            </div>
+            {% if isJoined %}
+                <span class="badge badge-joined">✓ Inscrit</span>
+            {% elseif isFull %}
+                <span class="badge badge-full">Complet</span>
+            {% else %}
+                <span class="badge badge-upcoming">📅 À venir</span>
+            {% endif %}
+        </div>
+
+        {# ── Meta info ── #}
+        <div class="card-meta">
+            <span class="meta-item">
+                {# calendar icon #}
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                {{ evenement.dateEvenement ? evenement.dateEvenement|date('d M Y') : '—' }}
+            </span>
+            <span class="meta-item">
+                {# pin icon #}
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+                {{ evenement.lieu ?: '—' }}
+            </span>
+            <span class="meta-item">
+                {# users icon #}
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                {{ confirmed }} / {{ evenement.nbParticipantsMax ?: '∞' }}
+            </span>
+            <span class="meta-item">
+                {# clock icon #}
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                {{ evenement.dateHeureDebut ? evenement.dateHeureDebut|date('H:i') : '—' }}
+                – {{ evenement.dateHeureFin ? evenement.dateHeureFin|date('H:i') : '—' }}
+            </span>
+        </div>
+
+        {# ── Capacity bar ── #}
+        <div>
+            <div class="capacity-label">
+                <span>Capacité</span><span>{{ pct }}%</span>
+            </div>
+            <div class="capacity-bar">
+                <div class="capacity-fill{{ isFull ? ' is-full' : '' }}" style="width:{{ pct > 100 ? 100 : pct }}%"></div>
+            </div>
+        </div>
+
+        {# ── Footer buttons ── #}
+        <div class="card-footer">
+
+            {# Details button opens the modal #}
+            <button type="button" class="btn-details"
+                    onclick="openDetailsModal(
+                        '{{ evenement.titre|e('js') }}',
+                        '{{ evenement.description|default('')|e('js') }}',
+                        '{{ evenement.lieu|default('—')|e('js') }}',
+                        '{{ evenement.dateEvenement ? evenement.dateEvenement|date('d/m/Y') : '—' }}',
+                        '{{ evenement.dateHeureDebut ? evenement.dateHeureDebut|date('H:i') : '—' }}',
+                        '{{ evenement.dateHeureFin   ? evenement.dateHeureFin|date('H:i')   : '—' }}',
+                        {{ confirmed }},
+                        {{ evenement.nbParticipantsMax|default(0) }}
+                    )">
+                👁 Détails
+            </button>
+
+            {% if isJoined %}
+                {# Badge link #}
+                <a href="{{ path('app_part_evenement_badge', {'id': evenement.id}) }}"
+                   class="btn-badge">🎫 Badge</a>
+
+                {# Cancel form with CSRF #}
+                <form method="post"
+                      action="{{ path('app_part_evenement_cancel', {'id': evenement.id}) }}"
+                      onsubmit="return confirm('Annuler votre participation à « {{ evenement.titre|e('js') }} » ?');"
+                      style="display:contents;">
+                    <input type="hidden" name="_token"
+                           value="{{ csrf_token('cancel_event_' ~ evenement.id) }}">
+                    <button type="submit" class="btn-cancel-part">✕ Annuler</button>
+                </form>
+
+            {% elseif not isFull %}
+                {# Join form with CSRF #}
+                <form method="post"
+                      action="{{ path('app_part_evenement_join', {'id': evenement.id}) }}"
+                      style="display:contents;">
+                    <input type="hidden" name="_token"
+                           value="{{ csrf_token('join_event_' ~ evenement.id) }}">
+                    <button type="submit" class="btn-join">➕ Participer</button>
+                </form>
+
+            {% else %}
+                {# Event is full and user is not joined #}
+                <button type="button" class="btn-join" disabled>🚫 Complet</button>
+            {% endif %}
+
+        </div>
+
+    </div>
+{% else %}
+    <div class="empty-grid">
+        <p>📭</p>
+        <p>Aucun événement à venir pour le moment.</p>
+        <p style="font-size:.82rem;">Revenez bientôt !</p>
+    </div>
+{% endfor %}
+</div>{# /cards-grid #}
+
+</div>{# /part-evenement-root #}
+
+
+{# ════════════════════════════════════════════════════════════════════════════
+   MODAL — Détails de l'événement
+════════════════════════════════════════════════════════════════════════════ #}
+<div id="modalDetails" class="modal-overlay" onclick="if(event.target===this)closeDetailsModal()">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h3 class="modal-title" id="mdTitle">Détails de l'événement</h3>
+            <button class="modal-close" onclick="closeDetailsModal()" aria-label="Fermer">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="detail-section-title">📅 Informations générales</div>
+
+            <div class="detail-row">
+                <strong>Titre :</strong>
+                <span id="mdTitreVal"></span>
+            </div>
+            <div class="detail-row">
+                <strong>Description :</strong>
+                <span id="mdDescVal" style="white-space:pre-line;"></span>
+            </div>
+            <div class="detail-row">
+                <strong>Lieu :</strong>
+                <span id="mdLieuVal"></span>
+            </div>
+            <div class="detail-row">
+                <strong>Date :</strong>
+                <span id="mdDateVal"></span>
+            </div>
+            <div class="detail-row">
+                <strong>Horaires :</strong>
+                <span id="mdHeuresVal"></span>
+            </div>
+
+            <div class="detail-section-title">👥 Participation</div>
+            <div class="detail-row">
+                <strong>Inscrits / Max :</strong>
+                <span id="mdCapaciteVal"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+(function () {
+    'use strict';
+
+    /* ── Details modal ────────────────────────────────────────────────────── */
+    window.openDetailsModal = function (titre, desc, lieu, date, debut, fin, confirmed, max) {
+        document.getElementById('mdTitle').textContent    = '📋 ' + titre;
+        document.getElementById('mdTitreVal').textContent = titre;
+        document.getElementById('mdDescVal').textContent  = desc || '—';
+        document.getElementById('mdLieuVal').textContent  = lieu || '—';
+        document.getElementById('mdDateVal').textContent  = date;
+        document.getElementById('mdHeuresVal').textContent = debut + ' – ' + fin;
+        document.getElementById('mdCapaciteVal').textContent =
+            confirmed + ' / ' + (max > 0 ? max : '∞');
+        document.getElementById('modalDetails').classList.add('is-open');
+    };
+
+    window.closeDetailsModal = function () {
+        document.getElementById('modalDetails').classList.remove('is-open');
+    };
+
+    /* ── Escape key ───────────────────────────────────────────────────────── */
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') window.closeDetailsModal();
+    });
+
+    /* ── Search / filter ──────────────────────────────────────────────────── */
+    window.filterCards = function () {
+        var q = (document.getElementById('searchEv').value || '').toLowerCase();
+        document.querySelectorAll('#cardsGrid .event-card').forEach(function (card) {
+            card.style.display = (card.dataset.title || '').includes(q) ? '' : 'none';
+        });
+    };
+
+})();
+</script>
+{% endblock %}

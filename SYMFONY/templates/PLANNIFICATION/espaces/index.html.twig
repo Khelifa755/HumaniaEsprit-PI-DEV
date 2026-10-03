@@ -1,0 +1,790 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Catalogue des Espaces — Humania{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+/* ══ Page toolbar ════════════════════════════════════════════════════════ */
+.page-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+.page-toolbar h1 {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #111827;
+    margin: 0 0 .2rem;
+}
+.page-toolbar p { color: #6b7280; font-size: .95rem; margin: 0; }
+.toolbar-actions { display: flex; align-items: center; gap: .75rem; }
+
+/* ══ Add button ══════════════════════════════════════════════════════════ */
+.btn-add-espace {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: .65rem 1.4rem;
+    font-size: .95rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    transition: background .2s, box-shadow .2s;
+    text-decoration: none;
+    white-space: nowrap;
+    box-shadow: 0 2px 10px rgba(37,99,235,.25);
+}
+.btn-add-espace:hover { background: #1d4ed8; color: #fff; box-shadow: 0 4px 16px rgba(37,99,235,.35); }
+
+/* ══ View toggle ═════════════════════════════════════════════════════════ */
+.view-toggle {
+    display: flex;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 9px;
+    overflow: hidden;
+    background: #f9fafb;
+}
+.view-toggle button {
+    background: none; border: none;
+    padding: .5rem .9rem;
+    font-size: .88rem; font-weight: 600;
+    color: #9ca3af; cursor: pointer;
+    transition: background .15s, color .15s;
+}
+.view-toggle button.is-on,
+.view-toggle button[aria-pressed="true"] {
+    background: #fff; color: #111827;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+}
+
+/* ══ Search bar ══════════════════════════════════════════════════════════ */
+.search-bar { position: relative; max-width: 480px; margin-bottom: 2rem; }
+.search-bar .search-ico {
+    position: absolute; left: 1rem; top: 50%;
+    transform: translateY(-50%); color: #9ca3af;
+    font-size: 1rem; pointer-events: none;
+}
+.search-bar input {
+    width: 100%;
+    padding: .72rem 1rem .72rem 2.8rem;
+    border: 1.5px solid #e5e7eb; border-radius: 12px;
+    font-size: .95rem; color: #111827;
+    background: #fff; outline: none;
+    transition: border-color .2s, box-shadow .2s;
+    box-sizing: border-box;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
+}
+.search-bar input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+}
+.search-bar input::placeholder { color: #9ca3af; }
+
+/* ══ Cards grid ══════════════════════════════════════════════════════════ */
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.4rem;
+}
+@media (max-width: 1100px) { .cards-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 680px)  { .cards-grid { grid-template-columns: 1fr; } }
+
+/* ══ Single card ══════════════════════════════════════════════════════════ */
+.espace-card {
+    background: #fff; border-radius: 16px;
+    box-shadow: 0 2px 14px rgba(0,0,0,.08);
+    overflow: hidden; display: flex; flex-direction: column;
+    transition: transform .2s, box-shadow .2s;
+}
+.espace-card:hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(0,0,0,.13); }
+
+.card-image-wrap { position: relative; height: 195px; overflow: hidden; background: #e5e7eb; }
+.card-image-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.no-image {
+    width: 100%; height: 100%; background: #f3f4f6;
+    display: flex; align-items: center; justify-content: center;
+    color: #9ca3af; font-size: 2.5rem;
+}
+
+.badge-type {
+    position: absolute; top: .75rem; left: .75rem;
+    background: rgba(20,20,20,.58); color: #fff;
+    border-radius: 8px; padding: .22rem .7rem;
+    font-size: .78rem; font-weight: 600;
+    backdrop-filter: blur(4px);
+    display: flex; align-items: center; gap: .35rem;
+}
+.badge-disponible {
+    position: absolute; top: .75rem; right: .75rem;
+    border-radius: 20px; padding: .25rem .8rem;
+    font-size: .8rem; font-weight: 700;
+    display: flex; align-items: center; gap: .35rem;
+}
+.badge-disponible.disponible { background: #d1fae5; color: #065f46; }
+.badge-disponible.occupe     { background: #fee2e2; color: #991b1b; }
+.badge-disponible .dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.badge-disponible.disponible .dot { background: #10b981; }
+.badge-disponible.occupe     .dot { background: #ef4444; }
+
+.card-body { padding: 1.1rem 1.25rem .75rem; flex: 1; display: flex; flex-direction: column; }
+.card-body h3 { font-size: 1.12rem; font-weight: 800; color: #111827; margin: 0 0 .6rem; }
+.card-meta { display: flex; flex-direction: column; gap: .2rem; margin-bottom: .8rem; }
+.card-meta span { font-size: .88rem; color: #4b5563; font-weight: 500; }
+
+.equipements-list { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .9rem; }
+.equip-tag {
+    background: #eff6ff; color: #2563eb;
+    border: 1px solid #bfdbfe; border-radius: 20px;
+    padding: .18rem .65rem; font-size: .78rem; font-weight: 500;
+}
+
+.card-actions { display: flex; gap: .65rem; padding: .85rem 1.1rem 1rem; border-top: 1px solid #f3f4f6; }
+
+.btn-edit-card {
+    flex: 1; padding: .58rem 0; border-radius: 9px;
+    font-size: .9rem; font-weight: 700; text-align: center;
+    cursor: pointer; background: #f59e0b; color: #fff; border: none;
+    display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
+    transition: background .18s, transform .12s;
+}
+.btn-edit-card:hover { background: #d97706; transform: scale(1.02); }
+
+.btn-delete-card {
+    flex: 1; padding: .58rem 0; border-radius: 9px;
+    font-size: .9rem; font-weight: 700; text-align: center;
+    cursor: pointer; background: #fff; color: #ef4444;
+    border: 2px solid #ef4444;
+    display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
+    transition: background .18s, color .18s, transform .12s;
+}
+.btn-delete-card:hover { background: #ef4444; color: #fff; transform: scale(1.02); }
+
+/* ══ List / table view ════════════════════════════════════════════════════ */
+.data-list {
+    width: 100%; border-collapse: collapse;
+    background: #fff; border-radius: 14px; overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,.07);
+}
+.data-list thead tr { background: #f9fafb; }
+.data-list th {
+    padding: .85rem 1rem; text-align: left;
+    font-size: .82rem; font-weight: 700;
+    color: #6b7280; text-transform: uppercase;
+    letter-spacing: .04em; border-bottom: 1.5px solid #f3f4f6;
+}
+.data-list tbody tr { border-bottom: 1px solid #f3f4f6; transition: background .15s; }
+.data-list tbody tr:last-child { border-bottom: none; }
+.data-list tbody tr:hover { background: #f9fafb; }
+.data-list td { padding: .75rem 1rem; font-size: .9rem; color: #374151; vertical-align: middle; }
+.data-list .thumb { width: 52px; height: 40px; object-fit: cover; border-radius: 8px; display: block; }
+.data-list .actions { display: flex; gap: .5rem; align-items: center; }
+
+.no-espaces { grid-column: 1/-1; text-align: center; padding: 3rem; color: #9ca3af; font-size: 1rem; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+
+/* ══ Flash messages ══════════════════════════════════════════════════════ */
+.flash-wrap { margin-bottom: 1rem; }
+.flash {
+    padding: .75rem 1.1rem; border-radius: 10px;
+    font-size: .92rem; font-weight: 500; margin-bottom: .5rem;
+}
+.flash-success { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+.flash-error   { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+/* ══ Modal overlay ════════════════════════════════════════════════════════ */
+.modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.48);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 900;
+    animation: moFadeIn .15s ease;
+}
+.modal-overlay.is-open { display: flex; }
+@keyframes moFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ══ Modal box ════════════════════════════════════════════════════════════ */
+.modal-box {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 8px 40px rgba(0,0,0,.18);
+    width: 560px;
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: moSlideUp .18s ease;
+}
+@keyframes moSlideUp {
+    from { transform: translateY(18px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* ══ Modal head ══════════════════════════════════════════════════════════ */
+.modal-head {
+    position: relative;
+    padding: 1.1rem 1.5rem 1rem;
+    border-bottom: 1.5px solid #f3f4f6;
+}
+.modal-title { font-size: 1.15rem; font-weight: 800; color: #111827; margin: 0; }
+.modal-close {
+    position: absolute; top: .85rem; right: 1rem;
+    background: none; border: none;
+    font-size: 1.15rem; color: #9ca3af;
+    cursor: pointer; line-height: 1;
+    transition: color .15s;
+}
+.modal-close:hover { color: #111827; }
+
+/* ══ Modal form ══════════════════════════════════════════════════════════ */
+.modal-form { padding: 1.3rem 1.5rem; }
+
+/* vertical stack groups (like competence) */
+.mf-group { margin-bottom: 1.1rem; }
+
+.mf-lbl {
+    display: block;
+    font-size: .84rem; font-weight: 700;
+    color: #374151; margin-bottom: .35rem;
+}
+.mf-lbl .req { color: #ef4444; }
+
+.mf-input {
+    width: 100%;
+    padding: .6rem .85rem;
+    border: 1.5px solid #e5e7eb; border-radius: 8px;
+    font-size: .92rem; color: #111827;
+    background: #f9fafb; outline: none;
+    transition: border-color .2s, background .2s;
+    box-sizing: border-box;
+}
+.mf-input:focus { border-color: #2563eb; background: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,.10); }
+
+/* two-column row */
+.mf-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.1rem;
+}
+.mf-row .mf-group { margin-bottom: 0; }
+
+/* radio group */
+.mf-radio-group { display: flex; gap: 1.2rem; flex-wrap: wrap; }
+.mf-radio-label {
+    display: flex; align-items: center; gap: .45rem;
+    font-size: .9rem; font-weight: 500; cursor: pointer;
+}
+.mf-radio-label input[type="radio"] {
+    width: 16px; height: 16px;
+    accent-color: #2563eb; cursor: pointer;
+}
+
+/* equipment grid */
+.mf-eq-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .45rem .75rem;
+}
+.mf-eq-item {
+    display: flex; align-items: center; gap: .45rem;
+    font-size: .88rem; font-weight: 500; cursor: pointer;
+}
+.mf-eq-item input[type="checkbox"] {
+    width: 15px; height: 15px;
+    accent-color: #2563eb; cursor: pointer; flex-shrink: 0;
+}
+
+/* checkbox row (Disponible) */
+.mf-check-row { display: flex; align-items: center; gap: .55rem; }
+.mf-check-row input[type="checkbox"] {
+    width: 17px; height: 17px;
+    accent-color: #2563eb; cursor: pointer;
+}
+.mf-check-row label { font-size: .9rem; font-weight: 500; cursor: pointer; margin: 0; }
+
+/* file row */
+.mf-file-row { display: flex; gap: .6rem; align-items: center; }
+.mf-file-row .mf-input { flex: 1; }
+.mf-file-btn {
+    padding: .58rem 1rem;
+    background: #f3f4f6; color: #374151;
+    border: 1.5px solid #e5e7eb; border-radius: 8px;
+    font-size: .85rem; font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+    transition: background .15s;
+}
+.mf-file-btn:hover { background: #e5e7eb; }
+
+/* ══ Modal footer ════════════════════════════════════════════════════════ */
+.modal-footer {
+    display: flex; justify-content: flex-end; gap: .75rem;
+    padding: 1rem 1.5rem 1.2rem;
+    border-top: 1.5px solid #f3f4f6;
+}
+.btn-cancel {
+    padding: .62rem 1.35rem;
+    background: #fff; color: #ef4444;
+    border: 2px solid #ef4444; border-radius: 8px;
+    font-size: .92rem; font-weight: 700; cursor: pointer;
+    transition: background .18s, color .18s;
+}
+.btn-cancel:hover { background: #ef4444; color: #fff; }
+
+.btn-save {
+    padding: .62rem 1.5rem;
+    background: #2563eb; color: #fff;
+    border: none; border-radius: 8px;
+    font-size: .92rem; font-weight: 700; cursor: pointer;
+    transition: background .2s;
+}
+.btn-save:hover { background: #1d4ed8; }
+
+/* ══ Delete confirm modal ════════════════════════════════════════════════ */
+.modal-confirm-text { font-size: .95rem; color: #374151; margin-bottom: 1.2rem; line-height: 1.5; }
+</style>
+{% endblock %}
+
+{% block body %}
+<div id="espaces-crud-root">
+
+{# ── Flash ── #}
+{% if app.flashes('success') or app.flashes('error') %}
+<div class="flash-wrap">
+    {% for msg in app.flashes('success') %}
+        <div class="flash flash-success">✅ {{ msg }}</div>
+    {% endfor %}
+    {% for msg in app.flashes('error') %}
+        <div class="flash flash-error">⚠ {{ msg }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{# ── Toolbar ── #}
+<div class="page-toolbar">
+    <div>
+        <h1>Catalogue des Espaces</h1>
+        <p>Gérez vos espaces disponibles</p>
+    </div>
+    <div class="toolbar-actions">
+        <div class="view-toggle" role="group" aria-label="Mode d'affichage">
+            <button type="button" data-toggle="grid" class="is-on" aria-pressed="true">▦ Grille</button>
+            <button type="button" data-toggle="list" aria-pressed="false">☰ Liste</button>
+        </div>
+        <button type="button" class="btn-add-espace" onclick="openNewModal()">
+            + Ajouter Espace
+        </button>
+    </div>
+</div>
+
+{# ── Search ── #}
+<div class="search-bar">
+    <span class="search-ico" aria-hidden="true">🔍</span>
+    <label class="visually-hidden" for="searchInput">Rechercher</label>
+    <input type="search" id="searchInput" placeholder="Rechercher un espace…"
+           autocomplete="off" oninput="filterEspaces(this.value)">
+</div>
+
+{# ── List view ── #}
+<table class="data-list" data-view-list hidden>
+    <thead>
+        <tr>
+            <th></th>
+            <th>Nom</th>
+            <th>Type</th>
+            <th>Étage</th>
+            <th>Capacité</th>
+            <th>Statut</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for espace in espaces %}
+        <tr class="espace-row" data-nom="{{ espace.nom|lower }}" data-type="{{ espace.typeEspace|lower }}">
+            <td>
+                {% if espace.urlImage %}
+                    <img class="thumb" src="{{ espace.urlImage }}" alt="" loading="lazy" width="52" height="40">
+                {% else %}
+                    <div class="thumb" style="background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:1.1rem;">🏢</div>
+                {% endif %}
+            </td>
+            <td><strong>{{ espace.nom }}</strong></td>
+            <td>{{ espace.typeEspace }}</td>
+            <td>{{ espace.etage }}{{ espace.etage == 1 ? 'er' : 'ème' }}</td>
+            <td>{{ espace.capacite }} pers.</td>
+            <td>
+                <span class="badge-disponible {{ espace.disponible ? 'disponible' : 'occupe' }}" style="position:static;display:inline-flex;">
+                    <span class="dot"></span>{{ espace.disponible ? 'Disponible' : 'Occupé' }}
+                </span>
+            </td>
+            <td class="actions">
+                <button type="button" class="btn-edit-card"
+                        style="flex:none;padding:.35rem .8rem;font-size:.82rem;"
+                        onclick="openEditModal(
+                            {{ espace.id }},
+                            '{{ espace.nom|e('js') }}',
+                            '{{ espace.typeEspace|e('js') }}',
+                            {{ espace.capacite }},
+                            {{ espace.etage }},
+                            '{{ espace.urlImage|default('')|e('js') }}',
+                            {{ espace.disponible ? 'true' : 'false' }},
+                            '{{ espace.listeEquipements|default('')|e('js') }}'
+                        )">✎ Modifier</button>
+
+                <form method="post" action="{{ path('app_espaces_delete', {'id': espace.id}) }}"
+                      data-delete-form data-name="{{ espace.nom|e('html_attr') }}"
+                      style="display:inline;">
+                    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ espace.id) }}">
+                    <button type="submit" class="btn-delete-card"
+                            style="flex:none;padding:.35rem .8rem;font-size:.82rem;">🗑 Supprimer</button>
+                </form>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:2.5rem;">Aucun espace trouvé.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{# ── Grid view ── #}
+<div class="cards-grid" data-view-grid>
+    {% for espace in espaces %}
+    <div class="espace-card" data-nom="{{ espace.nom|lower }}" data-type="{{ espace.typeEspace|lower }}">
+
+        <div class="card-image-wrap">
+            {% if espace.urlImage %}
+                <img src="{{ espace.urlImage }}" alt="{{ espace.nom }}" loading="lazy"
+                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                <div class="no-image" style="display:none;">🏢</div>
+            {% else %}
+                <div class="no-image">🏢</div>
+            {% endif %}
+            <span class="badge-type">{{ espace.typeEspace }}</span>
+            <span class="badge-disponible {{ espace.disponible ? 'disponible' : 'occupe' }}">
+                <span class="dot"></span>{{ espace.disponible ? 'Disponible' : 'Occupé' }}
+            </span>
+        </div>
+
+        <div class="card-body">
+            <h3>{{ espace.nom }}</h3>
+            <div class="card-meta">
+                <span>{{ espace.etage }}{{ espace.etage == 1 ? 'er' : 'ème' }} étage</span>
+                <span>{{ espace.capacite }} personnes</span>
+            </div>
+            <div class="equipements-list">
+                {% for equip in espace.listeEquipements|split(',')|slice(0, 4) %}
+                    {% if equip|trim %}<span class="equip-tag">{{ equip|trim }}</span>{% endif %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="card-actions">
+            <button type="button" class="btn-edit-card"
+                    onclick="openEditModal(
+                        {{ espace.id }},
+                        '{{ espace.nom|e('js') }}',
+                        '{{ espace.typeEspace|e('js') }}',
+                        {{ espace.capacite }},
+                        {{ espace.etage }},
+                        '{{ espace.urlImage|default('')|e('js') }}',
+                        {{ espace.disponible ? 'true' : 'false' }},
+                        '{{ espace.listeEquipements|default('')|e('js') }}'
+                    )">✎ Modifier</button>
+
+            <form data-delete-form data-name="{{ espace.nom|e('html_attr') }}"
+                  method="post" action="{{ path('app_espaces_delete', {'id': espace.id}) }}"
+                  style="flex:1;display:flex;">
+                <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ espace.id) }}">
+                <button type="submit" class="btn-delete-card" style="width:100%;">🗑 Supprimer</button>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <p class="no-espaces">Aucun espace trouvé.</p>
+    {% endfor %}
+</div>
+
+</div>{# end #espaces-crud-root #}
+
+
+{# ════════════════════════════════════════════════════════════════════════════
+   MODAL — Nouvel espace
+════════════════════════════════════════════════════════════════════════════ #}
+<div id="modalNew" class="modal-overlay" onclick="if(event.target===this)closeNewModal()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 class="modal-title">➕ Nouvel Espace</h3>
+      <button class="modal-close" onclick="closeNewModal()">✕</button>
+    </div>
+    <form method="post" action="{{ path('app_espaces_new') }}" class="modal-form"
+          onsubmit="buildEquipString('new')">
+
+      {# Nom #}
+      <div class="mf-group">
+        <label class="mf-lbl">Nom <span class="req">*</span></label>
+        <input type="text" name="nom" class="mf-input" required
+               placeholder="Ex : Salle de réunion A">
+      </div>
+
+      {# Type + Capacité #}
+      <div class="mf-row">
+        <div class="mf-group">
+          <label class="mf-lbl">Type d'espace</label>
+          <div class="mf-radio-group">
+            <label class="mf-radio-label">
+              <input type="radio" name="typeEspace" value="SALLE_REUNION" checked> 🏢 Réunion
+            </label>
+            <label class="mf-radio-label">
+              <input type="radio" name="typeEspace" value="COWORKING"> 🪑 Coworking
+            </label>
+          </div>
+        </div>
+        <div class="mf-group">
+          <label class="mf-lbl">Capacité</label>
+          <input type="number" name="capacite" class="mf-input" min="1" max="999" value="10">
+        </div>
+      </div>
+
+      {# Étage + Disponible #}
+      <div class="mf-row">
+        <div class="mf-group">
+          <label class="mf-lbl">Étage</label>
+          <input type="number" name="etage" class="mf-input" min="0" max="99" value="0">
+        </div>
+        <div class="mf-group">
+          <label class="mf-lbl">Disponible</label>
+          <div class="mf-check-row">
+            <input type="checkbox" name="disponible" id="new_disponible" value="1" checked>
+            <label for="new_disponible">Oui</label>
+          </div>
+        </div>
+      </div>
+
+      {# URL Image #}
+      <div class="mf-group">
+        <label class="mf-lbl">URL Image</label>
+        <div class="mf-file-row">
+          <input type="text" name="urlImage" id="new_urlImage" class="mf-input"
+                 placeholder="Chemin ou URL de l'image">
+          <label class="mf-file-btn" for="new_fileInput">Parcourir…</label>
+          <input type="file" id="new_fileInput" accept="image/*" style="display:none"
+                 onchange="document.getElementById('new_urlImage').value = this.files[0]?.name ?? ''">
+        </div>
+      </div>
+
+      {# Équipements #}
+      <div class="mf-group">
+        <label class="mf-lbl">Équipements</label>
+        <div class="mf-eq-grid" id="new_eq_grid">
+          <label class="mf-eq-item"><input type="checkbox" value="Projecteur"> Projecteur</label>
+          <label class="mf-eq-item"><input type="checkbox" value="Tableau blanc"> Tableau blanc</label>
+          <label class="mf-eq-item"><input type="checkbox" value="Ordinateur"> Ordinateur</label>
+          <label class="mf-eq-item"><input type="checkbox" value="Climatisation"> Climatisation</label>
+          <label class="mf-eq-item"><input type="checkbox" value="Wifi"> Wifi</label>
+          <label class="mf-eq-item"><input type="checkbox" value="Imprimante"> Imprimante</label>
+          <label class="mf-eq-item"><input type="checkbox" value="Téléphone"> Téléphone</label>
+          <label class="mf-eq-item"><input type="checkbox" value="Visioconférence"> Visioconférence</label>
+        </div>
+        {# Hidden field that will receive the comma-separated string #}
+        <input type="hidden" name="listeEquipements" id="new_listeEquipements">
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="closeNewModal()">Annuler</button>
+        <button type="submit" class="btn-save">✅ Enregistrer</button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+
+{# ════════════════════════════════════════════════════════════════════════════
+   MODAL — Modifier espace
+════════════════════════════════════════════════════════════════════════════ #}
+<div id="modalEdit" class="modal-overlay" onclick="if(event.target===this)closeEditModal()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 class="modal-title">✏ Modifier l'Espace</h3>
+      <button class="modal-close" onclick="closeEditModal()">✕</button>
+    </div>
+    <form method="post" id="formEdit" action="" class="modal-form"
+          onsubmit="buildEquipString('edit')">
+
+      {# Nom #}
+      <div class="mf-group">
+        <label class="mf-lbl">Nom <span class="req">*</span></label>
+        <input type="text" name="nom" id="edit_nom" class="mf-input" required>
+      </div>
+
+      {# Type + Capacité #}
+      <div class="mf-row">
+        <div class="mf-group">
+          <label class="mf-lbl">Type d'espace</label>
+          <div class="mf-radio-group">
+            <label class="mf-radio-label">
+              <input type="radio" id="edit_type_reunion"   name="typeEspace" value="SALLE_REUNION"> 🏢 Réunion
+            </label>
+            <label class="mf-radio-label">
+              <input type="radio" id="edit_type_coworking" name="typeEspace" value="COWORKING"> 🪑 Coworking
+            </label>
+          </div>
+        </div>
+        <div class="mf-group">
+          <label class="mf-lbl">Capacité</label>
+          <input type="number" name="capacite" id="edit_capacite" class="mf-input" min="1" max="999">
+        </div>
+      </div>
+
+      {# Étage + Disponible #}
+      <div class="mf-row">
+        <div class="mf-group">
+          <label class="mf-lbl">Étage</label>
+          <input type="number" name="etage" id="edit_etage" class="mf-input" min="0" max="99">
+        </div>
+        <div class="mf-group">
+          <label class="mf-lbl">Disponible</label>
+          <div class="mf-check-row">
+            <input type="checkbox" name="disponible" id="edit_disponible" value="1">
+            <label for="edit_disponible">Oui</label>
+          </div>
+        </div>
+      </div>
+
+      {# URL Image #}
+      <div class="mf-group">
+        <label class="mf-lbl">URL Image</label>
+        <div class="mf-file-row">
+          <input type="text" name="urlImage" id="edit_urlImage" class="mf-input"
+                 placeholder="Chemin ou URL de l'image">
+          <label class="mf-file-btn" for="edit_fileInput">Parcourir…</label>
+          <input type="file" id="edit_fileInput" accept="image/*" style="display:none"
+                 onchange="document.getElementById('edit_urlImage').value = this.files[0]?.name ?? ''">
+        </div>
+      </div>
+
+      {# Équipements #}
+      <div class="mf-group">
+        <label class="mf-lbl">Équipements</label>
+        <div class="mf-eq-grid" id="edit_eq_grid">
+          <label class="mf-eq-item"><input type="checkbox" value="Projecteur"> Projecteur</label>
+          <label class="mf-eq-item"><input type="checkbox" value="Tableau blanc"> Tableau blanc</label>
+          <label class="mf-eq-item"><input type="checkbox" value="Ordinateur"> Ordinateur</label>
+          <label class="mf-eq-item"><input type="checkbox" value="Climatisation"> Climatisation</label>
+          <label class="mf-eq-item"><input type="checkbox" value="Wifi"> Wifi</label>
+          <label class="mf-eq-item"><input type="checkbox" value="Imprimante"> Imprimante</label>
+          <label class="mf-eq-item"><input type="checkbox" value="Téléphone"> Téléphone</label>
+          <label class="mf-eq-item"><input type="checkbox" value="Visioconférence"> Visioconférence</label>
+        </div>
+        <input type="hidden" name="listeEquipements" id="edit_listeEquipements">
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="closeEditModal()">Annuler</button>
+        <button type="submit" class="btn-save">💾 Mettre à jour</button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+
+<script>
+/* ── New modal ──────────────────────────────────────────────────────────── */
+function openNewModal() {
+    document.getElementById('modalNew').classList.add('is-open');
+}
+function closeNewModal() {
+    document.getElementById('modalNew').classList.remove('is-open');
+}
+
+/* ── Edit modal ─────────────────────────────────────────────────────────── */
+function openEditModal(id, nom, type, capacite, etage, url, disponible, equipements) {
+    // Route: #[Route('/{id}/edit')] under #[Route('/espaces')]
+    document.getElementById('formEdit').action = '/espaces/' + id + '/edit';
+    document.getElementById('edit_nom').value      = nom;
+    document.getElementById('edit_capacite').value = capacite;
+    document.getElementById('edit_etage').value    = etage;
+    document.getElementById('edit_urlImage').value = url;
+    document.getElementById('edit_disponible').checked = disponible;
+
+    document.getElementById('edit_type_reunion').checked   = (type === 'SALLE_REUNION');
+    document.getElementById('edit_type_coworking').checked = (type === 'COWORKING');
+
+    // Tick equipment checkboxes
+    const activeEquip = equipements
+        ? equipements.split(',').map(s => s.trim().toLowerCase())
+        : [];
+    document.querySelectorAll('#edit_eq_grid input[type="checkbox"]').forEach(cb => {
+        cb.checked = activeEquip.includes(cb.value.toLowerCase());
+    });
+
+    document.getElementById('modalEdit').classList.add('is-open');
+}
+function closeEditModal() {
+    document.getElementById('modalEdit').classList.remove('is-open');
+}
+
+/* ── Build comma-separated listeEquipements before submit ───────────────── */
+function buildEquipString(prefix) {
+    const grid   = document.getElementById(prefix + '_eq_grid');
+    const hidden = document.getElementById(prefix + '_listeEquipements');
+    const checked = Array.from(grid.querySelectorAll('input[type="checkbox"]:checked'))
+                        .map(cb => cb.value);
+    hidden.value = checked.join(',');
+}
+
+/* ── Delete confirm ─────────────────────────────────────────────────────── */
+document.addEventListener('click', e => {
+    const form = e.target.closest('[data-delete-form]');
+    if (!form) return;
+    const btn = e.target.closest('button[type="submit"]');
+    if (!btn) return;
+    e.preventDefault();
+    const name = form.dataset.name || 'cet espace';
+    if (confirm('Supprimer l\'espace "' + name + '" ? Cette action est irréversible.')) {
+        form.submit();
+    }
+});
+
+/* ── View toggle ────────────────────────────────────────────────────────── */
+document.querySelectorAll('.view-toggle button').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const mode = btn.dataset.toggle;
+        document.querySelectorAll('.view-toggle button').forEach(b => {
+            b.classList.remove('is-on');
+            b.setAttribute('aria-pressed', 'false');
+        });
+        btn.classList.add('is-on');
+        btn.setAttribute('aria-pressed', 'true');
+        const grid = document.querySelector('[data-view-grid]');
+        const list = document.querySelector('[data-view-list]');
+        if (mode === 'grid') { grid.hidden = false; list.hidden = true; }
+        else                 { list.hidden = false; grid.hidden = true; }
+    });
+});
+
+/* ── Search ─────────────────────────────────────────────────────────────── */
+function filterEspaces(val) {
+    const q = val.toLowerCase();
+    document.querySelectorAll('.espace-card, .espace-row').forEach(el => {
+        const nom  = el.dataset.nom  || '';
+        const type = el.dataset.type || '';
+        el.style.display = (nom.includes(q) || type.includes(q)) ? '' : 'none';
+    });
+}
+
+/* ── Escape to close ────────────────────────────────────────────────────── */
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeNewModal(); closeEditModal(); }
+});
+</script>
+{% endblock %}

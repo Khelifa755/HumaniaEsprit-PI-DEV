@@ -1,0 +1,271 @@
+{# templates/plannification/coworking_reservation/seats.html.twig
+   Java equivalent: coworking_reservation__4_.fxml + CoworkingController JavaFX logic
+   
+   Renders one button per chair. Each button is styled by ChairViewModel.state:
+     STATE_MINE      → green  — user can cancel this seat
+     STATE_AVAILABLE → blue   — user can reserve this seat
+     STATE_TAKEN     → red    — disabled (someone else's seat)
+   
+   Every action (reserve / cancel / cancel-all) is a POST form, replacing
+   JavaFX EventHandlers attached to each chair button.
+#}
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ espace.nom }} — Sièges du {{ dateDisplay }}{% endblock %}
+
+{% block body %}
+<div class="container py-4">
+
+    {# ── Breadcrumb ────────────────────────────────────────────────── #}
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{{ path('coworking_index') }}">Coworking</a>
+            </li>
+            <li class="breadcrumb-item active">{{ espace.nom }}</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+        <div>
+            <h1 class="mb-0">{{ espace.nom }}</h1>
+            <p class="text-muted mb-0">
+                <i class="bi bi-calendar-event me-1"></i>{{ dateDisplay }}
+                &nbsp;|&nbsp;
+                <i class="bi bi-people me-1"></i>{{ espace.capacite }} siège(s)
+            </p>
+        </div>
+
+        {# Date navigator — replaces JavaFX DatePicker onChange listener #}
+        <form method="get" action="{{ path('coworking_seats', {'id': espace.id}) }}"
+              class="d-flex gap-2 align-items-center">
+            <label class="form-label mb-0 text-nowrap">Changer de date :</label>
+            <input type="date" name="date" class="form-control form-control-sm"
+                   value="{{ date }}" min="{{ 'now'|date('Y-m-d') }}" required>
+            <button class="btn btn-outline-secondary btn-sm text-nowrap">
+                <i class="bi bi-arrow-clockwise me-1"></i>Actualiser
+            </button>
+        </form>
+    </div>
+
+    {# ── Flash messages ───────────────────────────────────────────── #}
+    {% for label, messages in app.flashes %}
+        {% for message in messages %}
+            <div class="alert alert-{{ label == 'error' ? 'danger' : 'success' }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endfor %}
+
+    {# ── Legend — mirrors the colour coding in the JavaFX FXML ─────── #}
+    <div class="d-flex gap-3 mb-4 flex-wrap">
+        <span class="badge bg-success fs-6 px-3 py-2">
+            <i class="bi bi-check-circle me-1"></i>Mes sièges (MINE)
+        </span>
+        <span class="badge bg-primary fs-6 px-3 py-2">
+            <i class="bi bi-plus-circle me-1"></i>Disponible (AVAILABLE)
+        </span>
+        <span class="badge bg-danger fs-6 px-3 py-2">
+            <i class="bi bi-x-circle me-1"></i>Pris (TAKEN)
+        </span>
+    </div>
+
+    {# ── Seat grid ─────────────────────────────────────────────────── #}
+    {#
+       Java: the GridPane/FlowPane in the FXML populated by CoworkingController
+       iterating over ObservableList<ChairModel>. Each node was a Button with
+       a click handler. Here each chair is a form+button.
+    #}
+    {% macro render_chair(chair, espace, date) %}
+        {% if chair.state == 'MINE' %}
+            <form method="post"
+                  action="{{ path('coworking_cancel_chair', {'id': espace.id}) }}"
+                  title="Annuler ma réservation du siège {{ chair.seatNumber }}">
+                <input type="hidden" name="_token"
+                       value="{{ csrf_token('cancel_chair_' ~ chair.seatNumber) }}">
+                <input type="hidden" name="chair_number" value="{{ chair.seatNumber }}">
+                <input type="hidden" name="date" value="{{ date }}">
+                <button type="submit"
+                        class="btn btn-success chair-btn"
+                        aria-label="Siège {{ chair.seatNumber }} — le mien, cliquer pour annuler">
+                    <i class="bi bi-person-fill d-block mb-1"></i>
+                    <span>{{ chair.seatNumber }}</span>
+                </button>
+            </form>
+        {% elseif chair.state == 'AVAILABLE' %}
+            <form method="post"
+                  action="{{ path('coworking_reserve', {'id': espace.id}) }}"
+                  title="Réserver le siège {{ chair.seatNumber }}">
+                <input type="hidden" name="_token"
+                       value="{{ csrf_token('reserve_chair_' ~ chair.seatNumber) }}">
+                <input type="hidden" name="chair_number" value="{{ chair.seatNumber }}">
+                <input type="hidden" name="date" value="{{ date }}">
+                <button type="submit"
+                        class="btn btn-primary chair-btn"
+                        aria-label="Siège {{ chair.seatNumber }} — disponible, cliquer pour réserver">
+                    <i class="bi bi-plus-circle d-block mb-1"></i>
+                    <span>{{ chair.seatNumber }}</span>
+                </button>
+            </form>
+        {% else %}
+            <button class="btn btn-danger chair-btn"
+                    disabled
+                    aria-label="Siège {{ chair.seatNumber }} — réservé par un autre utilisateur"
+                    title="Réservé par un autre utilisateur">
+                <i class="bi bi-person-fill d-block mb-1"></i>
+                <span>{{ chair.seatNumber }}</span>
+            </button>
+        {% endif %}
+    {% endmacro %}
+    {% import _self as seat_ui %}
+
+    {% if chairs is empty %}
+        <p class="text-muted mb-5">Aucun siège trouvé pour cet espace.</p>
+    {% elseif chairs|length == 6 %}
+        <div class="coworking-table-layout mb-5" role="list" aria-label="Plan des sièges">
+            <div class="seats-row seats-row-top">
+                {{ seat_ui.render_chair(chairs[0], espace, date) }}
+                {{ seat_ui.render_chair(chairs[1], espace, date) }}
+            </div>
+
+            <div class="seats-middle">
+                <div class="seat-side">
+                    {{ seat_ui.render_chair(chairs[2], espace, date) }}
+                </div>
+
+                <div class="meeting-table">
+                    <div class="meeting-table-label">TABLE</div>
+                    <div class="meeting-table-name">{{ espace.nom }}</div>
+                    <div class="meeting-table-capacity">6 places</div>
+                </div>
+
+                <div class="seat-side">
+                    {{ seat_ui.render_chair(chairs[3], espace, date) }}
+                </div>
+            </div>
+
+            <div class="seats-row seats-row-bottom">
+                {{ seat_ui.render_chair(chairs[4], espace, date) }}
+                {{ seat_ui.render_chair(chairs[5], espace, date) }}
+            </div>
+        </div>
+    {% else %}
+        <div class="d-flex flex-wrap gap-3 mb-5" role="list" aria-label="Plan des sièges">
+            {% for chair in chairs %}
+                {{ seat_ui.render_chair(chair, espace, date) }}
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {# ── Cancel-all button ─────────────────────────────────────────── #}
+    {#
+       Java: service.cancelAllForUser() — available only when the user has
+       at least one reservation on this day (matches Java guard logic).
+    #}
+    {% set hasMine = chairs|filter(c => c.state == 'MINE')|length > 0 %}
+    {% if hasMine %}
+    <form method="post"
+          action="{{ path('coworking_cancel_all', {'id': espace.id}) }}"
+          onsubmit="return confirm('Annuler toutes vos réservations pour le {{ dateDisplay }} ?')">
+        <input type="hidden" name="_token" value="{{ csrf_token('cancel_all') }}">
+        <input type="hidden" name="date" value="{{ date }}">
+        <button type="submit" class="btn btn-outline-danger">
+            <i class="bi bi-trash me-1"></i>Annuler toutes mes réservations du jour
+        </button>
+    </form>
+    {% endif %}
+
+</div>
+
+{# ── Chair button styling ──────────────────────────────────────────── #}
+<style>
+.chair-btn {
+    width: 72px;
+    height: 72px;
+    font-size: .8rem;
+    font-weight: 600;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: transform .15s, box-shadow .15s;
+}
+.chair-btn:not(:disabled):hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,.2);
+}
+.chair-btn i { font-size: 1.2rem; }
+
+.coworking-table-layout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.seats-row,
+.seats-middle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+}
+
+.seats-middle {
+    gap: 2rem;
+}
+
+.seat-side {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 90px;
+}
+
+.meeting-table {
+    width: 320px;
+    min-height: 150px;
+    border-radius: 32px;
+    background: #fff3a6;
+    border: 3px solid #e0c54f;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, .08);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 1.5rem;
+}
+
+.meeting-table-label {
+    font-size: .75rem;
+    letter-spacing: .12em;
+    color: #7c6a00;
+    font-weight: 700;
+}
+
+.meeting-table-name {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #5f5600;
+}
+
+.meeting-table-capacity {
+    color: #7c6a00;
+    font-size: .9rem;
+}
+
+@media (max-width: 768px) {
+    .meeting-table {
+        width: 220px;
+        min-height: 120px;
+    }
+
+    .seats-middle {
+        gap: 1rem;
+    }
+}
+</style>
+{% endblock %}

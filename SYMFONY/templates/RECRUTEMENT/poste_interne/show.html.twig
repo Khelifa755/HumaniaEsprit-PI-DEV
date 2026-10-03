@@ -1,0 +1,184 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Poste Interne #{{ poste_interne.id }}{% endblock %}
+
+{% block stylesheets %}
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --green:#22c55e; --blue:#3b82f6; --purple:#a855f7; --orange:#f97316;
+        --bg:#f4f6f9; --card:#fff; --text:#1e293b; --muted:#64748b; --border:#e2e8f0;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); }
+
+    .show-wrap { max-width:640px; margin:40px auto; padding:0 20px; }
+
+    .back-btn {
+        display:inline-flex; align-items:center; gap:6px;
+        font-size:13px; color:var(--muted); text-decoration:none;
+        margin-bottom:22px; transition:color .15s;
+    }
+    .back-btn:hover { color:var(--text); }
+
+    .show-card {
+        background:var(--card); border-radius:18px;
+        padding:32px 36px;
+        box-shadow:0 4px 24px rgba(0,0,0,.07);
+        animation:slideUp .25s ease;
+    }
+    @keyframes slideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
+
+    .show-header {
+        display:flex; align-items:center; gap:14px; margin-bottom:28px;
+        padding-bottom:20px; border-bottom:1px solid var(--border);
+    }
+    .show-icon {
+        width:52px; height:52px; border-radius:14px;
+        display:flex; align-items:center; justify-content:center; font-size:26px;
+    }
+    .show-title { font-family:'Sora',sans-serif; font-size:22px; font-weight:700; }
+    .show-sub   { font-size:13px; color:var(--muted); margin-top:3px; }
+
+    .badge-type {
+        margin-left:auto; font-size:12px; font-weight:500;
+        padding:5px 12px; border-radius:20px;
+    }
+    .badge-renfort  { background:#fff7ed; color:var(--orange); }
+    .badge-interne  { background:#eff6ff; color:var(--blue); }
+    .badge-externe  { background:#faf5ff; color:var(--purple); }
+
+    .info-grid {
+        display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:28px;
+    }
+    .info-item {
+        background:#f8fafc; border-radius:12px; padding:14px 16px;
+        border:1px solid var(--border);
+    }
+    .info-item label { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:600; margin-bottom:4px; display:block; }
+    .info-item span  { font-size:16px; font-weight:600; color:var(--text); }
+
+    .action-row { display:flex; gap:10px; flex-wrap:wrap; }
+    .btn-edit-show {
+        padding:9px 20px; border-radius:9px; text-decoration:none;
+        background:#fef9c3; color:#92400e; font-size:14px; font-weight:500;
+        display:inline-flex; align-items:center; gap:6px; transition:opacity .15s;
+    }
+    .btn-del-show {
+        padding:9px 20px; border-radius:9px;
+        background:#fee2e2; color:#b91c1c; font-size:14px; font-weight:500;
+        border:none; cursor:pointer;
+        display:inline-flex; align-items:center; gap:6px; transition:opacity .15s;
+    }
+    .btn-edit-show:hover, .btn-del-show:hover { opacity:.8; }
+
+    /* Delete modal */
+    .modal-overlay {
+        display:none; position:fixed; inset:0;
+        background:rgba(15,23,42,.45); backdrop-filter:blur(4px);
+        z-index:9998; align-items:center; justify-content:center;
+    }
+    .modal-overlay.open { display:flex; }
+    .modal-box {
+        background:var(--card); border-radius:18px;
+        width:100%; max-width:400px; padding:32px 36px;
+        box-shadow:0 20px 60px rgba(0,0,0,.18);
+        position:relative;
+    }
+    .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+    .modal-header h2 { font-family:'Sora',sans-serif; font-size:18px; font-weight:700; }
+    .modal-close { width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:transparent;cursor:pointer;font-size:16px;color:var(--muted); }
+    .modal-close:hover { background:#f1f5f9; }
+    .modal-box p { font-size:14px; color:var(--muted); margin-bottom:6px; }
+    .modal-footer { display:flex;justify-content:flex-end;gap:10px;margin-top:22px;padding-top:18px;border-top:1px solid var(--border); }
+    .btn-cancel { padding:8px 18px;border-radius:9px;border:1px solid var(--border);background:transparent;font-size:13px;cursor:pointer; }
+    .btn-cancel:hover { background:#f1f5f9; }
+    .btn-danger { padding:8px 18px;border-radius:9px;background:#dc2626;color:#fff;border:none;font-size:13px;font-weight:600;cursor:pointer; }
+
+    @media(max-width:560px){ .info-grid{grid-template-columns:1fr;} .show-card{padding:22px 18px;} }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="show-wrap">
+    <a href="{{ path('app_poste_interne_index') }}" class="back-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        Retour aux postes
+    </a>
+
+    <div class="show-card">
+        {% set type = poste_interne.typePoste %}
+        {% set icon = '💼' %}
+        {% set badgeClass = 'badge-interne' %}
+        {% if type == 'Renfort' %}{% set icon = '💪' %}{% set badgeClass = 'badge-renfort' %}
+        {% elseif type == 'Mission externe' %}{% set icon = '🌐' %}{% set badgeClass = 'badge-externe' %}{% endif %}
+
+        <div class="show-header">
+            <div class="show-icon" style="background:{% if type == 'Renfort' %}#fff7ed{% elseif type == 'Mission externe' %}#faf5ff{% else %}#eff6ff{% endif %}">{{ icon }}</div>
+            <div>
+                <div class="show-title">{{ type }}</div>
+                <div class="show-sub">Poste #{{ poste_interne.id }}</div>
+            </div>
+            <span class="badge-type {{ badgeClass }}">{{ type }}</span>
+        </div>
+
+        <div class="info-grid">
+            <div class="info-item">
+                <label>💰 Rémunération</label>
+                <span>{{ poste_interne.remuneration }} TND</span>
+            </div>
+            <div class="info-item">
+                <label>📋 Identifiant</label>
+                <span>#{{ poste_interne.id }}</span>
+            </div>
+            <div class="info-item">
+                <label>📅 Date de début</label>
+                <span>{{ poste_interne.dateDebut ? poste_interne.dateDebut|date('d/m/Y') : 'N/A' }}</span>
+            </div>
+            <div class="info-item">
+                <label>🏁 Date de fin</label>
+                <span>{{ poste_interne.dateFin ? poste_interne.dateFin|date('d/m/Y') : 'N/A' }}</span>
+            </div>
+        </div>
+
+        <div class="action-row">
+            <a href="{{ path('app_poste_interne_edit', {'id': poste_interne.id}) }}" class="btn-edit-show">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                Modifier
+            </a>
+            <button class="btn-del-show" onclick="document.getElementById('deleteModal').classList.add('open')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                Supprimer
+            </button>
+        </div>
+    </div>
+</div>
+
+{# Delete modal #}
+<div class="modal-overlay" id="deleteModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>🗑️ Confirmation</h2>
+            <button class="modal-close" onclick="document.getElementById('deleteModal').classList.remove('open')">✕</button>
+        </div>
+        <p>Voulez-vous supprimer le poste <strong>{{ poste_interne.typePoste }} #{{ poste_interne.id }}</strong> ?</p>
+        <p>Cette action est irréversible.</p>
+        <form method="post" action="{{ path('app_poste_interne_delete', {'id': poste_interne.id}) }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ poste_interne.id) }}">
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="document.getElementById('deleteModal').classList.remove('open')">Annuler</button>
+                <button type="submit" class="btn-danger">Supprimer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.getElementById('deleteModal').addEventListener('click', function(e){
+    if(e.target === this) this.classList.remove('open');
+});
+document.addEventListener('keydown', function(e){
+    if(e.key==='Escape') document.getElementById('deleteModal').classList.remove('open');
+});
+</script>
+{% endblock %}

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Rapport de formation — {{ formation.titre }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; font-size: 13px; color: #1e293b; background: #fff; padding: 30px; }
+
+        /* En-tête */
+        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; border-bottom: 3px solid #6366f1; padding-bottom: 18px; }
+        .header-left h1 { font-size: 20px; color: #4f46e5; font-weight: 800; }
+        .header-left .subtitle { font-size: 11px; color: #64748b; margin-top: 4px; }
+        .header-right { text-align: right; font-size: 11px; color: #64748b; }
+        .header-right .date { font-weight: 700; color: #1e293b; }
+
+        /* Bloc infos formation */
+        .formation-block { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; margin-bottom: 24px; display: flex; gap: 40px; flex-wrap: wrap; }
+        .formation-block .info-item { }
+        .formation-block .info-label { font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+        .formation-block .info-value { font-weight: 700; font-size: 13px; color: #1e293b; }
+
+        /* Progression globale */
+        .progress-section { margin-bottom: 28px; }
+        .progress-section h2 { font-size: 14px; color: #4f46e5; margin-bottom: 12px; font-weight: 700; border-left: 4px solid #6366f1; padding-left: 10px; }
+        .progress-bar-wrap { background: #e2e8f0; border-radius: 999px; height: 14px; width: 100%; margin-bottom: 6px; }
+        .progress-bar-fill { background: linear-gradient(90deg, #6366f1, #8b5cf6); height: 14px; border-radius: 999px; }
+        .progress-stats { display: flex; gap: 30px; margin-top: 10px; }
+        .stat-box { background: #f1f5f9; border-radius: 8px; padding: 10px 16px; text-align: center; flex: 1; }
+        .stat-box .stat-val { font-size: 22px; font-weight: 800; color: #4f46e5; }
+        .stat-box .stat-lbl { font-size: 10px; color: #64748b; text-transform: uppercase; margin-top: 2px; }
+
+        /* Modules */
+        .modules-section h2 { font-size: 14px; color: #4f46e5; margin-bottom: 14px; font-weight: 700; border-left: 4px solid #6366f1; padding-left: 10px; }
+        .module-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; page-break-inside: avoid; }
+        .module-card.completed { border-left: 4px solid #22c55e; background: #f0fdf4; }
+        .module-card.not_started { border-left: 4px solid #cbd5e1; background: #f8fafc; }
+        .module-card.in_progress { border-left: 4px solid #f59e0b; background: #fffbeb; }
+
+        .module-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .module-title { font-weight: 700; font-size: 13px; color: #1e293b; }
+        .module-ordre { font-size: 10px; color: #94a3b8; }
+
+        .module-meta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+        .meta-badge { font-size: 10px; padding: 2px 8px; border-radius: 999px; font-weight: 600; }
+        .badge-type { background: #ede9fe; color: #7c3aed; }
+        .badge-duree { background: #e0f2fe; color: #0369a1; }
+        .badge-statut-completed { background: #dcfce7; color: #15803d; }
+        .badge-statut-not_started { background: #f1f5f9; color: #475569; }
+        .badge-statut-in_progress { background: #fef3c7; color: #b45309; }
+        .badge-score { background: #fae8ff; color: #9333ea; }
+
+        .module-desc { font-size: 11px; color: #64748b; line-height: 1.5; }
+
+        /* Footer */
+        .footer { margin-top: 36px; border-top: 1px solid #e2e8f0; padding-top: 12px; display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-left">
+        <h1>📋 Rapport de Progression</h1>
+        <div class="subtitle">Humania-RH · Module Mes Leçons</div>
+    </div>
+    <div class="header-right">
+        <div class="date">{{ date }}</div>
+        <div>Généré automatiquement</div>
+    </div>
+</div>
+
+<div class="formation-block">
+    <div class="info-item">
+        <div class="info-label">Formation</div>
+        <div class="info-value">{{ formation.titre }}</div>
+    </div>
+    <div class="info-item">
+        <div class="info-label">Catégorie</div>
+        <div class="info-value">{{ formation.categorie ?? 'Autre' }}</div>
+    </div>
+    <div class="info-item">
+        <div class="info-label">Durée totale</div>
+        <div class="info-value">{{ formation.duree ?? '—' }} h</div>
+    </div>
+    <div class="info-item">
+        <div class="info-label">Modules</div>
+        <div class="info-value">{{ done }} / {{ total }}</div>
+    </div>
+</div>
+
+<div class="progress-section">
+    <h2>Progression globale</h2>
+    <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" style="width: {{ progress }}%;"></div>
+    </div>
+    <div style="text-align:right; font-size:12px; color:#4f46e5; font-weight:700; margin-bottom:10px;">{{ progress }}% complété</div>
+    <div class="progress-stats">
+        <div class="stat-box">
+            <div class="stat-val">{{ done }}</div>
+            <div class="stat-lbl">Modules terminés</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-val">{{ total - done }}</div>
+            <div class="stat-lbl">Restants</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-val">{{ progress }}%</div>
+            <div class="stat-lbl">Taux de complétion</div>
+        </div>
+        {% set avgScore = 0 %}
+        {% set scoredCount = 0 %}
+        {% for m in modules %}{% if m.score > 0 %}{% set avgScore = avgScore + m.score %}{% set scoredCount = scoredCount + 1 %}{% endif %}{% endfor %}
+        <div class="stat-box">
+            <div class="stat-val">{{ scoredCount > 0 ? (avgScore / scoredCount)|round : '—' }}</div>
+            <div class="stat-lbl">Score moyen quiz</div>
+        </div>
+    </div>
+</div>
+
+<div class="modules-section">
+    <h2>Détail des modules</h2>
+    {% for module in modules %}
+    <div class="module-card {{ module.statut }}">
+        <div class="module-header">
+            <div class="module-title">
+                {% if module.statut == 'completed' %}✅{% elseif module.statut == 'in_progress' %}🔄{% else %}⬜{% endif %}
+                {{ module.titre }}
+            </div>
+            <div class="module-ordre">#{{ module.ordre }}</div>
+        </div>
+        <div class="module-meta">
+            <span class="meta-badge badge-type">{{ module.type_contenu|upper }}</span>
+            {% if module.duree_minutes %}
+            <span class="meta-badge badge-duree">⏱ {{ module.duree_minutes }} min</span>
+            {% endif %}
+            <span class="meta-badge badge-statut-{{ module.statut }}">
+                {% if module.statut == 'completed' %}Terminé{% elseif module.statut == 'in_progress' %}En cours{% else %}Non commencé{% endif %}
+            </span>
+            {% if module.score > 0 %}
+            <span class="meta-badge badge-score">Quiz : {{ module.score }}%</span>
+            {% endif %}
+        </div>
+        {% if module.description %}
+        <div class="module-desc">{{ module.description }}</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+<div class="footer">
+    <span>Humania-RH — Rapport généré le {{ date }}</span>
+    <span>{{ formation.titre }} — {{ progress }}% complété</span>
+</div>
+
+</body>
+</html>

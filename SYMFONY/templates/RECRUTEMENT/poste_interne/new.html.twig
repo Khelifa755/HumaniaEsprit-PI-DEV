@@ -1,0 +1,86 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Nouveau Poste Interne{% endblock %}
+
+{% block stylesheets %}
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --green:  #22c55e; --blue: #3b82f6; --bg: #f4f6f9;
+        --card: #fff; --text: #1e293b; --muted: #64748b; --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); }
+
+    .new-backdrop {
+        min-height: 100vh; display: flex;
+        align-items: center; justify-content: center; padding: 40px 20px;
+    }
+    .new-card {
+        background: var(--card); border-radius: 18px;
+        width: 100%; max-width: 560px; padding: 36px 40px;
+        box-shadow: 0 8px 40px rgba(0,0,0,.10);
+        animation: slideUp .25s ease;
+    }
+    @keyframes slideUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:none; } }
+
+    .new-header { display:flex; align-items:center; gap:12px; margin-bottom:28px; }
+    .new-icon {
+        width:44px; height:44px; background:#f0fdf4;
+        border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px;
+    }
+    .new-header h2 { font-family:'Sora',sans-serif; font-size:20px; font-weight:700; }
+    .new-header p  { font-size:12px; color:var(--muted); margin-top:2px; }
+
+    .form-group { margin-bottom:18px; }
+    label { display:block; font-size:13px; font-weight:500; color:var(--muted); margin-bottom:6px; }
+    input, select {
+        width:100%; padding:10px 14px; border:1px solid var(--border);
+        border-radius:9px; font-size:14px; outline:none;
+        background:#fafbfc; font-family:'Inter',sans-serif;
+        transition: border-color .2s, box-shadow .2s;
+    }
+    input:focus, select:focus {
+        border-color:var(--blue); box-shadow:0 0 0 3px rgba(59,130,246,.12); background:#fff;
+    }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+
+    .modal-footer {
+        display:flex; justify-content:flex-end; gap:10px;
+        margin-top:26px; padding-top:20px; border-top:1px solid var(--border);
+    }
+    .btn-cancel {
+        padding:9px 20px; border-radius:9px;
+        border:1px solid var(--border); background:transparent;
+        font-size:14px; cursor:pointer; font-weight:500;
+        text-decoration:none; color:var(--text); display:inline-flex; align-items:center;
+        transition:background .15s;
+    }
+    .btn-cancel:hover { background:#f1f5f9; }
+    .btn-save {
+        padding:9px 22px; border-radius:9px;
+        background:#16a34a; color:#fff; border:none;
+        font-size:14px; font-weight:600; cursor:pointer;
+        display:inline-flex; align-items:center; gap:5px;
+        box-shadow:0 2px 6px rgba(22,163,74,.3); transition:background .2s;
+    }
+    .btn-save:hover { background:#15803d; }
+
+    @media(max-width:560px) { .new-card{padding:24px 18px;} .form-row{grid-template-columns:1fr;} }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="new-backdrop">
+    <div class="new-card">
+        <div class="new-header">
+            <div class="new-icon">✨</div>
+            <div>
+                <h2>Créer un poste interne</h2>
+                <p>Remplissez les informations du poste</p>
+            </div>
+        </div>
+        {{ include('RECRUTEMENT/poste_interne/_form.html.twig', {'button_label': 'Créer le poste'}) }}
+    </div>
+</div>
+{% endblock %}

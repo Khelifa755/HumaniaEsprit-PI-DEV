@@ -1,0 +1,25 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .placeholder-page { max-width: 560px; }
+        .placeholder-page__title {
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin: 0 0 12px;
+            color: #0f172a;
+        }
+        .placeholder-page__text { color: #64748b; margin: 0; line-height: 1.6; }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="placeholder-page">
+    <h1 class="placeholder-page__title">{{ page_title }}</h1>
+    <p class="placeholder-page__text">Cette section sera disponible prochainement.</p>
+</div>
+{% endblock %}

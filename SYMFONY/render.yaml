@@ -1,0 +1,61 @@
+services:
+  - type: web
+    name: humania
+    runtime: docker
+    rootDir: SYMFONY
+    dockerfilePath: ./Dockerfile
+    dockerContext: ./
+    plan: starter
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: prod
+      - key: APP_DEBUG
+        value: "0"
+      - key: APP_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: MESSENGER_TRANSPORT_DSN
+        value: doctrine://default?auto_setup=0
+      - key: APP_DEFAULT_TIMEZONE
+        value: Europe/Paris
+      - key: PART_EVENEMENT_STATIC_EMPLOYE_ID
+        value: "1"
+      - key: MAILER_DSN
+        sync: false
+      - key: MAILER_FROM
+        sync: false
+      - key: MAILER_FROM_NAME
+        value: Humania RH
+      - key: EMAIL_RH_NOTIFICATIONS
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_VERIFY_SSL
+        value: "true"
+      - key: ZOOM_ACCOUNT_ID
+        sync: false
+      - key: ZOOM_CLIENT_ID
+        sync: false
+      - key: ZOOM_CLIENT_SECRET
+        sync: false
+      - key: ZOOM_USER_ID
+        value: me
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: RECAPTCHA_SITE_KEY
+        sync: false
+      - key: RECAPTCHA_SECRET_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: YOUTUBE_API_KEY
+        sync: false

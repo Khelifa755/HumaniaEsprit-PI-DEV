@@ -1,0 +1,780 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Documents RH{% endblock %}
+
+{% block stylesheets %}
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg:       #f0f2f5;
+    --card:     #ffffff;
+    --border:   #e4e7ec;
+    --text:     #1a1f2e;
+    --muted:    #6b7280;
+    --blue:     #2563eb;
+    --blue-lt:  #eff6ff;
+    --green:    #16a34a;
+    --green-lt: #f0fdf4;
+    --orange:   #d97706;
+    --orange-lt:#fffbeb;
+    --gray:     #6b7280;
+    --gray-lt:  #f9fafb;
+    --red:      #dc2626;
+    --radius:   12px;
+    --shadow:   0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+}
+
+/* ── Page header ── */
+.doc-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 28px;
+}
+.doc-header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+}
+.doc-header p {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 3px;
+}
+.btn-upload {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 11px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background .15s, transform .15s;
+    white-space: nowrap;
+}
+.btn-upload:hover { background: #1d4ed8; transform: translateY(-1px); }
+
+/* ── Stats grid ── */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.stat-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 20px 22px 16px;
+    border-top: 4px solid transparent;
+    box-shadow: var(--shadow);
+}
+.stat-card.blue   { border-color: var(--blue); }
+.stat-card.green  { border-color: #22c55e; }
+.stat-card.orange { border-color: var(--orange); }
+.stat-card.gray   { border-color: var(--gray); }
+
+.stat-num {
+    font-size: 38px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+.stat-card.blue   .stat-num { color: var(--blue); }
+.stat-card.green  .stat-num { color: #22c55e; }
+.stat-card.orange .stat-num { color: var(--orange); }
+.stat-card.gray   .stat-num { color: var(--gray); }
+
+.stat-label { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 6px; }
+.stat-sub   { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+
+/* ── Info banner ── */
+.info-banner {
+    background: var(--blue-lt);
+    border: 1px solid #bfdbfe;
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    font-size: 13px;
+    color: #1e40af;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+/* ── Toolbar ── */
+.toolbar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+}
+.search-wrap {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.search-wrap svg {
+    position: absolute;
+    left: 10px;
+    color: var(--muted);
+    pointer-events: none;
+}
+.search-wrap input {
+    width: 100%;
+    padding: 8px 12px 8px 34px;
+    border: none;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--text);
+    background: transparent;
+    outline: none;
+}
+.search-wrap input::placeholder { color: var(--muted); }
+.toolbar-sep { width: 1px; background: var(--border); margin: 4px 0; }
+.type-filter {
+    padding: 8px 32px 8px 12px;
+    border: none;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--text);
+    background: transparent;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%236b7280' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+}
+
+/* ── Document list ── */
+.doc-list {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+}
+.doc-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    transition: background .12s;
+}
+.doc-row:last-child { border-bottom: none; }
+.doc-row:hover { background: #fafafa; }
+
+.doc-icon {
+    width: 40px;
+    height: 40px;
+    background: #1e293b;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #fff;
+}
+
+.doc-info { flex: 1; min-width: 0; }
+.doc-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.doc-date { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+.badge-type {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    color: var(--gray);
+    flex-shrink: 0;
+}
+.badge-type.pdf   { background: #fee2e2; color: #dc2626; }
+.badge-type.docx  { background: #dbeafe; color: #2563eb; }
+.badge-type.xlsx  { background: #dcfce7; color: #16a34a; }
+.badge-type.img   { background: #fef3c7; color: #d97706; }
+
+.doc-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.btn-open {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--blue-lt);
+    color: var(--blue);
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background .12s;
+    font-family: inherit;
+}
+.btn-open:hover { background: #dbeafe; }
+
+.btn-sign {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background .12s;
+    font-family: inherit;
+}
+.btn-sign:hover { background: #15803d; }
+
+.btn-del-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #dc2626;
+    padding: 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    transition: background .12s;
+    opacity: .6;
+}
+.btn-del-icon:hover { background: #fee2e2; opacity: 1; }
+
+/* Email icon */
+.btn-email {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--muted);
+    padding: 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    transition: background .12s;
+}
+.btn-email:hover { background: var(--gray-lt); color: var(--text); }
+
+/* ── Empty state ── */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+}
+.empty-state svg { margin-bottom: 12px; opacity: .3; }
+.empty-state p { font-size: 15px; }
+
+/* ── Upload Modal ── */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.4);
+    z-index: 10050;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+.modal-overlay.open {
+    display: flex;
+    pointer-events: auto;
+}
+.modal-overlay.open .modal-box {
+    pointer-events: auto;
+    position: relative;
+    z-index: 1;
+}
+.modal-box {
+    background: #fff;
+    border-radius: 16px;
+    padding: 32px;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.15);
+    position: relative;
+}
+.modal-box h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+.modal-box p.modal-sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 24px;
+}
+.modal-close {
+    position: absolute;
+    top: 16px; right: 16px;
+    background: none; border: none; cursor: pointer;
+    font-size: 20px; color: var(--muted);
+    line-height: 1;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+.modal-close:hover { background: var(--bg); }
+
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--text); }
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px 13px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--text);
+    background: #fff;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+}
+.form-group textarea { resize: vertical; min-height: 80px; }
+
+.modal-footer {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 24px;
+}
+.btn-cancel {
+    padding: 10px 20px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    background: #fff;
+    color: var(--text);
+    transition: background .12s;
+}
+.btn-cancel:hover { background: var(--bg); }
+.btn-save {
+    padding: 10px 22px;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .12s;
+}
+.btn-save:hover { background: #1d4ed8; }
+
+/* ── Delete modal ── */
+.modal-box.delete-box { max-width: 400px; }
+.delete-box .warning-icon {
+    width: 52px; height: 52px;
+    background: #fee2e2;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 16px;
+    color: var(--red);
+}
+.delete-box p { text-align: center; font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+.delete-box strong { color: var(--text); }
+.btn-del-confirm {
+    padding: 10px 22px;
+    background: var(--red);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .12s;
+}
+.btn-del-confirm:hover { background: #b91c1c; }
+
+/* ── Sign modal ── */
+.sign-modal-info {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--green);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    line-height: 1.45;
+    background: var(--green-lt);
+    margin-left: -4px;
+    margin-right: -4px;
+    padding: 14px 14px 14px 16px;
+    border-radius: 8px;
+    border: 1px solid #bbf7d0;
+}
+.sign-modal-info .sign-emoji { flex-shrink: 0; font-size: 16px; line-height: 1.2; }
+</style>
+{% endblock %}
+
+{% block body %}
+
+{# ── Header ── #}
+<div class="doc-header">
+    <div>
+        <h1>Documents RH</h1>
+        <p>Gestion documentaire et signatures électroniques</p>
+    </div>
+    <button class="btn-upload" onclick="openModal('uploadModal')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        Uploader un document
+    </button>
+</div>
+
+{# ── Stats ── #}
+{% set total   = documents|length %}
+{% set signes  = documents|filter(d => d.type starts with 'signé')|length %}
+{% set attente = 0 %}
+{% set nonsign = documents|filter(d => not (d.type starts with 'signé'))|length %}
+
+<div class="stats-grid">
+    <div class="stat-card blue">
+        <div class="stat-num">{{ total }}</div>
+        <div class="stat-label">Total documents</div>
+        <div class="stat-sub">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 3h18v18H3z" rx="2"/></svg>
+            Tous fichiers
+        </div>
+    </div>
+    <div class="stat-card green">
+        <div class="stat-num">{{ signes }}</div>
+        <div class="stat-label">Signés</div>
+        <div class="stat-sub">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            Signature complète
+        </div>
+    </div>
+    <div class="stat-card orange">
+        <div class="stat-num">{{ attente }}</div>
+        <div class="stat-label">En attente de signature</div>
+        <div class="stat-sub">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Signature en cours
+        </div>
+    </div>
+    <div class="stat-card gray">
+        <div class="stat-num">{{ nonsign }}</div>
+        <div class="stat-label">Non signés</div>
+        <div class="stat-sub">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+            Sans signature
+        </div>
+    </div>
+</div>
+
+{# ── Info banner ── #}
+<div class="info-banner">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+    Signature électronique disponible via SignNow. Cliquez sur
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+    <strong>Signer</strong> à côté d'un document pour envoyer une demande.
+</div>
+
+{# ── Toolbar ── #}
+<div class="toolbar">
+    <div class="search-wrap">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input type="text" id="searchInput" placeholder="Rechercher un document..." oninput="filterDocs()">
+    </div>
+    <div class="toolbar-sep"></div>
+    <select class="type-filter" id="typeFilter" onchange="filterDocs()">
+        <option value="">Tous</option>
+        <option value="PDF">PDF</option>
+        <option value="DOCX">DOCX</option>
+        <option value="XLSX">XLSX</option>
+    </select>
+</div>
+
+{# ── Document list ── #}
+<div class="doc-list" id="docList">
+{% for document in documents %}
+    {% set ext = document.type|upper %}
+    {% set badgeClass = 'pdf' %}
+    {% if ext == 'DOCX' %}{% set badgeClass = 'docx' %}
+    {% elseif ext == 'XLSX' %}{% set badgeClass = 'xlsx' %}
+    {% elseif ext in ['PNG','JPG','JPEG','GIF','WEBP'] %}{% set badgeClass = 'img' %}
+    {% endif %}
+
+    <div class="doc-row"
+         data-name="{{ document.name|lower }}"
+         data-type="{{ document.type|upper }}">
+
+        <div class="doc-icon">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+            </svg>
+        </div>
+
+        <div class="doc-info">
+            <div class="doc-name">{{ document.name }}</div>
+            <div class="doc-date">
+                {{ document.uploadedAt ? document.uploadedAt|date('d/m/Y') : 'Date inconnue' }} · Stocké en DB
+            </div>
+        </div>
+
+        <span class="badge-type {{ badgeClass }}">{{ ext }}</span>
+
+        <div class="doc-actions">
+            <a href="{{ document.path }}" target="_blank" class="btn-open">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Ouvrir
+            </a>
+
+            <button class="btn-email" title="Envoyer par email">
+                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <polyline points="22,6 12,13 2,6"/>
+                </svg>
+            </button>
+
+            <button type="button" class="btn-sign" onclick="openSignModal({{ document.id }}, '{{ document.name|e('js') }}')">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+                </svg>
+                Signer
+            </button>
+
+            <button class="btn-del-icon"
+                    onclick="openDeleteModal({{ document.id }}, '{{ document.name|e('js') }}')"
+                    title="Supprimer">
+                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                    <path d="M10 11v6M14 11v6"/>
+                    <path d="M9 6V4h6v2"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+{% else %}
+    <div class="empty-state">
+        <svg width="52" height="52" fill="none" stroke="#94a3b8" stroke-width="1.5" viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+        </svg>
+        <p>Aucun document disponible.</p>
+    </div>
+{% endfor %}
+</div>
+
+{# ════ UPLOAD MODAL ════ #}
+<div class="modal-overlay" id="uploadModal">
+    <div class="modal-box">
+        <button class="modal-close" onclick="closeModal('uploadModal')">✕</button>
+        <h2>📄 Uploader un document</h2>
+        <p class="modal-sub">Ajoutez un nouveau document à la base documentaire RH.</p>
+
+        <form method="post" action="{{ path('app_document_new') }}" enctype="multipart/form-data">
+            <input type="hidden" name="_token" value="{{ csrf_token('document_upload') }}">
+
+            <div class="form-group">
+                <label for="doc_file">Fichier sur votre ordinateur</label>
+                <input type="file" id="doc_file" name="document[file]" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,image/*">
+            </div>
+            <div class="form-group">
+                <label for="doc_name">Nom affiché (optionnel)</label>
+                <input type="text" id="doc_name" name="document[name]" placeholder="Laissé vide = nom du fichier téléversé">
+            </div>
+            <div class="form-group">
+                <label for="doc_path">Ou URL / chemin (si pas de fichier)</label>
+                <input type="text" id="doc_path" name="document[path]" placeholder="https://... ou /uploads/... (optionnel si fichier ci-dessus)">
+            </div>
+            <div class="form-group">
+                <label for="doc_type">Type (si saisie URL uniquement)</label>
+                <select id="doc_type" name="document[type]">
+                    <option value="">— Déduit du fichier si upload —</option>
+                    <option value="PDF">PDF</option>
+                    <option value="DOCX">DOCX</option>
+                    <option value="XLSX">XLSX</option>
+                    <option value="PNG">Image (PNG/JPG)</option>
+                    <option value="Autre">Autre</option>
+                </select>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeModal('uploadModal')">Annuler</button>
+                <button type="submit" class="btn-save">Uploader</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# ════ SIGN MODAL ════ #}
+<div class="modal-overlay" id="signModal">
+    <div class="modal-box">
+        <button type="button" class="modal-close" onclick="closeModal('signModal')">✕</button>
+        <h2>✍️ Demande de signature</h2>
+        <p class="modal-sub">Document : <strong id="signDocName"></strong></p>
+
+        <form id="signForm" method="post" action="#">
+            <input type="hidden" name="_token" id="signCsrf" value="">
+
+            <div class="form-group">
+                <label for="sign_prenom">Prénom du signataire :</label>
+                <input type="text" id="sign_prenom" name="signataire_prenom" placeholder="Prénom" required autocomplete="given-name">
+            </div>
+            <div class="form-group">
+                <label for="sign_nom">Nom du signataire :</label>
+                <input type="text" id="sign_nom" name="signataire_nom" placeholder="Nom" required autocomplete="family-name">
+            </div>
+            <div class="form-group">
+                <label for="sign_email">Email du signataire :</label>
+                <input type="email" id="sign_email" name="signataire_email" placeholder="email@exemple.com" required autocomplete="email">
+            </div>
+
+            <div class="sign-modal-info">
+                <span class="sign-emoji" aria-hidden="true">📧</span>
+                <span>Le signataire recevra un email SignNow avec son lien de signature.</span>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeModal('signModal')">Annuler</button>
+                <button type="submit" class="btn-save">Envoyer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# ════ DELETE MODAL ════ #}
+<div class="modal-overlay" id="deleteModal">
+    <div class="modal-box delete-box">
+        <div class="warning-icon">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            </svg>
+        </div>
+        <p><strong>Supprimer le document</strong></p>
+        <p id="deleteDocName" style="margin-bottom:16px;font-weight:600;color:var(--text);text-align:center;"></p>
+        <p>Cette action est irréversible.</p>
+
+        <form id="deleteForm" method="post">
+            <input type="hidden" name="_token" id="deleteToken" value="">
+            <div class="modal-footer" style="justify-content:center;gap:12px;margin-top:20px;">
+                <button type="button" class="btn-cancel" onclick="closeModal('deleteModal')">Annuler</button>
+                <button type="submit" class="btn-del-confirm">Supprimer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# CSRF tokens pour delete #}
+<script type="application/json" id="doc-csrf-data">
+    {% if documents is not empty %}
+    { {% for document in documents %}"{{ document.id }}": {{ csrf_token('delete' ~ document.id)|json_encode|raw }}{% if not loop.last %}, {% endif %}{% endfor %} }
+    {% else %}{}{% endif %}
+</script>
+<script type="application/json" id="doc-sign-csrf-data">
+    {% if documents is not empty %}
+    { {% for document in documents %}"{{ document.id }}": {{ csrf_token('document_sign_' ~ document.id)|json_encode|raw }}{% if not loop.last %}, {% endif %}{% endfor %} }
+    {% else %}{}{% endif %}
+</script>
+
+<script>
+const csrfData    = JSON.parse(document.getElementById('doc-csrf-data').textContent);
+const signCsrfData = JSON.parse(document.getElementById('doc-sign-csrf-data').textContent);
+const deleteTpl   = {{ path('app_document_delete', {id: '__ID__'})|json_encode|raw }};
+const signTpl     = {{ path('app_document_sign', {id: '__ID__'})|json_encode|raw }};
+
+function openModal(id)  { document.getElementById(id).classList.add('open');    document.body.style.overflow = 'hidden'; }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); document.body.style.overflow = ''; }
+
+document.querySelectorAll('.modal-overlay').forEach(o => {
+    o.addEventListener('click', e => { if (e.target === o) closeModal(o.id); });
+});
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => closeModal(m.id));
+});
+
+function openDeleteModal(id, name) {
+    document.getElementById('deleteDocName').textContent = name;
+    document.getElementById('deleteForm').action = deleteTpl.replace('__ID__', String(id));
+    document.getElementById('deleteToken').value = csrfData[id] ?? csrfData[String(id)] ?? '';
+    openModal('deleteModal');
+}
+
+function openSignModal(id, name) {
+    document.getElementById('signDocName').textContent = name;
+    document.getElementById('signForm').action = signTpl.replace('__ID__', String(id));
+    document.getElementById('signCsrf').value = signCsrfData[id] ?? signCsrfData[String(id)] ?? '';
+    document.getElementById('sign_prenom').value = '';
+    document.getElementById('sign_nom').value = '';
+    document.getElementById('sign_email').value = '';
+    openModal('signModal');
+    setTimeout(() => document.getElementById('sign_prenom').focus(), 100);
+}
+
+function filterDocs() {
+    const q    = document.getElementById('searchInput').value.toLowerCase();
+    const type = document.getElementById('typeFilter').value.toUpperCase();
+    document.querySelectorAll('.doc-row').forEach(row => {
+        const matchQ    = !q    || row.dataset.name.includes(q);
+        const matchType = !type || row.dataset.type === type;
+        row.style.display = (matchQ && matchType) ? '' : 'none';
+    });
+}
+
+document.getElementById('doc_file')?.addEventListener('change', function () {
+    const nameInput = document.getElementById('doc_name');
+    if (!nameInput || !this.files?.length) return;
+    if (!nameInput.value.trim()) {
+        nameInput.value = this.files[0].name;
+    }
+});
+</script>
+{% endblock %}

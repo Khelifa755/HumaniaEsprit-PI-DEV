@@ -1,0 +1,445 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Candidatures Internes — Humania{% endblock %}
+
+{% block stylesheets %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --purple:  #6c3fc5;
+    --orange:  #f59e0b;
+    --green:   #10b981;
+    --red:     #ef4444;
+    --bg:      #f4f6fb;
+    --card:    #ffffff;
+    --text:    #1e293b;
+    --muted:   #64748b;
+    --border:  #e2e8f0;
+    --radius:  14px;
+    --shadow:  0 2px 12px rgba(0,0,0,.07);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); }
+
+  .page-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:28px; }
+  .page-header h1 { font-size:1.75rem; font-weight:700; }
+  .page-header p  { color:var(--muted); font-size:.9rem; margin-top:3px; }
+
+  .btn-primary {
+    display:inline-flex; align-items:center; gap:8px;
+    background:var(--purple); color:#fff; border:none; border-radius:10px;
+    padding:11px 22px; font-size:.9rem; font-weight:600;
+    cursor:pointer; text-decoration:none; white-space:nowrap;
+    transition:background .2s, transform .15s;
+  }
+  .btn-primary:hover { background:#5530a8; transform:translateY(-1px); }
+
+  .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px; }
+  @media(max-width:900px) { .stats-grid { grid-template-columns:repeat(2,1fr); } }
+
+  .stat-card { background:var(--card); border-radius:var(--radius); padding:22px 24px; box-shadow:var(--shadow); border-top:4px solid var(--purple); }
+  .stat-card.orange { border-top-color:var(--orange); }
+  .stat-card.green  { border-top-color:var(--green); }
+  .stat-card.red    { border-top-color:var(--red); }
+  .stat-val { font-size:2rem; font-weight:700; line-height:1; margin-bottom:4px; color:var(--purple); }
+  .stat-card.orange .stat-val { color:var(--orange); }
+  .stat-card.green  .stat-val { color:var(--green); }
+  .stat-card.red    .stat-val { color:var(--red); }
+  .stat-val.zero    { font-size:1rem; letter-spacing:.2em; opacity:.35; }
+  .stat-label { font-size:.88rem; font-weight:600; color:var(--text); margin-bottom:6px; }
+  .stat-sub   { font-size:.76rem; color:var(--muted); }
+
+  .filters { display:flex; gap:12px; margin-bottom:24px; }
+  .search-box {
+    flex:1; display:flex; align-items:center;
+    background:var(--card); border:1px solid var(--border);
+    border-radius:10px; padding:0 16px; gap:10px; box-shadow:var(--shadow);
+  }
+  .search-box input {
+    border:none; outline:none; width:100%; font-size:.9rem;
+    font-family:inherit; color:var(--text); padding:12px 0; background:transparent;
+  }
+  .filter-select {
+    background:var(--card); border:1px solid var(--border); border-radius:10px;
+    padding:0 36px 0 14px; font-size:.88rem; font-family:inherit; color:var(--text); appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 12px center;
+    height:46px; min-width:130px; cursor:pointer; box-shadow:var(--shadow);
+  }
+
+  .candidature-list { display:flex; flex-direction:column; gap:14px; }
+  .candidature-card {
+    background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow);
+    border-left:5px solid var(--purple);
+    display:flex; align-items:center; padding:18px 22px; gap:18px;
+    transition:transform .2s, box-shadow .2s;
+  }
+  .candidature-card:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,0,0,.1); }
+  .candidature-card.s-attente   { border-left-color:var(--orange); }
+  .candidature-card.s-approuvee { border-left-color:var(--green); }
+  .candidature-card.s-refusee   { border-left-color:var(--red); }
+
+  .avatar { width:50px; height:50px; border-radius:50%; background:var(--purple); color:#fff; font-weight:700; font-size:1rem; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .card-body  { flex:1; min-width:0; }
+  .card-title { font-weight:700; font-size:1.02rem; margin-bottom:6px; }
+  .card-title .arrow { color:var(--muted); margin:0 6px; }
+  .card-meta  { display:flex; gap:16px; font-size:.8rem; color:var(--muted); align-items:center; flex-wrap:wrap; }
+  .card-meta span { display:flex; align-items:center; gap:5px; }
+  .card-meta .motif { max-width:320px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .card-id    { font-size:.82rem; color:var(--muted); font-weight:500; flex-shrink:0; align-self:flex-start; }
+  .card-actions { display:flex; gap:8px; flex-shrink:0; }
+
+  .btn-action { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:8px; font-size:.8rem; font-weight:600; cursor:pointer; border:none; transition:background .2s, transform .15s; }
+  .btn-edit   { background:#fef9ec; color:#b45309; }
+  .btn-edit:hover   { background:#fde68a; transform:translateY(-1px); }
+  .btn-delete { background:#fef2f2; color:#dc2626; }
+  .btn-delete:hover { background:#fecaca; transform:translateY(-1px); }
+
+  .alert { padding:12px 18px; border-radius:10px; margin-bottom:20px; font-size:.88rem; font-weight:500; }
+  .alert-success { background:#d1fae5; color:#065f46; border-left:4px solid var(--green); }
+  .alert-danger  { background:#fee2e2; color:#991b1b; border-left:4px solid var(--red); }
+  .empty-state { text-align:center; padding:60px 20px; color:var(--muted); }
+
+  /* ── MODAL ── */
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(15,23,42,.45); backdrop-filter:blur(3px); z-index:10050; align-items:center; justify-content:center; padding:20px; }
+  .modal-overlay.active { display:flex; }
+  /* .rec-dialog — éviter la classe "modal" (Bootstrap cache .modal sans .show) */
+  .rec-dialog { display:block; background:var(--card); border-radius:18px; width:100%; max-width:640px; max-height:90vh; overflow-y:auto; box-shadow:0 24px 60px rgba(0,0,0,.2); animation:slideUp .25s ease; }
+  @keyframes slideUp { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+  .modal-header { display:flex; align-items:center; justify-content:space-between; padding:22px 28px 18px; border-bottom:1px solid var(--border); }
+  .modal-header h2 { font-size:1.15rem; font-weight:700; }
+  .modal-close { width:32px; height:32px; border-radius:50%; border:none; background:var(--bg); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.1rem; color:var(--muted); transition:background .15s; }
+  .modal-close:hover { background:var(--border); }
+  .modal-body { padding:24px 28px 28px; }
+
+  /* ── Formulaire dans modal ── */
+  .hi-grid  { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .hi-group { display:flex; flex-direction:column; gap:5px; }
+  .hi-full  { grid-column:1/-1; }
+  .hi-form label { font-size:.79rem; font-weight:600; color:#64748b; text-transform:uppercase; letter-spacing:.04em; }
+  .hi-form input,
+  .hi-form select,
+  .hi-form textarea {
+    border:1.5px solid #e2e8f0; border-radius:8px; padding:10px 14px; font-size:.9rem;
+    font-family:'DM Sans',sans-serif; color:#1e293b; background:#f4f6fb;
+    outline:none; width:100%; resize:vertical; transition:border-color .2s, background .2s;
+  }
+  .hi-form input:focus,
+  .hi-form select:focus,
+  .hi-form textarea:focus { border-color:#6c3fc5; background:#fff; }
+  .hi-form ul.errors { list-style:none; color:#dc2626; font-size:.78rem; margin-top:3px; }
+  .hi-footer { display:flex; justify-content:flex-end; align-items:center; gap:10px; margin-top:22px; padding-top:18px; border-top:1px solid #e2e8f0; }
+  .hi-btn-cancel { padding:10px 22px; border-radius:8px; border:1.5px solid #e2e8f0; background:transparent; font-size:.9rem; font-family:inherit; font-weight:600; cursor:pointer; color:#64748b; }
+  .hi-btn-cancel:hover { background:#f4f6fb; }
+  .hi-btn-save { padding:10px 26px; border-radius:8px; border:none; background:#6c3fc5; color:#fff; font-size:.9rem; font-family:inherit; font-weight:600; cursor:pointer; transition:background .2s, transform .15s; }
+  .hi-btn-save:hover { background:#5530a8; transform:translateY(-1px); }
+  .hi-btn-delete { display:inline-flex; align-items:center; gap:6px; padding:9px 18px; border-radius:8px; border:none; background:#fef2f2; color:#dc2626; font-size:.85rem; font-family:inherit; font-weight:600; cursor:pointer; margin-right:auto; }
+  .hi-btn-delete:hover { background:#fecaca; }
+
+  /* Spinner */
+  .modal-loading { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px; gap:12px; color:var(--muted); }
+  .spinner { width:32px; height:32px; border:3px solid var(--border); border-top-color:var(--purple); border-radius:50%; animation:spin .7s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+</style>
+{% endblock %}
+
+{% block body %}
+
+{# ── Flash messages ── #}
+{% for label, messages in app.flashes %}
+  {% for message in messages %}
+    <div class="alert alert-{{ label == 'success' ? 'success' : 'danger' }}">{{ message }}</div>
+  {% endfor %}
+{% endfor %}
+
+{# ── Header ── #}
+<div class="page-header">
+  <div>
+    <h1>Candidatures Internes</h1>
+    <p>Mobilité interne — suivi des demandes de changement de poste</p>
+  </div>
+  <button class="btn-primary" onclick="openModal('modal-new')">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+      <path d="M12 5v14M5 12h14"/>
+    </svg>
+    Nouvelle demande
+  </button>
+</div>
+
+{# ── Stats ── #}
+{% set total     = candidature_internes|length %}
+{% set attente   = candidature_internes|filter(c => c.statut == 'En attente')|length %}
+{% set approuvee = candidature_internes|filter(c => c.statut == 'Approuvée')|length %}
+{% set refusee   = candidature_internes|filter(c => c.statut == 'Refusée')|length %}
+
+<div class="stats-grid">
+  <div class="stat-card purple">
+    <div class="stat-val">{{ total }}</div>
+    <div class="stat-label">Total demandes</div>
+    <div class="stat-sub">⊙ Mobilité interne</div>
+  </div>
+  <div class="stat-card orange">
+    <div class="stat-val {% if attente == 0 %}zero{% endif %}">{{ attente == 0 ? '—' : attente }}</div>
+    <div class="stat-label">En attente</div>
+    <div class="stat-sub">👤 En cours de traitement</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-val {% if approuvee == 0 %}zero{% endif %}">{{ approuvee == 0 ? '—' : approuvee }}</div>
+    <div class="stat-label">Approuvées</div>
+    <div class="stat-sub">✔ Mutations validées</div>
+  </div>
+  <div class="stat-card red">
+    <div class="stat-val {% if refusee == 0 %}zero{% endif %}">{{ refusee == 0 ? '—' : refusee }}</div>
+    <div class="stat-label">Refusées</div>
+    <div class="stat-sub">✗ Non approuvées</div>
+  </div>
+</div>
+
+{# ── Filters ── #}
+<div class="filters">
+  <div class="search-box">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+    </svg>
+    <input type="text" id="searchInput"
+           placeholder="Rechercher par poste actuel, nouveau poste, motif…"
+           oninput="filterCards()">
+  </div>
+  <select class="filter-select" id="filterStatut" onchange="filterCards()">
+    <option value="">Tous</option>
+    <option>En attente</option>
+    <option>Approuvée</option>
+    <option>Refusée</option>
+  </select>
+</div>
+
+{# ── List ── #}
+<div class="candidature-list" id="candidatureList">
+  {% for c in candidature_internes %}
+    {% set words = c.posteActuel|split(' ') %}
+    {% set initials = (words|first|first ~ (words|length > 1 ? words[1]|first : words|first|slice(1,1)))|upper %}
+    {% set slugStatut = c.statut|lower|replace({' ': '-', 'é': 'e', 'è': 'e'}) %}
+
+    <div class="candidature-card s-{{ slugStatut == 'en-attente' ? 'attente' : (slugStatut == 'approuvee' ? 'approuvee' : (slugStatut == 'refusee' ? 'refusee' : 'default')) }}"
+         data-search="{{ c.posteActuel|lower }} {{ c.nouveauPoste|lower }} {{ c.motif|lower }}"
+         data-statut="{{ c.statut }}">
+
+      <div class="avatar" style="background:hsl({{ (c.posteActuel|length * 47) % 360 }},55%,42%)">
+        {{ initials }}
+      </div>
+
+      <div class="card-body">
+        <div class="card-title">
+          {{ c.posteActuel }}
+          <span class="arrow">→</span>
+          {{ c.nouveauPoste }}
+        </div>
+        <div class="card-meta">
+          <span>
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+            </svg>
+            {{ c.dateDemande ? c.dateDemande|date('d/m/Y') : '—' }}
+          </span>
+          {% if c.motif %}
+          <span class="motif">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            {{ c.motif|length > 70 ? c.motif|slice(0,70) ~ '…' : c.motif }}
+          </span>
+          {% endif %}
+          {% if c.nouveauSalaire %}
+          <span>
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/>
+            </svg>
+            {{ c.nouveauSalaire|number_format(0,',','') }} TND
+          </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card-id">#{{ c.id }}</div>
+
+      <div class="card-actions">
+        {# URL générée côté Twig dans data-attribute → aucune manipulation JS d'URL #}
+        <button class="btn-action btn-edit"
+                data-url="{{ path('app_candidature_interne_edit', {'id': c.id}) }}?modal=1"
+                onclick="openEditModal(this)">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          Modifier
+        </button>
+        <button class="btn-action btn-delete" onclick="confirmDelete({{ c.id }})">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/>
+          </svg>
+          Supprimer
+        </button>
+      </div>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+      <p>Aucune candidature interne trouvée</p>
+    </div>
+  {% endfor %}
+</div>
+
+{# ══════════════════════════════════
+   MODAL — Nouvelle demande
+══════════════════════════════════ #}
+<div class="modal-overlay" id="modal-new" onclick="closeOnBackdrop(event,'modal-new')">
+  <div class="rec-dialog">
+    <div class="modal-header">
+      <h2>✦ Nouvelle demande interne</h2>
+      <button class="modal-close" onclick="closeModal('modal-new')">✕</button>
+    </div>
+    <div class="modal-body">
+      {{ form_start(form, {'attr': {'class': 'hi-form'}}) }}
+      <div class="hi-grid">
+        <div class="hi-group">
+          {{ form_label(form.posteActuel, 'Poste actuel') }}
+          {{ form_widget(form.posteActuel, {'attr': {'placeholder': 'Ex : Développeur Junior'}}) }}
+          {{ form_errors(form.posteActuel) }}
+        </div>
+        <div class="hi-group">
+          {{ form_label(form.nouveauPoste, 'Nouveau poste souhaité') }}
+          {{ form_widget(form.nouveauPoste, {'attr': {'placeholder': 'Ex : Chef de Projet'}}) }}
+          {{ form_errors(form.nouveauPoste) }}
+        </div>
+        <div class="hi-group">
+          {{ form_label(form.dateDemande, 'Date de la demande') }}
+          {{ form_widget(form.dateDemande) }}
+          {{ form_errors(form.dateDemande) }}
+        </div>
+        <div class="hi-group">
+          {{ form_label(form.nouveauSalaire, 'Nouveau salaire (TND)') }}
+          {{ form_widget(form.nouveauSalaire, {'attr': {'placeholder': 'Ex : 3500'}}) }}
+          {{ form_errors(form.nouveauSalaire) }}
+        </div>
+        <div class="hi-group">
+          {{ form_label(form.statut, 'Statut') }}
+          {{ form_widget(form.statut) }}
+          {{ form_errors(form.statut) }}
+        </div>
+        <div class="hi-group hi-full">
+          {{ form_label(form.motif, 'Motif de la demande') }}
+          {{ form_widget(form.motif, {'attr': {'placeholder': 'Décrivez les raisons de votre demande…', 'rows': 4}}) }}
+          {{ form_errors(form.motif) }}
+        </div>
+      </div>
+      {{ form_rest(form) }}
+      <div class="hi-footer">
+        <button type="button" class="hi-btn-cancel" onclick="closeModal('modal-new')">Annuler</button>
+        <button type="submit" class="hi-btn-save">Enregistrer</button>
+      </div>
+      {{ form_end(form) }}
+    </div>
+  </div>
+</div>
+
+{# ══════════════════════════════════
+   MODAL — Modifier (contenu chargé via fetch)
+══════════════════════════════════ #}
+<div class="modal-overlay" id="modal-edit" onclick="closeOnBackdrop(event,'modal-edit')">
+  <div class="rec-dialog">
+    <div class="modal-header">
+      <h2>✎ Modifier la demande</h2>
+      <button class="modal-close" onclick="closeModal('modal-edit')">✕</button>
+    </div>
+    <div class="modal-body" id="modal-edit-body">
+      <div class="modal-loading"><div class="spinner"></div><span>Chargement…</span></div>
+    </div>
+  </div>
+</div>
+
+{# Formulaires de suppression cachés #}
+{% for c in candidature_internes %}
+<form id="del-{{ c.id }}" method="post"
+      action="{{ path('app_candidature_interne_delete', {'id': c.id}) }}"
+      style="display:none">
+  <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ c.id) }}">
+</form>
+{% endfor %}
+
+<script>
+  function openModal(id) {
+    document.getElementById(id).classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal(id) {
+    const el = document.getElementById(id);
+    if (el) { el.classList.remove('active'); document.body.style.overflow = ''; }
+  }
+  function closeOnBackdrop(e, id) {
+    if (e.target.id === id) closeModal(id);
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape')
+      document.querySelectorAll('.modal-overlay.active').forEach(m => closeModal(m.id));
+  });
+
+  /**
+   * Ouvre le modal d'édition et charge le formulaire pré-rempli via fetch.
+   * L'URL est lue depuis l'attribut data-url du bouton cliqué.
+   */
+  function openEditModal(btn) {
+    const url = btn.getAttribute('data-url');
+    openModal('modal-edit');
+    const body = document.getElementById('modal-edit-body');
+    body.innerHTML = '<div class="modal-loading"><div class="spinner"></div><span>Chargement du formulaire…</span></div>';
+
+    fetch(url, {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => {
+      if (!response.ok) throw new Error('Erreur HTTP ' + response.status);
+      return response.text();
+    })
+    .then(html => {
+      body.innerHTML = html;
+    })
+    .catch(err => {
+      const fallback = url.replace('?modal=1', '');
+      body.innerHTML = `
+        <div style="text-align:center;padding:30px 20px;color:#dc2626">
+          <p style="margin-bottom:12px">Impossible de charger le formulaire.</p>
+          <a href="${fallback}" style="color:#6c3fc5;font-weight:600;text-decoration:underline">
+            Ouvrir la page d'édition complète →
+          </a>
+        </div>`;
+    });
+  }
+
+  function confirmDelete(id) {
+    if (!confirm('Confirmer la suppression de cette demande ?')) return;
+    document.getElementById('del-' + id).submit();
+  }
+
+  function filterCards() {
+    const q  = document.getElementById('searchInput').value.toLowerCase();
+    const st = document.getElementById('filterStatut').value;
+    document.querySelectorAll('.candidature-card').forEach(card => {
+      const s  = (card.dataset.search || '').toLowerCase();
+      const cs = card.dataset.statut || '';
+      card.style.display = (!q || s.includes(q)) && (!st || cs === st) ? 'flex' : 'none';
+    });
+  }
+
+  {# Ré-ouvrir le modal "Nouvelle demande" si la validation a échoué #}
+  {% if open_new_modal is defined and open_new_modal %}
+    document.addEventListener('DOMContentLoaded', () => openModal('modal-new'));
+  {% endif %}
+</script>
+
+{% endblock %}

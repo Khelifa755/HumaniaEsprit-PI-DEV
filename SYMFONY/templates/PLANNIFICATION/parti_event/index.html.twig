@@ -1,0 +1,322 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Participer aux Événements — Humania{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+/* ── reuse existing event-card styles ─────────────────────────────────────── */
+.page-header { display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:1rem;flex-wrap:wrap; }
+.page-header-text h1 { font-size:1.75rem;font-weight:700;margin:0 0 4px;color:#0f172a; }
+.page-header-text p  { margin:0;color:#94a3b8;font-size:.9rem; }
+
+.flash { padding:.72rem 1rem;border-radius:10px;font-size:.9rem;font-weight:500;margin-bottom:14px; }
+.flash-success { background:#d1fae5;color:#065f46;border:1px solid #6ee7b7; }
+.flash-error   { background:#fee2e2;color:#991b1b;border:1px solid #fca5a5; }
+
+.search-bar { display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid #e2e8f0;border-radius:14px;padding:10px 16px;margin-bottom:16px;max-width:420px;box-shadow:0 1px 3px rgba(0,0,0,.06); }
+.search-bar input { border:none;outline:none;font-size:.9rem;font-family:inherit;color:#0f172a;background:transparent;flex:1; }
+.search-bar input::placeholder { color:#94a3b8; }
+
+.filter-bar { display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px 20px;margin-bottom:28px; }
+.filter-bar-label { font-size:.88rem;font-weight:700;color:#0f172a;margin-right:4px; }
+.filter-btn { display:inline-flex;align-items:center;gap:5px;padding:7px 16px;border-radius:99px;font-size:.82rem;font-weight:600;cursor:pointer;border:1.5px solid #e2e8f0;background:#fff;color:#64748b;font-family:inherit;transition:background .15s,color .15s,border-color .15s; }
+.filter-btn:hover { background:#f8fafc;border-color:#cbd5e1; }
+.filter-btn.is-active { background:#0f172a;color:#fff;border-color:#0f172a; }
+.filter-btn.btn-avenir.is-active { background:#2563eb;border-color:#2563eb;color:#fff; }
+
+.cards-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px; }
+
+.event-card { background:#fff;border-radius:14px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:20px;display:flex;flex-direction:column;gap:.85rem;transition:box-shadow .18s,transform .18s; }
+.event-card:hover { box-shadow:0 6px 20px rgba(0,0,0,.09);transform:translateY(-1px); }
+.event-card.is-joined { border-color:#10b981;box-shadow:0 0 0 2px rgba(16,185,129,.15); }
+
+.card-header { display:flex;justify-content:space-between;gap:.5rem;align-items:flex-start; }
+.card-title  { font-weight:700;margin:0 0 .25rem;font-size:1rem;color:#0f172a;line-height:1.35; }
+.card-desc   { margin:0;color:#94a3b8;font-size:.84rem;line-height:1.45; }
+
+.badge          { padding:.2rem .6rem;border-radius:99px;font-size:.72rem;font-weight:600;white-space:nowrap;flex-shrink:0; }
+.badge-done     { background:#1f2937;color:#fff; }
+.badge-active   { background:#10b981;color:#fff; }
+.badge-upcoming { background:#2563eb;color:#fff; }
+.badge-joined   { background:#10b981;color:#fff; }
+
+.card-meta { display:grid;grid-template-columns:1fr 1fr;gap:5px 8px; }
+.meta-item { display:flex;align-items:center;gap:5px;font-size:.8rem;color:#64748b; }
+
+.capacity-label { display:flex;justify-content:space-between;font-size:.78rem;color:#64748b;margin-bottom:5px; }
+.capacity-bar   { height:6px;background:#f1f5f9;border-radius:99px;overflow:hidden; }
+.capacity-fill  { height:100%;background:#2563eb;border-radius:99px; }
+
+.card-footer { display:flex;gap:8px;align-items:stretch;padding-top:14px;border-top:1px solid #f1f5f9;margin-top:auto;flex-wrap:wrap; }
+
+.btn-details {
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    flex:1;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:10px;
+    background:#fff;color:#1e293b;font-size:.82rem;font-weight:600;
+    cursor:pointer;font-family:inherit;transition:background .15s,border-color .15s;white-space:nowrap;
+}
+.btn-details:hover { background:#f8fafc;border-color:#cbd5e1; }
+
+.btn-join {
+    display:inline-flex;align-items:center;justify-content:center;gap:5px;
+    flex:1;padding:8px 10px;border-radius:10px;font-size:.82rem;font-weight:700;
+    border:none;background:#2563eb;color:#fff;cursor:pointer;
+    font-family:inherit;transition:background .18s;white-space:nowrap;
+}
+.btn-join:hover { background:#1d4ed8; }
+
+.btn-cancel-part {
+    display:inline-flex;align-items:center;justify-content:center;gap:5px;
+    flex:1;padding:8px 10px;border-radius:10px;font-size:.82rem;font-weight:700;
+    background:#fff;color:#ef4444;border:2px solid #ef4444;
+    cursor:pointer;font-family:inherit;transition:background .18s,color .18s;white-space:nowrap;
+}
+.btn-cancel-part:hover { background:#ef4444;color:#fff; }
+
+.btn-badge {
+    display:inline-flex;align-items:center;justify-content:center;gap:5px;
+    flex:1;padding:8px 10px;border-radius:10px;font-size:.82rem;font-weight:700;
+    border:none;background:#10b981;color:#fff;cursor:pointer;
+    font-family:inherit;transition:background .18s;white-space:nowrap;text-decoration:none;
+}
+.btn-badge:hover { background:#059669; }
+
+.btn-disabled {
+    display:inline-flex;align-items:center;justify-content:center;gap:5px;
+    flex:1;padding:8px 10px;border-radius:10px;font-size:.82rem;font-weight:600;
+    border:1.5px solid #e2e8f0;background:#f8fafc;color:#94a3b8;
+    cursor:not-allowed;font-family:inherit;white-space:nowrap;
+}
+
+.empty-grid { grid-column:1/-1;text-align:center;padding:3rem;color:#94a3b8; }
+
+/* ── Details modal ────────────────────────────────────────────────────────── */
+.modal-overlay { position:fixed;inset:0;background:rgba(15,23,42,.5);display:none;align-items:center;justify-content:center;z-index:900;animation:moFade .15s ease; }
+.modal-overlay.is-open { display:flex; }
+@keyframes moFade { from{opacity:0}to{opacity:1} }
+
+.modal-box { background:#fff;border-radius:16px;box-shadow:0 12px 48px rgba(15,23,42,.18);width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;animation:moUp .18s ease; }
+@keyframes moUp { from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1} }
+
+.modal-head { position:relative;padding:1.1rem 1.5rem 1rem;border-bottom:1.5px solid #f1f5f9; }
+.modal-title { font-size:1.1rem;font-weight:800;color:#0f172a;margin:0; }
+.modal-close { position:absolute;top:.9rem;right:1.1rem;background:none;border:none;font-size:1.1rem;color:#94a3b8;cursor:pointer;line-height:1;transition:color .15s; }
+.modal-close:hover { color:#0f172a; }
+
+.modal-body { padding:1.5rem; }
+.detail-row { display:flex;gap:.6rem;align-items:flex-start;margin-bottom:1rem;font-size:.9rem;color:#374151; }
+.detail-row strong { min-width:130px;color:#0f172a;font-weight:700; }
+.detail-desc { white-space:pre-wrap;background:#f8fafc;border-radius:8px;padding:.75rem 1rem;font-size:.88rem;color:#374151;line-height:1.6;margin-top:.25rem;border:1px solid #e2e8f0; }
+</style>
+{% endblock %}
+
+{% block body %}
+<div id="part-evenement-root">
+
+{% for msg in app.flashes('success') %}
+    <div class="flash flash-success">✅ {{ msg }}</div>
+{% endfor %}
+{% for msg in app.flashes('error') %}
+    <div class="flash flash-error">⚠ {{ msg }}</div>
+{% endfor %}
+
+<div class="page-header">
+    <div class="page-header-text">
+        <h1>🎟 Mes Événements</h1>
+        <p>Participez aux événements à venir et gérez vos inscriptions</p>
+    </div>
+</div>
+
+<div class="search-bar">
+    <span aria-hidden="true">🔍</span>
+    <input type="search" id="searchEv" placeholder="Rechercher un événement…" autocomplete="off" oninput="filterEv()">
+</div>
+
+<div class="filter-bar" role="group" aria-label="Filtrer par statut">
+    <span class="filter-bar-label">Statut :</span>
+    <button type="button" class="filter-btn is-active" data-filter="all"    aria-pressed="true">Tous</button>
+    <button type="button" class="filter-btn btn-avenir" data-filter="avenir" aria-pressed="false">📅 À venir</button>
+    <button type="button" class="filter-btn"            data-filter="joined" aria-pressed="false">✅ Mes participations</button>
+</div>
+
+<div class="cards-grid" id="cardsGrid">
+{% for evenement in evenements %}
+    {% set now_ts = "now"|date("U") %}
+    {% set debut  = evenement.dateHeureDebut ? evenement.dateHeureDebut|date("U") : 0 %}
+    {% set fin    = evenement.dateHeureFin   ? evenement.dateHeureFin|date("U")   : 0 %}
+
+    {% if fin < now_ts %}
+        {% set statusLabel = "Terminé"  %} {% set statusClass = "badge-done"     %} {% set statusKey = "termine" %}
+    {% elseif debut <= now_ts and fin >= now_ts %}
+        {% set statusLabel = "En cours" %} {% set statusClass = "badge-active"   %} {% set statusKey = "encours" %}
+    {% else %}
+        {% set statusLabel = "À venir"  %} {% set statusClass = "badge-upcoming" %} {% set statusKey = "avenir"  %}
+    {% endif %}
+
+    {% set isJoined    = joinedIds[evenement.id] is defined %}
+    {% set canJoin     = statusKey == 'avenir' %}
+    {% set participation = joinedIds[evenement.id] ?? null %}
+
+    <div class="event-card {{ isJoined ? 'is-joined' : '' }}"
+         data-title="{{ evenement.titre|lower }}"
+         data-status="{{ statusKey }}"
+         data-joined="{{ isJoined ? 'joined' : 'not' }}">
+
+        <div class="card-header">
+            <div>
+                <p class="card-title">{{ evenement.titre }}</p>
+                <p class="card-desc">{{ evenement.description|slice(0, 100) }}{% if evenement.description|length > 100 %}…{% endif %}</p>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+                <span class="badge {{ statusClass }}">{{ statusLabel }}</span>
+                {% if isJoined %}
+                    <span class="badge badge-joined">✅ Inscrit</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card-meta">
+            <span class="meta-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                {{ evenement.dateEvenement ? evenement.dateEvenement|date('d M Y') : '—' }}
+            </span>
+            <span class="meta-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+                {{ evenement.lieu ?: '—' }}
+            </span>
+            <span class="meta-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                {{ evenement.dateHeureDebut ? evenement.dateHeureDebut|date('H:i') : '—' }}
+                – {{ evenement.dateHeureFin ? evenement.dateHeureFin|date('H:i') : '—' }}
+            </span>
+            <span class="meta-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                {{ evenement.nbParticipantsMax ?: '0' }} max
+            </span>
+        </div>
+
+        <div class="card-footer">
+            {# ── Voir détails (modal) ── #}
+            <button type="button" class="btn-details"
+                onclick="openDetailsModal(
+                    '{{ evenement.titre|e('js') }}',
+                    '{{ evenement.description|default('')|e('js') }}',
+                    '{{ evenement.lieu|default('—')|e('js') }}',
+                    '{{ evenement.dateHeureDebut ? evenement.dateHeureDebut|date('d/m/Y H:i') : '—' }}',
+                    '{{ evenement.dateHeureFin   ? evenement.dateHeureFin|date('d/m/Y H:i')   : '—' }}',
+                    {{ evenement.nbParticipantsMax|default(0) }},
+                    '{{ statusLabel }}'
+                )">
+                👁 Voir détails
+            </button>
+
+            {% if isJoined %}
+                {# Badge ── #}
+                <a href="{{ path('app_part_evenement_badge', {'id': evenement.id}) }}"
+                   class="btn-badge" target="_blank">🎫 Badge</a>
+
+                {# Cancel ── #}
+                <form method="post" action="{{ path('app_part_evenement_cancel', {'id': evenement.id}) }}" style="display:contents">
+                    <input type="hidden" name="_token" value="{{ csrf_token('cancel' ~ evenement.id) }}">
+                    <button type="submit" class="btn-cancel-part"
+                            onclick="return confirm('Annuler votre participation à « {{ evenement.titre|e('js') }} » ?')">
+                        ✕ Annuler
+                    </button>
+                </form>
+
+            {% elseif canJoin %}
+                {# Join ── #}
+                <form method="post" action="{{ path('app_part_evenement_join', {'id': evenement.id}) }}" style="display:contents">
+                    <input type="hidden" name="_token" value="{{ csrf_token('join' ~ evenement.id) }}">
+                    <button type="submit" class="btn-join">🎟 Participer</button>
+                </form>
+
+            {% else %}
+                <span class="btn-disabled">🔒 Fermé</span>
+            {% endif %}
+        </div>
+
+    </div>
+{% else %}
+    <p class="empty-grid">Aucun événement disponible.</p>
+{% endfor %}
+</div>
+
+{# ════ Details Modal ════════════════════════════════════════════════════════ #}
+<div id="modalDetails" class="modal-overlay" onclick="if(event.target===this)closeDetailsModal()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 class="modal-title" id="det_titre">—</h3>
+      <button class="modal-close" onclick="closeDetailsModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-row"><strong>📍 Lieu :</strong><span id="det_lieu">—</span></div>
+      <div class="detail-row"><strong>🕐 Début :</strong><span id="det_debut">—</span></div>
+      <div class="detail-row"><strong>🕔 Fin :</strong><span id="det_fin">—</span></div>
+      <div class="detail-row"><strong>👥 Participants max :</strong><span id="det_max">—</span></div>
+      <div class="detail-row"><strong>📌 Statut :</strong><span id="det_statut">—</span></div>
+      <div style="margin-top:.5rem">
+        <strong style="font-size:.88rem;color:#0f172a">📝 Description :</strong>
+        <div class="detail-desc" id="det_desc">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>{# /part-evenement-root #}
+
+<script>
+(function () {
+    'use strict';
+
+    /* ── Details modal ── */
+    window.openDetailsModal = function (titre, desc, lieu, debut, fin, max, statut) {
+        document.getElementById('det_titre').textContent  = titre;
+        document.getElementById('det_desc').textContent   = desc || '—';
+        document.getElementById('det_lieu').textContent   = lieu;
+        document.getElementById('det_debut').textContent  = debut;
+        document.getElementById('det_fin').textContent    = fin;
+        document.getElementById('det_max').textContent    = max;
+        document.getElementById('det_statut').textContent = statut;
+        document.getElementById('modalDetails').classList.add('is-open');
+    };
+    window.closeDetailsModal = function () {
+        document.getElementById('modalDetails').classList.remove('is-open');
+    };
+
+    /* ── Escape ── */
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeDetailsModal();
+    });
+
+    /* ── Search + filter ── */
+    var activeFilter = 'all';
+
+    function applyFilters() {
+        var q = (document.getElementById('searchEv').value || '').toLowerCase();
+        document.querySelectorAll('#cardsGrid .event-card').forEach(function (card) {
+            var titleMatch  = (card.dataset.title || '').includes(q);
+            var statusMatch = activeFilter === 'all'
+                || card.dataset.status  === activeFilter
+                || (activeFilter === 'joined' && card.dataset.joined === 'joined');
+            card.style.display = (titleMatch && statusMatch) ? '' : 'none';
+        });
+    }
+
+    window.filterEv = applyFilters;
+    document.getElementById('searchEv').addEventListener('input', applyFilters);
+
+    document.querySelectorAll('.filter-bar .filter-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.filter-bar .filter-btn').forEach(function (b) {
+                b.classList.remove('is-active'); b.setAttribute('aria-pressed', 'false');
+            });
+            btn.classList.add('is-active'); btn.setAttribute('aria-pressed', 'true');
+            activeFilter = btn.dataset.filter;
+            applyFilters();
+        });
+    });
+})();
+</script>
+{% endblock %}

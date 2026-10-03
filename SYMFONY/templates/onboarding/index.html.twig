@@ -1,0 +1,164 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Onboarding — Humania{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="{{ asset('css/planification/boarding.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="boarding-wrapper onboarding">
+
+    <header class="boarding-header">
+        <div class="boarding-header__inner">
+            <div class="boarding-header__title">
+                <span class="boarding-header__icon">🚀</span>
+                <div>
+                    <h1>Onboarding</h1>
+                    <p>Generation du parcours d'integration personnalise</p>
+                </div>
+            </div>
+            <a href="{{ path('app_offboarding_index') }}" class="btn btn--ghost btn--sm">
+                👋 Voir Offboarding
+            </a>
+        </div>
+    </header>
+
+    <div class="boarding-layout">
+        <aside class="boarding-sidebar">
+            <div class="card">
+                <div class="card__header">
+                    <h2 class="card__title">⚙️ Configuration</h2>
+                </div>
+                <div class="card__body">
+                    <div class="form-group">
+                        <label class="form-label" for="employeeSelect">Employe</label>
+                        <select id="employeeSelect" class="form-control">
+                            <option value="">Selectionner un employe…</option>
+                            {% for utilisateur in utilisateurs %}
+                                <option value="{{ utilisateur.id }}">
+                                    {{ utilisateur.prenom }} {{ utilisateur.nom }}
+                                    {% if utilisateur.posteActuel %} — {{ utilisateur.posteActuel }}{% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="departmentSelect">Departement</label>
+                        <select id="departmentSelect" class="form-control">
+                            <option value="">Selectionner un departement…</option>
+                            {% for dept in departments %}
+                                <option value="{{ dept }}">{{ dept }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="arrivalDate">Date d'arrivee</label>
+                        <input type="date" id="arrivalDate" class="form-control" value="{{ 'now'|date('Y-m-d') }}">
+                    </div>
+
+                    <button id="generateBtn" class="btn btn--primary btn--full">
+                        ✨ Generer le parcours
+                    </button>
+
+                    <button id="publishPostBtn" class="btn btn--full" style="display:none;margin-top:8px;background:#7c3aed;color:#fff;">
+                        📢 Publier un post
+                    </button>
+                </div>
+            </div>
+
+            <div id="employeeCard" class="card card--hidden">
+                <div class="card__header">
+                    <h2 class="card__title">👤 Informations employe</h2>
+                </div>
+                <div class="card__body" id="employeeCardBody"></div>
+            </div>
+
+            <div id="autoActionsCard" class="card card--hidden">
+                <div class="card__header">
+                    <h2 class="card__title">⚙️ Actions automatiques</h2>
+                    <p class="card__subtitle">Declenchees a la generation du parcours</p>
+                </div>
+                <div class="card__body" id="autoActionsBody"></div>
+                <div class="card__footer" id="autoActionsFooter"></div>
+            </div>
+        </aside>
+
+        <main class="boarding-main">
+            <div id="statsRow" class="stats-row"></div>
+            <div class="card card--tasks">
+                <div id="taskPanel">
+                    <div class="empty-state">
+                        <div class="empty-state__icon">🚀</div>
+                        <p class="empty-state__text">
+                            Selectionnez un employe et cliquez sur<br>
+                            <strong>« Generer le parcours »</strong> pour commencer.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<div id="alertBox" class="alert-box alert-box--hidden"></div>
+
+{# ── Post Preview Modal ─────────────────────────────────────────────────── #}
+<div id="postModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;
+     align-items:center;justify-content:center;padding:20px;">
+    <div style="background:#fff;border-radius:20px;width:100%;max-width:540px;
+                box-shadow:0 24px 60px rgba(0,0,0,.18);overflow:hidden;">
+        <div style="padding:20px 24px 16px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:36px;height:36px;border-radius:50%;background:#ede9fe;display:flex;align-items:center;justify-content:center;font-size:1.1rem;">🎉</div>
+                <div>
+                    <div style="font-weight:700;font-size:.95rem;color:#1e293b;">Publication Onboarding</div>
+                </div>
+            </div>
+            <button onclick="closePostModal()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:#94a3b8;">✕</button>
+        </div>
+        <div style="padding:20px 24px;">
+            <textarea id="postContent" rows="7" style="width:100%;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;font-size:.88rem;color:#1e293b;resize:vertical;outline:none;" placeholder="Le contenu du post sera généré automatiquement…"></textarea>
+        </div>
+        <div style="padding:14px 24px 20px;border-top:1px solid #f1f5f9;display:flex;gap:10px;justify-content:flex-end;">
+            <button onclick="closePostModal()" style="padding:9px 20px;border-radius:10px;border:1.5px solid #e2e8f0;background:#fff;color:#64748b;font-weight:600;cursor:pointer;">Annuler</button>
+            <button id="confirmPublishBtn" style="padding:9px 22px;border-radius:10px;border:none;background:#667eea;color:#fff;font-weight:700;cursor:pointer;">🎉 Publier maintenant</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        const GENERATE_URL    = '{{ path('app_onboarding_generate') }}';
+        const TOGGLE_URL_BASE = '{{ path('app_onboarding_task_toggle', {'id': 0}) }}'.replace('0/toggle', '');
+        const MARK_ALL_URL    = '{{ path('app_onboarding_mark_all', {'id': 0}) }}'.replace('0/mark-all', '');
+        const PUBLISH_URL     = '{{ path('app_onboarding_publish_post', {'id': 0}) }}'.replace('0/publish-post', '');
+        const LOAD_URL_BASE   = '{{ path('app_onboarding_load', {'utilisateurId': 0}) }}'.replace('0', '');
+        const BOARDING_MODE   = 'onboarding';
+
+        function closePostModal() {
+            const m = document.getElementById('postModal');
+            if(m) m.style.display = 'none';
+        }
+    </script>
+    <script src="{{ asset('js/boarding.js') }}?v={{ 'now'|date('U') }}"></script>
+    <script>
+        const _urlParams = new URLSearchParams(window.location.search);
+        const _autoLoad  = _urlParams.get('load');
+        if (_autoLoad) {
+            document.addEventListener('DOMContentLoaded', () => {
+                const sel = document.getElementById('employeeSelect');
+                if (sel) {
+                    sel.value = _autoLoad;
+                    sel.dispatchEvent(new Event('change'));
+                }
+            });
+        }
+    </script>
+{% endblock %}

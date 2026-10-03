@@ -1,0 +1,661 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Candidatures Externes — Humania{% endblock %}
+
+{% block stylesheets %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --purple:   #6c3fc5;
+    --orange:   #f59e0b;
+    --green:    #10b981;
+    --red:      #ef4444;
+    --blue:     #3b82f6;
+    --bg:       #f4f6fb;
+    --card:     #ffffff;
+    --text:     #1e293b;
+    --muted:    #64748b;
+    --border:   #e2e8f0;
+    --radius:   14px;
+    --shadow:   0 2px 12px rgba(0,0,0,.07);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  /* ── Page header ── */
+  .page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+  .page-header h1 { font-size: 1.75rem; font-weight: 700; }
+  .page-header p  { color: var(--muted); font-size: .9rem; margin-top: 2px; }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--purple);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 11px 22px;
+    font-size: .9rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background .2s, transform .15s;
+  }
+  .btn-primary:hover { background: #5530a8; transform: translateY(-1px); }
+
+  /* ── Stat cards ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  @media(max-width:1100px) { .stats-grid { grid-template-columns: repeat(3,1fr); } }
+  @media(max-width:700px)  { .stats-grid { grid-template-columns: 1fr 1fr; } }
+
+  .stat-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    box-shadow: var(--shadow);
+    border-top: 4px solid var(--purple);
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card.orange { border-top-color: var(--orange); }
+  .stat-card.green  { border-top-color: var(--green); }
+  .stat-card.red    { border-top-color: var(--red); }
+  .stat-card.blue   { border-top-color: var(--blue); }
+
+  .stat-card .stat-val {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .stat-card.purple .stat-val { color: var(--purple); }
+  .stat-card.orange .stat-val { color: var(--orange); }
+  .stat-card.green  .stat-val { color: var(--green); }
+  .stat-card.red    .stat-val { color: var(--red); }
+  .stat-card.blue   .stat-val { color: var(--blue); }
+
+  .stat-card .stat-label { font-size: .85rem; font-weight: 600; color: var(--text); }
+  .stat-card .stat-sub   { font-size: .75rem; color: var(--muted); margin-top: 6px; }
+
+  /* ── Filters ── */
+  .filters {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .search-box {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0 16px;
+    gap: 10px;
+    box-shadow: var(--shadow);
+  }
+  .search-box svg { color: var(--muted); flex-shrink: 0; }
+  .search-box input {
+    border: none;
+    outline: none;
+    width: 100%;
+    font-size: .9rem;
+    font-family: inherit;
+    color: var(--text);
+    padding: 12px 0;
+    background: transparent;
+  }
+  .filter-select {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0 36px 0 14px;
+    font-size: .88rem;
+    font-family: inherit;
+    color: var(--text);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    height: 46px;
+    min-width: 130px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+  }
+
+  /* ── Candidature cards ── */
+  .candidature-list { display: flex; flex-direction: column; gap: 14px; }
+
+  .candidature-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border-left: 5px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 18px 22px;
+    gap: 18px;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .candidature-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.1); }
+  .candidature-card.status-en_attente   { border-left-color: var(--orange); }
+  .candidature-card.status-acceptee     { border-left-color: var(--green); }
+  .candidature-card.status-refusee      { border-left-color: var(--red); }
+  .candidature-card.status-en_entretien { border-left-color: var(--blue); }
+  .candidature-card.status-finalise     { border-left-color: var(--purple); }
+
+  .avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--purple);
+    color: #fff;
+    font-weight: 700;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .card-body { flex: 1; }
+  .card-name  { font-weight: 700; font-size: 1.02rem; margin-bottom: 5px; }
+  .card-meta  {
+    display: flex;
+    gap: 16px;
+    font-size: .8rem;
+    color: var(--muted);
+    align-items: center;
+  }
+  .card-meta span { display: flex; align-items: center; gap: 5px; }
+
+  .card-badges { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+  .badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: .75rem;
+    font-weight: 600;
+    background: #f1f5f9;
+    color: var(--muted);
+  }
+  .badge.purple { background: #ede9fe; color: var(--purple); }
+  .badge.orange { background: #fef3c7; color: #b45309; }
+  .badge.green  { background: #d1fae5; color: #065f46; }
+  .badge.red    { background: #fee2e2; color: #991b1b; }
+  .badge.blue   { background: #dbeafe; color: #1d4ed8; }
+
+  .card-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+  .btn-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: .8rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+    transition: background .2s, transform .15s;
+  }
+  .btn-edit   { background: #fef9ec; color: #b45309; }
+  .btn-edit:hover   { background: #fde68a; transform: translateY(-1px); }
+  .btn-delete { background: #fef2f2; color: #dc2626; }
+  .btn-delete:hover { background: #fecaca; transform: translateY(-1px); }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15,23,42,.45);
+    backdrop-filter: blur(3px);
+    z-index: 10050;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.active { display: flex; }
+
+  /* .rec-dialog — éviter "modal" (Bootstrap: .modal { display:none } sans .show) */
+  .rec-dialog {
+    display: block;
+    background: var(--card);
+    border-radius: 18px;
+    width: 100%;
+    max-width: 640px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 60px rgba(0,0,0,.2);
+    animation: slideUp .25s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px 28px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-header h2 { font-size: 1.15rem; font-weight: 700; }
+  .modal-close {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: var(--bg);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+    color: var(--muted);
+    transition: background .15s;
+  }
+  .modal-close:hover { background: var(--border); }
+
+  .modal-body { padding: 24px 28px 28px; }
+
+  /* ── Form inside modal ── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .form-grid .full { grid-column: 1 / -1; }
+
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label {
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .03em;
+  }
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: .9rem;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--bg);
+    transition: border-color .2s;
+    outline: none;
+  }
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus { border-color: var(--purple); background: #fff; }
+
+  /* Symfony form widget override */
+  .modal-body .form-widget { }
+  .modal-body input[type=text],
+  .modal-body input[type=url],
+  .modal-body input[type=number],
+  .modal-body input[type=date],
+  .modal-body input[type=datetime-local],
+  .modal-body select,
+  .modal-body textarea {
+    width: 100%;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: .9rem;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--bg);
+    transition: border-color .2s;
+    outline: none;
+    margin-bottom: 14px;
+  }
+  .modal-body input:focus,
+  .modal-body select:focus,
+  .modal-body textarea:focus { border-color: var(--purple); background: #fff; }
+  .modal-body label {
+    display: block;
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    margin-bottom: 4px;
+  }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .btn-cancel {
+    padding: 10px 22px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    font-size: .9rem;
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--muted);
+    transition: background .15s;
+  }
+  .btn-cancel:hover { background: var(--bg); }
+
+  .btn-save {
+    padding: 10px 26px;
+    border-radius: 8px;
+    border: none;
+    background: var(--purple);
+    color: #fff;
+    font-size: .9rem;
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s, transform .15s;
+  }
+  .btn-save:hover { background: #5530a8; transform: translateY(-1px); }
+
+  /* Alerts */
+  .alert {
+    padding: 12px 18px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    font-size: .88rem;
+    font-weight: 500;
+  }
+  .alert-success { background: #d1fae5; color: #065f46; border-left: 4px solid var(--green); }
+  .alert-danger   { background: #fee2e2; color: #991b1b; border-left: 4px solid var(--red); }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+  .empty-state svg { margin-bottom: 12px; opacity: .4; }
+</style>
+{% endblock %}
+
+{% block body %}
+
+{# ── Flash messages ── #}
+{% for label, messages in app.flashes %}
+  {% for message in messages %}
+    <div class="alert alert-{{ label == 'success' ? 'success' : 'danger' }}">{{ message }}</div>
+  {% endfor %}
+{% endfor %}
+
+{# ── Header ── #}
+<div class="page-header">
+  <div>
+    <h1>Candidatures Externes</h1>
+    <p>Suivi et gestion des candidats externes</p>
+  </div>
+  <button class="btn-primary" onclick="openModal('modal-new')">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    Nouvelle candidature
+  </button>
+</div>
+
+{# ── Stats ── #}
+{% set total      = candidature_externes|length %}
+{% set en_attente = candidature_externes|filter(c => c.statut == 'En attente')|length %}
+{% set acceptees  = candidature_externes|filter(c => c.statut == 'Acceptée')|length %}
+{% set refusees   = candidature_externes|filter(c => c.statut == 'Refusée')|length %}
+{% set entretien  = candidature_externes|filter(c => c.statut == 'En entretien')|length %}
+
+<div class="stats-grid">
+  <div class="stat-card purple">
+    <div class="stat-val">{{ total }}</div>
+    <div class="stat-label">Total candidatures</div>
+    <div class="stat-sub">🗂 Toutes les entrées</div>
+  </div>
+  <div class="stat-card orange">
+    <div class="stat-val">{{ en_attente }}</div>
+    <div class="stat-label">En attente</div>
+    <div class="stat-sub">👤 À traiter</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-val">{{ acceptees }}</div>
+    <div class="stat-label">Acceptées</div>
+    <div class="stat-sub">✔ Recrutements validés</div>
+  </div>
+  <div class="stat-card red">
+    <div class="stat-val">{{ refusees }}</div>
+    <div class="stat-label">Refusées</div>
+    <div class="stat-sub">✗ Non retenues</div>
+  </div>
+  <div class="stat-card blue">
+    <div class="stat-val">{{ entretien }}</div>
+    <div class="stat-label">En entretien</div>
+    <div class="stat-sub">✏ Pipeline actif</div>
+  </div>
+</div>
+
+{# ── Filters ── #}
+<div class="filters">
+  <div class="search-box">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+    </svg>
+    <input type="text" id="searchInput" placeholder="Rechercher un candidat, un poste…" oninput="filterCards()">
+  </div>
+  <select class="filter-select" id="filterStatut" onchange="filterCards()">
+    <option value="">Tous</option>
+    <option>En attente</option>
+    <option>Acceptée</option>
+    <option>Refusée</option>
+    <option>En entretien</option>
+  </select>
+  <select class="filter-select" id="filterEtape" onchange="filterCards()">
+    <option value="">Tous</option>
+    <option>Réception</option>
+    <option>Finalisé</option>
+    <option>Entretien</option>
+    <option>Offre</option>
+  </select>
+</div>
+
+{# ── List ── #}
+<div class="candidature-list" id="candidatureList">
+  {% for c in candidature_externes %}
+    {% set initials = (c.nom|first ~ c.prenom|first)|upper %}
+    {% set slug = c.statut|lower|replace({' ': '_', 'é': 'e', 'è': 'e', 'ê': 'e'}) %}
+    <div class="candidature-card status-{{ slug }}"
+         data-nom="{{ c.nom|lower }} {{ c.prenom|lower }}"
+         data-statut="{{ c.statut }}"
+         data-etape="{{ c.etapePipeline }}">
+
+      <div class="avatar" style="background: hsl({{ (c.nom|length * 37) % 360 }}, 60%, 45%)">
+        {{ initials }}
+      </div>
+
+      <div class="card-body">
+        <div class="card-name">{{ c.prenom }} {{ c.nom }}</div>
+        <div class="card-meta">
+          <span>
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+            </svg>
+            {{ c.dateDepot ? c.dateDepot|date('d/m/Y') : '—' }}
+          </span>
+          <span>
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+            </svg>
+            {{ c.etapePipeline ?? '—' }}
+          </span>
+        </div>
+      </div>
+
+      <div class="card-badges">
+        <span class="badge">{{ c.etapePipeline ?? '—' }}</span>
+        <span class="badge
+          {% if c.statut == 'En attente' %}orange
+          {% elseif c.statut == 'Acceptée' %}green
+          {% elseif c.statut == 'Refusée' %}red
+          {% elseif c.statut == 'En entretien' %}blue
+          {% else %}purple{% endif %}">
+          {{ c.statut }}
+        </span>
+      </div>
+
+      <div class="card-actions">
+        {# Edit button → full edit page (more reliable than modal submit) #}
+        <a class="btn-action btn-edit"
+           href="{{ path('app_candidature_externe_edit', {'id': c.id}) }}">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          Modifier
+        </a>
+
+        {# Delete button → confirm + submit form #}
+        <button class="btn-action btn-delete"
+                onclick="confirmDelete({{ c.id }})">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+            <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
+          </svg>
+          Supprimer
+        </button>
+      </div>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+      <p>Aucune candidature trouvée</p>
+    </div>
+  {% endfor %}
+</div>
+
+{# ══════════════════════════════════════
+   MODAL — Nouvelle candidature
+   ══════════════════════════════════════ #}
+<div class="modal-overlay" id="modal-new" onclick="closeOnBackdrop(event, 'modal-new')">
+  <div class="rec-dialog">
+    <div class="modal-header">
+      <h2>✦ Nouvelle candidature</h2>
+      <button class="modal-close" onclick="closeModal('modal-new')">✕</button>
+    </div>
+    <div class="modal-body">
+      {{ include('RECRUTEMENT/candidature_externe/_form.html.twig', {
+        form: form,
+        button_label: 'Enregistrer',
+        form_action: path('app_candidature_externe_new')
+      }) }}
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeModal('modal-new')">Annuler</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ══════════════════════════════════════
+   MODAL — Modifier candidature
+   (loaded via fetch/iframe per card)
+   ══════════════════════════════════════ #}
+<div class="modal-overlay" id="modal-edit" onclick="closeOnBackdrop(event, 'modal-edit')">
+  <div class="rec-dialog">
+    <div class="modal-header">
+      <h2>✎ Modifier la candidature</h2>
+      <button class="modal-close" onclick="closeModal('modal-edit')">✕</button>
+    </div>
+    <div class="modal-body" id="modal-edit-body">
+      <p style="color:var(--muted);text-align:center;padding:30px 0">Chargement…</p>
+    </div>
+  </div>
+</div>
+
+{# Hidden delete forms (one per candidature) #}
+{% for c in candidature_externes %}
+<form id="delete-form-{{ c.id }}" method="post"
+      action="{{ path('app_candidature_externe_delete', {'id': c.id}) }}"
+      style="display:none">
+  <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ c.id) }}">
+</form>
+{% endfor %}
+
+<script>
+  /* ── Modal helpers ── */
+  function openModal(id) {
+    document.getElementById(id).classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+    document.body.style.overflow = '';
+  }
+  function closeOnBackdrop(e, id) {
+    if (e.target.id === id) closeModal(id);
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal-overlay.active')
+        .forEach(m => closeModal(m.id));
+    }
+  });
+
+  /* ── Edit modal: load form via fetch ── */
+  function openEditModal(id) {
+    openModal('modal-edit');
+    const body = document.getElementById('modal-edit-body');
+    body.innerHTML = '<p style="color:var(--muted);text-align:center;padding:30px 0">Chargement…</p>';
+    fetch({{ path('app_candidature_externe_edit', {id: 999999999})|json_encode|raw }}.replace('999999999', String(id)) + '?modal=1')
+      .then(r => r.text())
+      .then(html => { body.innerHTML = html; })
+      .catch(() => { body.innerHTML = '<p style="color:red;padding:20px">Erreur de chargement.</p>'; });
+  }
+
+  /* ── Delete confirmation ── */
+  function confirmDelete(id) {
+    if (!confirm('Confirmer la suppression de cette candidature ?')) return;
+    document.getElementById('delete-form-' + id).submit();
+  }
+
+  /* ── Search / filter ── */
+  function filterCards() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const statut = document.getElementById('filterStatut').value.toLowerCase();
+    const etape  = document.getElementById('filterEtape').value.toLowerCase();
+
+    document.querySelectorAll('.candidature-card').forEach(card => {
+      const nom    = card.dataset.nom    || '';
+      const st     = (card.dataset.statut || '').toLowerCase();
+      const et     = (card.dataset.etape  || '').toLowerCase();
+      const show   =
+        (!search || nom.includes(search)) &&
+        (!statut || st === statut) &&
+        (!etape  || et === etape);
+      card.style.display = show ? 'flex' : 'none';
+    });
+  }
+
+  /* ── Auto-open new modal if form has errors ── */
+  {% if app.request.method == 'POST' and not form.vars.valid is defined %}
+    // openModal('modal-new');
+  {% endif %}
+</script>
+
+{% endblock %}

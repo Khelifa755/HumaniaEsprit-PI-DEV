@@ -1,0 +1,8 @@
+{% extends "base.html.twig" %}
+
+{% block title %}Accueil - Humania{% endblock %}
+
+{% block body %}
+{# home.html.twig — redirige vers la dashboard selon le rôle #}
+{{ block('body', 'dashboard/dashboard_html.twig') }}
+{% endblock %}

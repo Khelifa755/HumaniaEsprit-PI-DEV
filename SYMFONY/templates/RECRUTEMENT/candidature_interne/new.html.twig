@@ -1,0 +1,24 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Nouvelle demande — Humania{% endblock %}
+
+{% block stylesheets %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --purple:#6c3fc5; --border:#e2e8f0; --bg:#f4f6fb; --text:#1e293b; --muted:#64748b; }
+  body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); }
+  .wrap { max-width:700px; margin:40px auto; background:#fff; border-radius:16px; padding:36px; box-shadow:0 4px 24px rgba(0,0,0,.08); }
+  .wrap h1 { font-size:1.35rem; font-weight:700; margin-bottom:24px; }
+  .back { display:inline-flex; align-items:center; gap:6px; color:var(--muted); font-size:.88rem; text-decoration:none; margin-bottom:20px; }
+  .back:hover { color:var(--purple); }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="wrap">
+  <a href="{{ path('app_candidature_interne_index') }}" class="back">← Retour à la liste</a>
+  <h1>✦ Nouvelle demande interne</h1>
+  {{ include('RECRUTEMENT/candidature_interne/_form.html.twig', {'button_label': 'Enregistrer'}) }}
+</div>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% use "form_div_layout.html.twig" %}
+
+{# Radios type d’espace + grille 2 colonnes pour les équipements #}
+{%- block choice_widget_expanded -%}
+    {%- if attr['data-equipements-grid'] is defined -%}
+        <div {{ block('widget_container_attributes') }}>
+            {%- for child in form -%}
+                <div class="equip-check-cell">
+                    {{- form_widget(child) -}}
+                    {{- form_label(child, null, { translation_domain: choice_translation_domain }) -}}
+                </div>
+            {%- endfor -%}
+        </div>
+    {%- elseif attr['data-type-espace-radios'] is defined -%}
+        <div {{ block('widget_container_attributes') }}>
+            {%- for child in form -%}
+                <div class="type-espace-radio-cell">
+                    {{- form_widget(child) -}}
+                    {{- form_label(child, null, { translation_domain: choice_translation_domain }) -}}
+                </div>
+            {%- endfor -%}
+        </div>
+    {%- else -%}
+        {{- parent() -}}
+    {%- endif -%}
+{%- endblock choice_widget_expanded -%}

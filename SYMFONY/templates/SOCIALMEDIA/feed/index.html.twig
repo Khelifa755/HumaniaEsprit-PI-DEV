@@ -1,0 +1,1326 @@
+{% extends 'SOCIALMEDIA/feed/base.html.twig' %}
+
+{% block title %}Accueil · Social{% endblock %}
+
+{% block feed_content %}
+
+{# ══ CARTE CRÉER UNE PUBLICATION ══ #}
+<div style="background:#fff;border-radius:16px;border:1.5px solid #E8EAF6;padding:16px 18px;margin-bottom:16px;box-shadow:0 2px 10px rgba(108,92,231,0.06)">
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        {# Avatar user courant #}
+        <div style="width:42px;height:42px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#74b9ff,#0984e3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700;overflow:hidden;border:2px solid #fff">
+            {% if currentUser %}
+                {% if currentUser.avatarUrl %}
+                    <img src="{{ currentUser.avatarUrl }}" style="width:100%;height:100%;object-fit:cover">
+                {% else %}
+                    {{ currentUser.firstName|slice(0, 1)|upper }}{{ currentUser.lastName|slice(0, 1)|upper }}
+                {% endif %}
+            {% else %}?{% endif %}
+        </div>
+
+        {# Champ fake → ouvre la modal #}
+        <div onclick="document.getElementById('createPostModal').style.display='flex'; initializeValidation(document.getElementById('createPostContenu'))"
+             style="flex:1;height:42px;border-radius:50px;background:#F4F5FB;border:1.5px solid #E8EAF6;padding:0 18px;display:flex;align-items:center;font-size:13px;color:#A0A8CC;cursor:pointer">
+            Partagez quelque chose avec votre équipe...
+        </div>
+    </div>
+
+    <div style="display:flex;gap:8px">
+        <button onclick="document.getElementById('createPostModal').style.display='flex'"
+            style="display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:9px;border:none;background:#F4F5FB;color:#4A5080;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit">
+            🖼️ Photo
+        </button>
+        <button onclick="document.getElementById('createPostModal').style.display='flex'"
+            style="display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:9px;border:none;background:#F4F5FB;color:#4A5080;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit">
+            😊 Sentiment
+        </button>
+    </div>
+</div>
+
+{# ══ LISTE DES PUBLICATIONS ══ #}
+{% if publications is empty %}
+    <div style="text-align:center;padding:60px 20px;background:#fff;border-radius:16px;border:1.5px dashed #E8EAF6">
+        <div style="font-size:44px;margin-bottom:10px">📭</div>
+        <div style="font-size:14px;font-weight:600;color:#4A5080">Aucune publication pour l'instant</div>
+        <div style="font-size:12px;color:#A0A8CC;margin-top:5px">Soyez le premier à partager quelque chose !</div>
+    </div>
+{% else %}
+
+    {% for pub in publications %}
+        {% set author  = pub.authorId %}
+        {% set pubId   = pub.getId() %}
+        {% set myReact = userReactions[pubId] ?? null %}
+        {% set isSaved = userSaved[pubId] ?? false %}
+
+        {% include 'SOCIALMEDIA/feed/components/_publication-card.html.twig' with {
+            pub: pub,
+            pubId: pubId,
+            author: author,
+            myReact: myReact,
+            isSaved: isSaved,
+            userShares: userShares,
+            currentUserId: currentUserId,
+            publicationComments: commentsByPublication[pubId] ?? [],
+            currentUser: currentUser,
+            reactionStats: reactionStats,
+            shareCount: shareCount
+        } %}
+
+    {% endfor %}
+
+{% endif %}
+{% endblock %}
+
+{% block modals %}
+{# ══ MODAL CRÉER PUBLICATION ══ #}
+<div id="createPostModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.45);align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:18px;width:100%;max-width:540px;margin:0 16px;box-shadow:0 20px 60px rgba(0,0,0,0.2);border:1.5px solid #E8EAF6;overflow:hidden">
+
+        {# Header #}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #E8EAF6">
+            <div style="font-size:15px;font-weight:700;color:#1A1D2E">Nouvelle publication</div>
+            <button onclick="document.getElementById('createPostModal').style.display='none'"
+                    style="background:none;border:none;font-size:21px;color:#A0A8CC;cursor:pointer;line-height:1">×</button>
+        </div>
+
+        <form action="{{ path('social_feed_post_create') }}" method="post" enctype="multipart/form-data" id="createPostForm">
+            <div style="padding:18px 20px">
+
+                {# User info + visibilité #}
+                <div style="display:flex;align-items:center;gap:11px;margin-bottom:14px">
+                    <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#A29BFE,#6C5CE7);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700;flex-shrink:0;overflow:hidden;border:2px solid #fff">
+                        {% if currentUser %}
+                            {% if currentUser.avatarUrl %}
+                                <img src="{{ currentUser.avatarUrl }}" style="width:100%;height:100%;object-fit:cover">
+                            {% else %}
+                                {{ currentUser.firstName|slice(0, 1)|upper }}{{ currentUser.lastName|slice(0, 1)|upper }}
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    <div>
+                        <div style="font-size:13.5px;font-weight:700;color:#1A1D2E">
+                            {% if currentUser %}{{ currentUser.firstName }} {{ currentUser.lastName }}{% endif %}
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+                            <select id="postVisibility" name="visibility" onchange="updateGroupSelector()" style="background:#F4F5FB;border:1.5px solid #E8EAF6;border-radius:7px;padding:4px 10px;font-size:11.5px;color:#4A5080;outline:none;font-family:inherit;cursor:pointer">
+                                <option value="PUBLIC">🌍 Public</option>
+                                <option value="GROUP">👥 Groupe</option>
+                            </select>
+                            <select id="groupSelector" name="groupId" style="background:#F4F5FB;border:1.5px solid #E8EAF6;border-radius:7px;padding:4px 10px;font-size:11.5px;color:#4A5080;outline:none;font-family:inherit;cursor:pointer;display:none">
+                                <option value="">-- Sélectionner un groupe --</option>
+                                {% for group in userGroups %}
+                                    <option value="{{ group.id }}">{{ group.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                {# Texte avec validation #}
+                <div style="position:relative;margin-bottom:9px">
+                    <textarea id="createPostContenu" name="contenu" rows="4" required
+                        placeholder="Partagez quelque chose avec votre équipe..."
+                        data-min="3"
+                        data-max="5000"
+                        data-type="publication"
+                        style="width:100%;border:1.5px solid #E8EAF6;border-radius:11px;padding:13px 15px;font-size:13.5px;font-family:inherit;color:#1A1D2E;resize:vertical;outline:none;background:#F4F5FB;box-sizing:border-box"></textarea>
+                    
+                    {# Error message #}
+                    <div class="validation-error" style="display:none;margin-top:8px;padding:9px 12px;background:#FFF1F0;border:1px solid #F5CCCA;border-radius:8px;font-size:12px;color:#C23C35;font-weight:500"></div>
+                    
+                    {# Character counter #}
+                    <div style="text-align:right;margin-top:6px;font-size:11px;color:#A0A8CC">
+                        <span class="char-counter">0/5000</span>
+                    </div>
+                </div>
+
+                {# GIF Picker Button + AI Buttons #}
+                <div style="display:flex;gap:6px;margin-top:9px;margin-bottom:9px;flex-wrap:wrap">
+                    <button type="button" onclick="openGifPickerModal('post')" style="display:flex;align-items:center;gap:4px;padding:6px 12px;border-radius:7px;border:1.5px solid #FF6B6B;background:none;color:#FF6B6B;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit">
+                        🎬 GIF
+                    </button>
+                    <button type="button" onclick="improvePostText()" style="display:flex;align-items:center;gap:4px;padding:6px 12px;border-radius:7px;border:1.5px solid #6C5CE7;background:none;color:#6C5CE7;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit">
+                        ✨ Améliorer
+                    </button>
+                    <button type="button" onclick="openGeneratePostModal()" style="display:flex;align-items:center;gap:4px;padding:6px 12px;border-radius:7px;border:1.5px solid #2DAA63;background:none;color:#2DAA63;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit">
+                        🤖 Générer
+                    </button>
+                </div>
+
+                {# GIF Preview #}
+                <div id="postGifPreview" style="display:none;margin-bottom:9px"></div>
+
+                {# Hidden GIF URL field #}
+                <input type="hidden" name="gifUrl" value="">
+
+                {# Image Upload #}
+                <label style="display:block;margin-top:9px;font-size:12.5px;color:#4A5080;font-weight:500;margin-bottom:6px">🖼️ Ajouter une image</label>
+                <input type="file" name="image" accept="image/*"
+                       style="width:100%;border:1.5px solid #E8EAF6;border-radius:9px;padding:9px 13px;font-size:12.5px;font-family:inherit;outline:none;background:#F4F5FB;box-sizing:border-box">
+            </div>
+
+            {# Footer #}
+            <div style="display:flex;justify-content:flex-end;gap:9px;padding:13px 20px;border-top:1px solid #E8EAF6">
+                <button type="button"
+                        onclick="document.getElementById('createPostModal').style.display='none'"
+                        style="padding:8px 18px;border-radius:9px;border:1.5px solid #E8EAF6;background:#F4F5FB;color:#4A5080;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">
+                    Annuler
+                </button>
+                <button type="submit"
+                        style="padding:8px 20px;border-radius:9px;border:none;background:linear-gradient(135deg,#6C5CE7,#A29BFE);color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(108,92,231,0.3)">
+                    Publier
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# ══ GIF PICKER MODAL ══ #}
+<div id="gifPickerModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.45);align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:18px;width:100%;max-width:600px;margin:0 16px;box-shadow:0 20px 60px rgba(0,0,0,0.2);border:1.5px solid #E8EAF6;overflow:hidden">
+
+        {# Header #}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #E8EAF6">
+            <div style="font-size:15px;font-weight:700;color:#1A1D2E">🎬 Sélectionner un GIF</div>
+            <button type="button" onclick="document.getElementById('gifPickerModal').style.display='none'"
+                    style="background:none;border:none;font-size:21px;color:#A0A8CC;cursor:pointer;line-height:1">×</button>
+        </div>
+
+        <div style="padding:18px 20px">
+
+            {# Search bar #}
+            <div style="display:flex;gap:8px;margin-bottom:14px">
+                <input type="text" id="gifSearchInput" placeholder="Rechercher des GIFs..."
+                    style="flex:1;border:1.5px solid #E8EAF6;border-radius:9px;padding:10px 13px;font-size:13.5px;font-family:inherit;color:#1A1D2E;outline:none;background:#F4F5FB;box-sizing:border-box">
+                <button type="button" onclick="searchGifs()" style="padding:10px 20px;border-radius:9px;border:none;background:#6C5CE7;color:white;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">
+                    🔍 Chercher
+                </button>
+            </div>
+
+            {# GIF grid #}
+            <div id="gifPickerResults" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(120px, 1fr));gap:10px;max-height:400px;overflow-y:auto;padding-right:8px">
+                {# GIFs will be loaded here #}
+            </div>
+        </div>
+
+        {# Footer #}
+        <div style="display:flex;justify-content:flex-end;gap:9px;padding:13px 20px;border-top:1px solid #E8EAF6">
+            <button type="button"
+                    onclick="document.getElementById('gifPickerModal').style.display='none'"
+                    style="padding:8px 18px;border-radius:9px;border:1.5px solid #E8EAF6;background:#F4F5FB;color:#4A5080;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">
+                Fermer
+            </button>
+        </div>
+    </div>
+</div>
+
+{# ══ MODAL DE GÉNÉRATION DE PUBLICATION ══ #}
+<div id="generatePostModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.45);align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:18px;width:100%;max-width:480px;margin:0 16px;box-shadow:0 20px 60px rgba(0,0,0,0.2);border:1.5px solid #E8EAF6;overflow:hidden">
+
+        {# Header #}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #E8EAF6">
+            <div style="font-size:15px;font-weight:700;color:#1A1D2E">🤖 Générer une publication</div>
+            <button type="button" onclick="document.getElementById('generatePostModal').style.display='none'"
+                    style="background:none;border:none;font-size:21px;color:#A0A8CC;cursor:pointer;line-height:1">×</button>
+        </div>
+
+        <div style="padding:18px 20px">
+
+            {# Subject input #}
+            <div style="margin-bottom:14px">
+                <label style="display:block;font-size:12.5px;color:#4A5080;font-weight:600;margin-bottom:8px">
+                    📌 Sujet ou titre
+                </label>
+                <input type="text" id="generateSubject" placeholder="Ex: Les avantages du télétravail..."
+                    style="width:100%;border:1.5px solid #E8EAF6;border-radius:9px;padding:10px 13px;font-size:13.5px;font-family:inherit;color:#1A1D2E;outline:none;background:#F4F5FB;box-sizing:border-box">
+            </div>
+
+            {# Tone selector #}
+            <div style="margin-bottom:18px">
+                <label style="display:block;font-size:12.5px;color:#4A5080;font-weight:600;margin-bottom:8px">
+                    💬 Ton de la publication
+                </label>
+                <select id="generateTone" style="width:100%;border:1.5px solid #E8EAF6;border-radius:9px;padding:10px 13px;font-size:13.5px;color:#4A5080;outline:none;background:#F4F5FB;box-sizing:border-box;font-family:inherit;cursor:pointer">
+                    <option value="professionnel">💼 Professionnel</option>
+                    <option value="inspirationnel">✨ Inspirationnel</option>
+                    <option value="casual">😊 Casual</option>
+                    <option value="informatif">📚 Informatif</option>
+                    <option value="humoristique">😂 Humoristique</option>
+                </select>
+            </div>
+
+            {# Info text #}
+            <div style="padding:11px 13px;background:#F0F4FF;border-radius:8px;border-left:4px solid #6C5CE7;margin-bottom:14px;font-size:12px;color:#4A5080;line-height:1.5">
+                💡 L'IA générera une publication adaptée au ton choisi en fonction de votre sujet.
+            </div>
+        </div>
+
+        {# Footer #}
+        <div style="display:flex;justify-content:flex-end;gap:9px;padding:13px 20px;border-top:1px solid #E8EAF6">
+            <button type="button"
+                    onclick="document.getElementById('generatePostModal').style.display='none'"
+                    style="padding:8px 18px;border-radius:9px;border:1.5px solid #E8EAF6;background:#F4F5FB;color:#4A5080;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">
+                Annuler
+            </button>
+            <button type="button" onclick="generatePostFromSubject()"
+                    style="padding:8px 20px;border-radius:9px;border:none;background:linear-gradient(135deg,#2DAA63,#10b981);color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(45,170,99,0.3)">
+                Générer
+            </button>
+        </div>
+    </div>
+</div>
+
+{# ══ MODAL D'ÉDITION ══ #}
+<div id="editPostModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.45);align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:18px;width:100%;max-width:540px;margin:0 16px;box-shadow:0 20px 60px rgba(0,0,0,0.2);border:1.5px solid #E8EAF6;overflow:hidden">
+
+        {# Header #}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #E8EAF6">
+            <div style="font-size:15px;font-weight:700;color:#1A1D2E">Éditer la publication</div>
+            <button type="button" onclick="document.getElementById('editPostModal').style.display='none'"
+                    style="background:none;border:none;font-size:21px;color:#A0A8CC;cursor:pointer;line-height:1">×</button>
+        </div>
+
+        <form id="editPostForm" method="post" enctype="multipart/form-data" style="display:contents">
+            <div style="padding:18px 20px">
+
+                {# Texte avec validation #}
+                <div style="position:relative;margin-bottom:9px">
+                    <textarea id="editContenu" name="contenu" rows="4" required
+                        placeholder="Partagez quelque chose avec votre équipe..."
+                        data-min="3"
+                        data-max="5000"
+                        data-type="publication"
+                        style="width:100%;border:1.5px solid #E8EAF6;border-radius:11px;padding:13px 15px;font-size:13.5px;font-family:inherit;color:#1A1D2E;resize:vertical;outline:none;background:#F4F5FB;box-sizing:border-box;margin-bottom:0"></textarea>
+                    
+                    {# Error message #}
+                    <div class="validation-error" style="display:none;margin-top:8px;padding:9px 12px;background:#FFF1F0;border:1px solid #F5CCCA;border-radius:8px;font-size:12px;color:#C23C35;font-weight:500"></div>
+                    
+                    {# Character counter #}
+                    <div style="text-align:right;margin-top:6px;margin-bottom:9px;font-size:11px;color:#A0A8CC">
+                        <span class="char-counter">0/5000</span>
+                    </div>
+                </div>
+
+                {# Visibilité #}
+                <select id="editVisibility" name="visibility" onchange="updateEditGroupSelector()" style="width:100%;background:#F4F5FB;border:1.5px solid #E8EAF6;border-radius:7px;padding:9px 13px;font-size:12.5px;color:#4A5080;outline:none;font-family:inherit;cursor:pointer;box-sizing:border-box;margin-bottom:9px">
+                    <option value="PUBLIC">🌍 Public</option>
+                    <option value="GROUP">👥 Groupe</option>
+                </select>
+
+                {# Group Selector (hidden by default) #}
+                <select id="editGroupSelector" name="groupId" style="width:100%;background:#F4F5FB;border:1.5px solid #E8EAF6;border-radius:7px;padding:9px 13px;font-size:12.5px;color:#4A5080;outline:none;font-family:inherit;cursor:pointer;box-sizing:border-box;margin-bottom:9px;display:none">
+                    <option value="">-- Sélectionner un groupe --</option>
+                    {% for group in userGroups %}
+                        <option value="{{ group.id }}">{{ group.name }}</option>
+                    {% endfor %}
+                </select>
+
+                {# AI Buttons for Edit #}
+                <div style="display:flex;gap:6px;margin-bottom:9px;flex-wrap:wrap">
+                    <button type="button" onclick="improveEditText()" style="display:flex;align-items:center;gap:4px;padding:6px 12px;border-radius:7px;border:1.5px solid #6C5CE7;background:none;color:#6C5CE7;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit">
+                        ✨ Améliorer
+                    </button>
+                    <button type="button" onclick="summarizeEditText()" style="display:flex;align-items:center;gap:4px;padding:6px 12px;border-radius:7px;border:1.5px solid #F5A623;background:none;color:#F5A623;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit">
+                        📝 Résumer
+                    </button>
+                </div>
+
+                {# Image Upload #}
+                <label style="display:block;font-size:12.5px;color:#4A5080;font-weight:500;margin-bottom:6px">🖼️ Ajouter une image</label>
+                <input type="file" id="editImage" name="image" accept="image/*"
+                       style="width:100%;border:1.5px solid #E8EAF6;border-radius:9px;padding:9px 13px;font-size:12.5px;font-family:inherit;outline:none;background:#F4F5FB;box-sizing:border-box">
+            </div>
+
+            {# Footer #}
+            <div style="display:flex;justify-content:flex-end;gap:9px;padding:13px 20px;border-top:1px solid #E8EAF6">
+                <button type="button"
+                        onclick="document.getElementById('editPostModal').style.display='none'"
+                        style="padding:8px 18px;border-radius:9px;border:1.5px solid #E8EAF6;background:#F4F5FB;color:#4A5080;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">
+                    Annuler
+                </button>
+                <button type="submit"
+                        style="padding:8px 20px;border-radius:9px;border:none;background:linear-gradient(135deg,#6C5CE7,#A29BFE);color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(108,92,231,0.3)">
+                    Enregistrer
+                </button>
+            </div>
+        </form>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleComments(pubId) {
+    const commentsDiv = document.getElementById(`comments-${pubId}`);
+    commentsDiv.style.display = commentsDiv.style.display === 'none' ? 'block' : 'none';
+}
+
+function togglePostMenu(pubId) {
+    const menu = document.getElementById(`post-menu-${pubId}`);
+    menu.style.display = menu.style.display === 'none' || menu.style.display === '' ? 'block' : 'none';
+}
+
+function closePostMenu(pubId) {
+    document.getElementById(`post-menu-${pubId}`).style.display = 'none';
+}
+
+function toggleCommentMenu(commentId) {
+    const menu = document.getElementById(`comment-menu-${commentId}`);
+    menu.style.display = menu.style.display === 'none' || menu.style.display === '' ? 'block' : 'none';
+}
+
+function closeCommentMenu(commentId) {
+    document.getElementById(`comment-menu-${commentId}`).style.display = 'none';
+}
+
+function openShareModal(pubId, contentPreview) {
+    document.getElementById('sharePreviewContent').textContent = contentPreview;
+    
+    const form = document.getElementById('shareForm');
+    form.action = '{{ path("social_feed_share", {id: 0}) }}'.replace('/0', '/' + pubId);
+    
+    document.getElementById('shareModal').style.display = 'flex';
+}
+
+function openEditModal(pubId, contenu, visibility, groupId = null) {
+    const textarea = document.getElementById('editContenu');
+    textarea.value = contenu;
+    document.getElementById('editVisibility').value = visibility;
+    
+    // Set group selector value if groupId is provided
+    const groupSelector = document.getElementById('editGroupSelector');
+    if (groupId) {
+        groupSelector.value = groupId;
+    } else {
+        groupSelector.value = '';
+    }
+    
+    // Update group selector visibility
+    updateEditGroupSelector();
+    
+    const form = document.getElementById('editPostForm');
+    form.action = '{{ path("social_feed_edit", {id: 0}) }}'.replace('/0', '/' + pubId);
+    
+    document.getElementById('editPostModal').style.display = 'flex';
+    
+    // Initialize validation
+    initializeValidation(textarea);
+}
+
+function updateEditGroupSelector() {
+    const visibility = document.getElementById('editVisibility').value;
+    const groupSelector = document.getElementById('editGroupSelector');
+    
+    if (visibility === 'GROUP') {
+        groupSelector.style.display = 'block';
+        groupSelector.required = true;
+    } else {
+        groupSelector.style.display = 'none';
+        groupSelector.required = false;
+        groupSelector.value = '';
+    }
+}
+
+function openEditCommentModal(commentId, contenu) {
+    const textarea = document.getElementById('editCommentContenu');
+    textarea.value = contenu;
+    
+    const form = document.getElementById('editCommentForm');
+    form.action = '{{ path("social_feed_edit_comment", {id: 0}) }}'.replace('/0', '/' + commentId);
+    
+    // Initialize validation
+    initializeValidation(textarea);
+    
+    document.getElementById('editCommentModal').style.display = 'flex';
+}
+
+// ══ REACTION PICKER FUNCTIONS ══
+function showReactionPicker(pubId) {
+    const picker = document.getElementById(`picker-${pubId}`);
+    if (picker) {
+        picker.style.display = 'inline-flex';
+    }
+}
+
+function hideReactionPicker(pubId) {
+    const picker = document.getElementById(`picker-${pubId}`);
+    if (picker) {
+        picker.style.display = 'none';
+    }
+}
+
+function submitReaction(pubId, reactionType) {
+    hideReactionPicker(pubId);
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ path("social_feed_react", {id: 0}) }}'.replace('/0', '/' + pubId);
+    
+    const typeInput = document.createElement('input');
+    typeInput.type = 'hidden';
+    typeInput.name = 'type';
+    typeInput.value = reactionType;
+    
+    form.appendChild(typeInput);
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// ══ SEARCH FILTER FUNCTION ══
+function filterPublications() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const posts = document.querySelectorAll('[id^="post-"]');
+    const usersResultsDiv = document.getElementById('searchUsersResults');
+    
+    // Filter posts locally
+    let visibleCount = 0;
+    posts.forEach(post => {
+        const content = post.textContent.toLowerCase();
+        const visible = (
+            content.includes(searchTerm) || 
+            searchTerm === ''
+        );
+        
+        post.style.display = visible ? 'block' : 'none';
+        if (visible) visibleCount++;
+    });
+    
+    // Search users if search term is long enough
+    if (searchTerm.length >= 2) {
+        fetch('{{ path("social_feed_search") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: 'q=' + encodeURIComponent(searchTerm)
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.users && data.users.length > 0) {
+                usersResultsDiv.innerHTML = '<div style="padding:12px 16px;border-bottom:1px solid #F4F5FB;font-size:10px;font-weight:700;color:#A0A8CC;text-transform:uppercase;letter-spacing:1px">👥 Utilisateurs</div>';
+                
+                data.users.forEach(user => {
+                    const userDiv = document.createElement('div');
+                    userDiv.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #F4F5FB;cursor:pointer;transition:background 0.2s';
+                    userDiv.onmouseover = function() { this.style.background = '#F4F5FB'; };
+                    userDiv.onmouseout = function() { this.style.background = 'transparent'; };
+                    
+                    const avatar = user.avatarUrl ? 
+                        '<img src="' + user.avatarUrl + '" style="width:100%;height:100%;object-fit:cover;">' : 
+                        user.firstName.charAt(0).toUpperCase() + user.lastName.charAt(0).toUpperCase();
+                    
+                    userDiv.innerHTML = '<div style="width:36px;height:36px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700;overflow:hidden">' + avatar + '</div>' +
+                        '<div style="flex:1;min-width:0">' +
+                        '<div style="font-size:12.5px;font-weight:600;color:#1A1D2E">' + user.firstName + ' ' + user.lastName + '</div>' +
+                        '<div style="font-size:11px;color:#A0A8CC">@' + user.username + '</div>' +
+                        '</div>';
+                    
+                    userDiv.onclick = function() {
+                        window.location.href = '{{ path("social_profile_show", {id: 0}) }}'.replace('/0', '/' + user.id);
+                    };
+                    
+                    usersResultsDiv.appendChild(userDiv);
+                });
+                
+                usersResultsDiv.style.display = 'block';
+            } else {
+                usersResultsDiv.style.display = 'none';
+            }
+        })
+        .catch(err => console.error('Search error:', err));
+    } else {
+        usersResultsDiv.style.display = 'none';
+    }
+    
+    // Show/hide a "no results" message if needed
+    if (searchTerm !== '' && visibleCount === 0) {
+        let noResults = document.getElementById('noSearchResults');
+        if (!noResults) {
+            noResults = document.createElement('div');
+            noResults.id = 'noSearchResults';
+            noResults.style.cssText = 'text-align:center;padding:40px 20px;background:#fff;border-radius:16px;border:1.5px dashed #E8EAF6;color:#A0A8CC;font-size:14px';
+            noResults.innerHTML = '<div style="font-size:28px;margin-bottom:10px">🔍</div><div>Aucune publication trouvée</div><div style="font-size:12px;margin-top:5px">Essayez de chercher d\'autres mots clés</div>';
+            const postsContainer = document.querySelector('[id^="post-"]')?.parentElement;
+            if (postsContainer) {
+                postsContainer.insertBefore(noResults, postsContainer.firstChild);
+            }
+        }
+        noResults.style.display = 'block';
+    } else {
+        const noResults = document.getElementById('noSearchResults');
+        if (noResults) noResults.style.display = 'none';
+    }
+}
+
+// ══ CLIENT-SIDE VALIDATION FOR FORMS ══
+function validateContentOnChange(element) {
+    const minLen = parseInt(element.getAttribute('data-min'), 10);
+    const maxLen = parseInt(element.getAttribute('data-max'), 10);
+    const type = element.getAttribute('data-type') || 'publication';
+    const currentLen = element.value.trim().length;
+    const content = element.value.trim();
+    
+    // Update character counter
+    const counter = element.parentElement.querySelector('.char-counter');
+    if (counter) {
+        counter.textContent = `${currentLen}/${maxLen}`;
+        if (currentLen < minLen) {
+            counter.style.color = '#E74C3C';
+        } else if (currentLen > maxLen) {
+            counter.style.color = '#E74C3C';
+        } else {
+            counter.style.color = '#27AE60';
+        }
+    }
+    
+    // Check if valid
+    const submitBtn = element.closest('form').querySelector('[type="submit"]');
+    const errorMsg = element.parentElement.querySelector('.validation-error');
+    
+    // Check for repeated characters (alert)
+    if (/(.)\1{5,}/.test(content)) {
+        alert('⚠️ Attention!\n\nLes caractères répétés en excès ne sont pas autorisés.\n\nVeruillez éviter de répéter un même caractère plus de 5 fois.');
+        element.value = element.value.substring(0, element.value.length - 1);
+        validateContentOnChange(element);
+        return;
+    }
+    
+    // Check if valid overall
+    const isValid = currentLen >= minLen && currentLen <= maxLen;
+    if (submitBtn) {
+        submitBtn.disabled = !isValid;
+        submitBtn.style.opacity = isValid ? '1' : '0.5';
+        submitBtn.style.cursor = isValid ? 'pointer' : 'not-allowed';
+    }
+    
+    // Show error message for length issues
+    if (!isValid && currentLen > 0) {
+        if (currentLen < minLen) {
+            if (errorMsg) {
+                errorMsg.textContent = `${type === 'commentaire' ? 'Commentaire' : 'Publication'} trop court (min: ${minLen})`;
+                errorMsg.style.display = 'block';
+            }
+        } else if (currentLen > maxLen) {
+            if (errorMsg) {
+                errorMsg.textContent = `${type === 'commentaire' ? 'Commentaire' : 'Publication'} trop long (max: ${maxLen})`;
+                errorMsg.style.display = 'block';
+            }
+        }
+    } else if (errorMsg) {
+        errorMsg.style.display = 'none';
+    }
+}
+
+function initializeValidation(textarea) {
+    if (!textarea) return;
+    
+    const minLen = parseInt(textarea.getAttribute('data-min'), 10);
+    const maxLen = parseInt(textarea.getAttribute('data-max'), 10);
+    
+    // Add event listeners
+    textarea.addEventListener('input', function() {
+        validateContentOnChange(this);
+    });
+    textarea.addEventListener('change', function() {
+        validateContentOnChange(this);
+    });
+    
+    // Initial validation
+    validateContentOnChange(textarea);
+}
+
+// ══ INLINE COMMENT VALIDATION ══
+function validateCommentInput(input) {
+    const form = input.closest('form');
+    const submitBtn = form.querySelector('[type="submit"]');
+    const trimmedValue = input.value.trim();
+    
+    if (trimmedValue.length >= 1 && trimmedValue.length <= 500) {
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
+        submitBtn.style.cursor = 'pointer';
+    } else {
+        submitBtn.disabled = true;
+        submitBtn.style.opacity = '0.5';
+        submitBtn.style.cursor = 'not-allowed';
+    }
+}
+
+// ══ GROUP SELECTOR FUNCTION ══
+function updateGroupSelector() {
+    const visibility = document.getElementById('postVisibility').value;
+    const groupSelector = document.getElementById('groupSelector');
+    
+    if (visibility === 'GROUP') {
+        groupSelector.style.display = 'inline-block';
+        groupSelector.required = true;
+    } else {
+        groupSelector.style.display = 'none';
+        groupSelector.required = false;
+        groupSelector.value = '';
+    }
+}
+
+// ══ AI FEATURES FUNCTIONS ══
+// ══ CREATE POST AI FUNCTIONS ══
+function improvePostText() {
+    const textarea = document.getElementById('createPostContenu');
+    const text = textarea.value.trim();
+    
+    if (!text || text.length < 3) {
+        alert('⚠️ Veuillez entrer au moins 3 caractères');
+        return;
+    }
+    
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ En cours...';
+    btn.style.opacity = '0.6';
+    
+    fetch('{{ path("social_ai_improve") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ text: text })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.text) {
+            textarea.value = data.text;
+            validateContentOnChange(textarea);
+            textarea.focus();
+        } else {
+            alert('⚠️ Erreur: ' + (data.error || 'Impossible d\'améliorer le texte'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('⚠️ Erreur de connexion');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.textContent = originalText;
+        btn.style.opacity = '1';
+    });
+}
+
+function summarizePostText() {
+    const textarea = document.getElementById('createPostContenu');
+    const text = textarea.value.trim();
+    
+    if (!text || text.length < 3) {
+        alert('⚠️ Veuillez entrer au moins 3 caractères');
+        return;
+    }
+    
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ En cours...';
+    btn.style.opacity = '0.6';
+    
+    fetch('{{ path("social_ai_summarize") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ text: text })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.text) {
+            textarea.value = data.text;
+            validateContentOnChange(textarea);
+            textarea.focus();
+        } else {
+            alert('⚠️ Erreur: ' + (data.error || 'Impossible de résumer le texte'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('⚠️ Erreur de connexion');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.textContent = originalText;
+        btn.style.opacity = '1';
+    });
+}
+
+function summarizePublishedPost(content) {
+    const text = content.trim();
+    
+    if (!text || text.length < 3) {
+        alert('⚠️ Impossible de résumer un texte vide');
+        return;
+    }
+    
+    // Show loading alert
+    const originalAlert = window.alert;
+    let loadingActive = true;
+    
+    // Simulate loading with setTimeout
+    const loadingInterval = setInterval(() => {
+        if (!loadingActive) clearInterval(loadingInterval);
+    }, 100);
+    
+    fetch('{{ path("social_ai_summarize") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ text: text })
+    })
+    .then(response => response.json())
+    .then(data => {
+        loadingActive = false;
+        if (data.success && data.text) {
+            alert('📝 Résumé:\n\n' + data.text);
+        } else {
+            alert('⚠️ Erreur: ' + (data.error || 'Impossible de résumer la publication'));
+        }
+    })
+    .catch(error => {
+        loadingActive = false;
+        console.error('Error:', error);
+        alert('⚠️ Erreur de connexion');
+    });
+}
+
+// ══ EDIT POST AI FUNCTIONS ══
+function improveEditText() {
+    const textarea = document.getElementById('editContenu');
+    const text = textarea.value.trim();
+    
+    if (!text || text.length < 3) {
+        alert('⚠️ Veuillez entrer au moins 3 caractères');
+        return;
+    }
+    
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ En cours...';
+    btn.style.opacity = '0.6';
+    
+    fetch('{{ path("social_ai_improve") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ text: text })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.text) {
+            textarea.value = data.text;
+            validateContentOnChange(textarea);
+            textarea.focus();
+        } else {
+            alert('⚠️ Erreur: ' + (data.error || 'Impossible d\'améliorer le texte'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('⚠️ Erreur de connexion');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.textContent = originalText;
+        btn.style.opacity = '1';
+    });
+}
+
+function summarizeEditText() {
+    const textarea = document.getElementById('editContenu');
+    const text = textarea.value.trim();
+    
+    if (!text || text.length < 3) {
+        alert('⚠️ Veuillez entrer au moins 3 caractères');
+        return;
+    }
+    
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ En cours...';
+    btn.style.opacity = '0.6';
+    
+    fetch('{{ path("social_ai_summarize") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ text: text })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.text) {
+            textarea.value = data.text;
+            validateContentOnChange(textarea);
+            textarea.focus();
+        } else {
+            alert('⚠️ Erreur: ' + (data.error || 'Impossible de résumer le texte'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('⚠️ Erreur de connexion');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.textContent = originalText;
+        btn.style.opacity = '1';
+    });
+}
+
+// ══ CREATE POST AI FUNCTIONS (removed - now in edit modal) ══
+function improvePostText() {
+    const textarea = document.getElementById('createPostContenu');
+    const text = textarea.value.trim();
+    
+    if (!text || text.length < 3) {
+        alert('⚠️ Veuillez entrer au moins 3 caractères');
+        return;
+    }
+    
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ En cours...';
+    btn.style.opacity = '0.6';
+    
+    fetch('{{ path("social_ai_improve") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ text: text })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.text) {
+            textarea.value = data.text;
+            validateContentOnChange(textarea);
+            textarea.focus();
+        } else {
+            alert('⚠️ Erreur: ' + (data.error || 'Impossible d\'améliorer le texte'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('⚠️ Erreur de connexion');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.textContent = originalText;
+        btn.style.opacity = '1';
+    });
+}
+
+function summarizePostText() {
+    const textarea = document.getElementById('createPostContenu');
+    const text = textarea.value.trim();
+    
+    if (!text || text.length < 3) {
+        alert('⚠️ Veuillez entrer au moins 3 caractères');
+        return;
+    }
+    
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ En cours...';
+    btn.style.opacity = '0.6';
+    
+    fetch('{{ path("social_ai_summarize") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ text: text })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.text) {
+            textarea.value = data.text;
+            validateContentOnChange(textarea);
+            textarea.focus();
+        } else {
+            alert('⚠️ Erreur: ' + (data.error || 'Impossible de résumer le texte'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('⚠️ Erreur de connexion');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.textContent = originalText;
+        btn.style.opacity = '1';
+    });
+}
+
+function openGeneratePostModal() {
+    document.getElementById('generatePostModal').style.display = 'flex';
+}
+
+function generatePostFromSubject() {
+    const subjectInput = document.getElementById('generateSubject');
+    const toneSelect = document.getElementById('generateTone');
+    const subject = subjectInput.value.trim();
+    const tone = toneSelect.value;
+    
+    if (!subject || subject.length < 3) {
+        alert('⚠️ Veuillez entrer un sujet valide (min 3 caractères)');
+        return;
+    }
+    
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ Génération...';
+    btn.style.opacity = '0.6';
+    
+    fetch('{{ path("social_ai_generate") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ subject: subject, tone: tone })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.text) {
+            const textarea = document.getElementById('createPostContenu');
+            textarea.value = data.text;
+            validateContentOnChange(textarea);
+            textarea.focus();
+            
+            // Close modal
+            document.getElementById('generatePostModal').style.display = 'none';
+            subjectInput.value = '';
+            toneSelect.value = 'professionnel';
+        } else {
+            alert('⚠️ Erreur: ' + (data.error || 'Impossible de générer la publication'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('⚠️ Erreur de connexion');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.textContent = originalText;
+        btn.style.opacity = '1';
+    });
+}
+
+// ══ GIF PICKER FUNCTIONS ══
+let currentGifContext = 'post'; // 'post' or 'comment'
+let currentCommentPublicationId = null; // Track which comment/post we're adding GIF to
+
+function openGifPickerModal(context, pubId = null) {
+    currentGifContext = context;
+    currentCommentPublicationId = pubId;
+    const modal = document.getElementById('gifPickerModal');
+    modal.style.display = 'flex';
+    
+    // Load trending GIFs on open
+    loadTrendingGifs();
+}
+
+function loadTrendingGifs() {
+    const gifContainer = document.getElementById('gifPickerResults');
+    gifContainer.innerHTML = '<div style="text-align:center;padding:20px;color:#A0A8CC">⏳ Chargement...</div>';
+    
+    fetch('{{ path("social_gifs_trending") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ limit: 12 })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.gifs) {
+            displayGifs(data.gifs);
+        } else {
+            gifContainer.innerHTML = '<div style="padding:20px;color:#E74C3C">⚠️ Erreur lors du chargement des GIFs</div>';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        gifContainer.innerHTML = '<div style="padding:20px;color:#E74C3C">⚠️ Erreur de connexion</div>';
+    });
+}
+
+function searchGifs() {
+    const query = document.getElementById('gifSearchInput').value.trim();
+    if (!query || query.length < 2) {
+        alert('⚠️ Veuillez entrer au moins 2 caractères');
+        return;
+    }
+    
+    const gifContainer = document.getElementById('gifPickerResults');
+    gifContainer.innerHTML = '<div style="text-align:center;padding:20px;color:#A0A8CC">⏳ Recherche...</div>';
+    
+    fetch('{{ path("social_gifs_search") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ query: query, limit: 12 })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.gifs) {
+            displayGifs(data.gifs);
+        } else {
+            gifContainer.innerHTML = '<div style="padding:20px;color:#E74C3C">⚠️ Aucun GIF trouvé</div>';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        gifContainer.innerHTML = '<div style="padding:20px;color:#E74C3C">⚠️ Erreur de connexion</div>';
+    });
+}
+
+function displayGifs(gifs) {
+    const gifContainer = document.getElementById('gifPickerResults');
+    gifContainer.innerHTML = '';
+    
+    if (gifs.length === 0) {
+        gifContainer.innerHTML = '<div style="padding:20px;text-align:center;color:#A0A8CC">Aucun GIF trouvé</div>';
+        return;
+    }
+    
+    gifContainer.style.display = 'grid';
+    gifContainer.style.gridTemplateColumns = 'repeat(auto-fill, minmax(120px, 1fr))';
+    gifContainer.style.gap = '10px';
+    
+    gifs.forEach(gif => {
+        const gifDiv = document.createElement('div');
+        gifDiv.style.cssText = 'cursor:pointer;position:relative;overflow:hidden;border-radius:8px;aspect-ratio:1;';
+        gifDiv.innerHTML = `<img src="${gif.previewUrl}" alt="${gif.title}" style="width:100%;height:100%;object-fit:cover;transition:transform 0.2s">`;
+        
+        gifDiv.addEventListener('hover', function() {
+            this.querySelector('img').style.transform = 'scale(1.05)';
+        });
+        
+        gifDiv.addEventListener('click', function() {
+            selectGif(gif.originalUrl, gif.previewUrl, gif.title);
+        });
+        
+        gifContainer.appendChild(gifDiv);
+    });
+}
+
+function selectGif(originalUrl, previewUrl, title) {
+    if (currentGifContext === 'post') {
+        // Store GIF URL in hidden field
+        const form = document.getElementById('createPostForm');
+        const input = form.querySelector('input[name="gifUrl"]');
+        if (input) {
+            input.value = originalUrl;
+        }
+        
+        // Show preview
+        showGifPreview('post', previewUrl, title);
+    } else if (currentGifContext === 'comment' && currentCommentPublicationId) {
+        // Store GIF URL in comment hidden field
+        const commentForm = document.getElementById('commentForm-' + currentCommentPublicationId);
+        if (commentForm) {
+            const input = commentForm.querySelector('input[name="gifUrl"]');
+            if (input) {
+                input.value = originalUrl;
+            }
+        }
+        
+        // Show preview in comment
+        const previewDiv = document.getElementById('commentGifPreview-' + currentCommentPublicationId);
+        if (previewDiv) {
+            previewDiv.innerHTML = `<img src="${previewUrl}" alt="${title}" style="max-width:180px;height:auto;border-radius:6px;margin-right:8px;display:inline-block">
+                                    <button type="button" onclick="removeCommentGif(${currentCommentPublicationId})" style="padding:4px 8px;background:#E74C3C;color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px">✕</button>`;
+            previewDiv.style.display = 'block';
+        }
+    }
+    
+    // Close modal
+    document.getElementById('gifPickerModal').style.display = 'none';
+}
+
+function showGifPreview(context, gifUrl, title) {
+    if (context === 'post') {
+        const previewDiv = document.getElementById('postGifPreview');
+        if (previewDiv) {
+            previewDiv.innerHTML = `<img src="${gifUrl}" alt="${title}" style="max-width:100%;height:auto;border-radius:8px;margin-top:8px">
+                                    <button type="button" onclick="removePostGif()" style="margin-top:8px;padding:4px 8px;background:#E74C3C;color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px">✕ Supprimer</button>`;
+            previewDiv.style.display = 'block';
+        }
+    }
+}
+
+function removePostGif() {
+    const form = document.getElementById('createPostForm');
+    const input = form.querySelector('input[name="gifUrl"]');
+    if (input) input.value = '';
+    
+    const previewDiv = document.getElementById('postGifPreview');
+    if (previewDiv) previewDiv.style.display = 'none';
+}
+
+function removeCommentGif(pubId) {
+    const commentForm = document.getElementById('commentForm-' + pubId);
+    if (commentForm) {
+        const input = commentForm.querySelector('input[name="gifUrl"]');
+        if (input) input.value = '';
+    }
+    
+    const previewDiv = document.getElementById('commentGifPreview-' + pubId);
+    if (previewDiv) previewDiv.style.display = 'none';
+}
+
+// Prevent form submission if GROUP is selected but no group is chosen
+document.addEventListener('DOMContentLoaded', function() {
+    const createPostForm = document.getElementById('createPostForm');
+    if (createPostForm) {
+        createPostForm.addEventListener('submit', function(e) {
+            const visibility = document.getElementById('postVisibility').value;
+            const groupSelector = document.getElementById('groupSelector');
+            
+            if (visibility === 'GROUP' && !groupSelector.value) {
+                e.preventDefault();
+                alert('Veuillez sélectionner un groupe');
+                return false;
+            }
+        });
+    }
+});
+</script>
+
+{# ══ MODAL D'ÉDITION DE COMMENTAIRE ══ #}
+<div id="editCommentModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.45);align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:18px;width:100%;max-width:500px;margin:0 16px;box-shadow:0 20px 60px rgba(0,0,0,0.2);border:1.5px solid #E8EAF6;overflow:hidden">
+
+        {# Header #}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #E8EAF6">
+            <div style="font-size:15px;font-weight:700;color:#1A1D2E">Éditer le commentaire</div>
+            <button type="button" onclick="document.getElementById('editCommentModal').style.display='none'"
+                    style="background:none;border:none;font-size:21px;color:#A0A8CC;cursor:pointer;line-height:1">×</button>
+        </div>
+
+        <form id="editCommentForm" method="post" style="display:contents">
+            <div style="padding:18px 20px">
+
+                {# Texte with validation #}
+                <div style="position:relative;margin-bottom:9px">
+                    <textarea id="editCommentContenu" name="contenu" rows="3" required
+                        placeholder="Écrire un commentaire..."
+                        data-min="1"
+                        data-max="500"
+                        data-type="commentaire"
+                        style="width:100%;border:1.5px solid #E8EAF6;border-radius:11px;padding:13px 15px;font-size:13.5px;font-family:inherit;color:#1A1D2E;resize:vertical;outline:none;background:#F4F5FB;box-sizing:border-box"></textarea>
+                    
+                    {# Error message #}
+                    <div class="validation-error" style="display:none;margin-top:8px;padding:9px 12px;background:#FFF1F0;border:1px solid #F5CCCA;border-radius:8px;font-size:12px;color:#C23C35;font-weight:500"></div>
+                    
+                    {# Character counter #}
+                    <div style="text-align:right;margin-top:6px;font-size:11px;color:#A0A8CC">
+                        <span class="char-counter">0/500</span>
+                    </div>
+                </div>
+            </div>
+
+            {# Footer #}
+            <div style="display:flex;justify-content:flex-end;gap:9px;padding:13px 20px;border-top:1px solid #E8EAF6">
+                <button type="button"
+                        onclick="document.getElementById('editCommentModal').style.display='none'"
+                        style="padding:8px 18px;border-radius:9px;border:1.5px solid #E8EAF6;background:#F4F5FB;color:#4A5080;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">
+                    Annuler
+                </button>
+                <button type="submit"
+                        style="padding:8px 20px;border-radius:9px;border:none;background:linear-gradient(135deg,#6C5CE7,#A29BFE);color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(108,92,231,0.3)">
+                    Enregistrer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# ══ MODAL DE PARTAGE ══ #}
+<div id="shareModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.45);align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:18px;width:100%;max-width:520px;margin:0 16px;box-shadow:0 20px 60px rgba(0,0,0,0.2);border:1.5px solid #E8EAF6;overflow:hidden">
+
+        {# Header #}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #E8EAF6">
+            <div style="font-size:15px;font-weight:700;color:#1A1D2E">📤 Partager cette publication</div>
+            <button type="button" onclick="document.getElementById('shareModal').style.display='none'"
+                    style="background:none;border:none;font-size:21px;color:#A0A8CC;cursor:pointer;line-height:1">×</button>
+        </div>
+
+        <form id="shareForm" method="post" style="display:contents">
+            <div style="padding:18px 20px">
+
+                {# Publication preview (grisé) #}
+                <div style="padding:13px 14px;background:#F3F4F6;border-radius:11px;border-left:4px solid #6C5CE7;margin-bottom:14px">
+                    <div style="font-size:11px;color:#A0A8CC;margin-bottom:6px;font-weight:600">Vous allez partager :</div>
+                    <div id="sharePreviewContent" style="font-size:13px;color:#4A5080;line-height:1.5"></div>
+                </div>
+
+                {# User info + Visibilité #}
+                <div style="display:flex;align-items:center;gap:11px;margin-bottom:14px">
+                    <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#A29BFE,#6C5CE7);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700;flex-shrink:0">
+                        😊
+                    </div>
+                    <div>
+                        <div style="font-size:13.5px;font-weight:700;color:#1A1D2E">Vous</div>
+                        <select name="visibility" style="background:#F4F5FB;border:1.5px solid #E8EAF6;border-radius:7px;padding:3px 9px;font-size:11.5px;color:#4A5080;outline:none;font-family:inherit;margin-top:3px;cursor:pointer">
+                            <option value="PUBLIC">🌍 Public</option>
+                            <option value="FRIENDS">👥 Abonnés</option>
+                            <option value="PRIVATE">🔒 Privé</option>
+                        </select>
+                    </div>
+                </div>
+
+                {# Message optionnel #}
+                <label style="display:block;font-size:12.5px;color:#4A5080;font-weight:600;margin-bottom:6px">
+                    Ajouter un message (optionnel)
+                </label>
+                <textarea name="shareMessage" rows="3" placeholder="Partager vos pensées sur cette publication..."
+                    style="width:100%;border:1.5px solid #E8EAF6;border-radius:11px;padding:13px 15px;font-size:13.5px;font-family:inherit;color:#1A1D2E;resize:vertical;outline:none;background:#F4F5FB;box-sizing:border-box"></textarea>
+            </div>
+
+            {# Footer #}
+            <div style="display:flex;justify-content:flex-end;gap:9px;padding:13px 20px;border-top:1px solid #E8EAF6">
+                <button type="button"
+                        onclick="document.getElementById('shareModal').style.display='none'"
+                        style="padding:8px 18px;border-radius:9px;border:1.5px solid #E8EAF6;background:#F4F5FB;color:#4A5080;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">
+                    Annuler
+                </button>
+                <button type="submit"
+                        style="padding:8px 20px;border-radius:9px;border:none;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(16,185,129,0.3)">
+                    Partager
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

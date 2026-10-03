@@ -1,0 +1,171 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Modifier le Congé #{{ conge.id }} — Humania{% endblock %}
+
+{% block body %}
+
+<div class="page-header">
+    <div>
+        <div class="page-header-title">✏️ Modifier le congé #{{ conge.id }}</div>
+        <div class="page-header-sub">Modifiez les informations de votre demande</div>
+    </div>
+    <a href="{{ path('app_conge_index') }}" class="btn btn-white">← Retour à la liste</a>
+</div>
+
+<!-- Résumé actuel -->
+<div style="max-width:720px; margin:0 auto 24px;">
+    {% if conge.statut == 'Approuvé' %}{% set badgeClass = 'badge-success' %}
+    {% elseif conge.statut == 'Refusé' %}{% set badgeClass = 'badge-danger' %}
+    {% else %}{% set badgeClass = 'badge-warning' %}{% endif %}
+
+    <div style="background:white; border:1px solid var(--border); border-radius:12px; padding:16px 22px;
+                display:flex; gap:20px; align-items:center; box-shadow:var(--shadow);">
+        <div>
+            <div style="font-size:10px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:1px;">Statut actuel</div>
+            <span class="badge {{ badgeClass }}" style="margin-top:5px;">{{ conge.statut }}</span>
+        </div>
+        <div style="width:1px; background:var(--border); align-self:stretch;"></div>
+        <div>
+            <div style="font-size:10px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:1px;">Période</div>
+            <div style="font-size:13px; font-weight:600; margin-top:4px;">
+                {{ conge.dateDebut ? conge.dateDebut|date('d/m/Y') : '—' }}
+                → {{ conge.dateFin ? conge.dateFin|date('d/m/Y') : '—' }}
+            </div>
+        </div>
+        <div style="width:1px; background:var(--border); align-self:stretch;"></div>
+        <div>
+            <div style="font-size:10px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:1px;">Durée actuelle</div>
+            <div style="font-size:16px; font-weight:800; color:#059669; margin-top:4px;">
+                {{ conge.nbrJours }} jour{{ conge.nbrJours > 1 ? 's' : '' }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Formulaire principal -->
+<div class="card" style="max-width:720px; margin:0 auto;">
+    <div class="card-header" style="background:linear-gradient(to right, #eef2ff, #e8eeff);">
+        <span style="font-size:20px;">📝</span>
+        <div>
+            <div style="font-weight:700; font-size:15px; color:var(--text);">Modifier la demande</div>
+            <div style="font-size:11px; color:var(--muted);">Le nombre de jours est recalculé automatiquement</div>
+        </div>
+    </div>
+
+    <div class="card-body">
+        {{ form_start(form, {'attr': {'novalidate': 'novalidate', 'id': 'edit-form'}}) }}
+
+            {% if not form.vars.valid %}
+                <div class="alert alert-danger" style="margin-bottom:20px;">
+                    ⚠️ Veuillez corriger les erreurs ci-dessous.
+                </div>
+            {% endif %}
+
+            <!-- Dates -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">DATE DE DÉBUT *</label>
+                    {{ form_widget(form.dateDebut, {'attr': {'class': 'form-control', 'id': 'date_debut'}}) }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">DATE DE FIN *</label>
+                    {{ form_widget(form.dateFin, {'attr': {'class': 'form-control', 'id': 'date_fin'}}) }}
+                </div>
+            </div>
+
+            <!-- Nombre de jours -->
+            <div class="form-group">
+                <label class="form-label">NOMBRE DE JOURS <span style="color:var(--muted); font-weight:400;">(calculé automatiquement)</span></label>
+                <div style="position:relative;">
+                    {# On affiche directement la valeur BDD via conge.nbrJours #}
+                    <input type="text"
+                           id="nbr_jours_display"
+                           class="form-control"
+                           value="{{ conge.nbrJours ? conge.nbrJours ~ ' jour' ~ (conge.nbrJours > 1 ? 's' : '') : '' }}"
+                           readonly
+                           tabindex="-1"
+                           style="background:#f0fdf4; color:#059669; font-weight:700; cursor:not-allowed; border-color:#d1fae5;">
+                    <span style="position:absolute; right:14px; top:50%; transform:translateY(-50%); font-size:16px; pointer-events:none;">📆</span>
+                </div>
+                <div style="font-size:11px; color:var(--muted); margin-top:5px;">
+                    💡 Ce champ se met à jour automatiquement dès que vous changez les dates.
+                </div>
+            </div>
+
+            <!-- Statut -->
+            <div class="form-group">
+                <label class="form-label">STATUT *</label>
+                {{ form_widget(form.statut, {'attr': {'class': 'form-control'}}) }}
+            </div>
+
+            <!-- Type de congé et Utilisateur -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">TYPE DE CONGÉ *</label>
+                    {{ form_widget(form.typeCongeId, {'attr': {'class': 'form-control'}}) }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">UTILISATEUR *</label>
+                    {{ form_widget(form.utilisateurId, {'attr': {'class': 'form-control'}}) }}
+                </div>
+            </div>
+
+            <!-- Boutons -->
+            <div style="display:flex; gap:12px; justify-content:space-between; margin-top:24px; padding-top:20px; border-top:1px solid var(--border);">
+                <div style="display:flex; gap:8px;">
+                    <a href="{{ path('app_conge_index') }}" class="btn btn-secondary">❌ Annuler</a>
+                    <button type="button"
+                            onclick="document.getElementById('archive-form').submit();"
+                            class="btn" style="background:#fef3c7; color:#92400e; border:1px solid #fde68a;">
+                        📦 Archiver
+                    </button>
+                </div>
+                <button type="submit" class="btn btn-primary">💾 Enregistrer les modifications</button>
+            </div>
+
+        {{ form_end(form) }}
+    </div>
+</div>
+
+{# Formulaire Archiver — EN DEHORS du formulaire principal ✅ #}
+<form id="archive-form" method="post" action="{{ path('app_conge_delete', {'id': conge.id}) }}"
+      onsubmit="return confirm('Archiver ce congé ?')" style="display:none;">
+    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ conge.id) }}">
+</form>
+
+{% endblock %}
+
+{% block javascripts %}
+<script>
+(function () {
+    const fieldDebut   = document.getElementById('date_debut');
+    const fieldFin     = document.getElementById('date_fin');
+    const fieldDisplay = document.getElementById('nbr_jours_display');
+
+    if (!fieldDebut || !fieldFin || !fieldDisplay) return;
+
+    function calculer() {
+        const d1 = fieldDebut.value ? new Date(fieldDebut.value) : null;
+        const d2 = fieldFin.value   ? new Date(fieldFin.value)   : null;
+
+        if (d1 && d2) {
+            if (d2 < d1) {
+                fieldDisplay.value             = '⚠️ Date de fin avant début';
+                fieldDisplay.style.color       = '#ef4444';
+                fieldDisplay.style.borderColor = '#ef4444';
+                fieldDisplay.style.background  = '#fee2e2';
+                return;
+            }
+            const diff = Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
+            fieldDisplay.value             = diff + ' jour' + (diff > 1 ? 's' : '');
+            fieldDisplay.style.color       = '#059669';
+            fieldDisplay.style.borderColor = '#d1fae5';
+            fieldDisplay.style.background  = '#f0fdf4';
+        }
+    }
+
+    fieldDebut.addEventListener('change', calculer);
+    fieldFin.addEventListener('change', calculer);
+})();
+</script>
+{% endblock %}

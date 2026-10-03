@@ -1,0 +1,57 @@
+# This file is the entry point to configure your own services.
+# Files in the packages/ subdirectory configure your dependencies.
+
+parameters:
+  avatar_upload_dir: "%kernel.project_dir%/public/uploads/avatars"
+  recaptcha_secret_key: "%env(RECAPTCHA_SECRET_KEY)%"
+  recaptcha_site_key: "%env(RECAPTCHA_SITE_KEY)%"
+  google_client_id: "%env(GOOGLE_CLIENT_ID)%"
+  google_client_secret: "%env(GOOGLE_CLIENT_SECRET)%"
+  groq_api_key: "%env(GROQ_API_KEY)%"
+  youtube_api_key: "%env(YOUTUBE_API_KEY)%"
+  cv_upload_directory: '%kernel.project_dir%/public/uploads/cvs'
+
+services:
+    # default configuration for services in *this* file
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        bind:
+            string $avatarUploadDir: '%avatar_upload_dir%'
+            string $recaptchaSecretKey: '%recaptcha_secret_key%'
+            string $recaptchaSiteKey: '%recaptcha_site_key%'
+            string $googleClientId: '%google_client_id%'
+            string $googleClientSecret: '%google_client_secret%'
+
+            int $staticEmployeId: '%env(int:PART_EVENEMENT_STATIC_EMPLOYE_ID)%'
+            string $accountId: '%env(ZOOM_ACCOUNT_ID)%'
+            string $clientId: '%env(ZOOM_CLIENT_ID)%'
+            string $clientSecret: '%env(ZOOM_CLIENT_SECRET)%'
+            string $zoomUserId: '%env(ZOOM_USER_ID)%'
+            string $appTimezone: '%env(APP_DEFAULT_TIMEZONE)%'
+
+            string $brevoApiKey: '%env(BREVO_API_KEY)%'
+            bool $brevoVerifySsl: '%env(bool:BREVO_VERIFY_SSL)%'
+
+            string $supabaseUrl: "%env(SUPABASE_URL)%"
+            string $anonKey: "%env(SUPABASE_ANON_KEY)%"
+
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Entity/'
+            - '../src/Kernel.php'
+
+    # Explicit service configuration
+    App\Service\EmailService:
+        arguments:
+            $mailerFrom: '%env(MAILER_FROM)%'
+            $mailerFromName: '%env(MAILER_FROM_NAME)%'
+            $brevoApiKey: '%env(BREVO_API_KEY)%'
+    App\Service\Plannification\BrevoMailer:
+        arguments:
+            $brevoApiKey:   '%env(BREVO_API_KEY)%'
+            $brevoVerifySsl: '%env(bool:BREVO_VERIFY_SSL)%'
+            $mailerFrom:    '%env(MAILER_FROM)%'
+ 

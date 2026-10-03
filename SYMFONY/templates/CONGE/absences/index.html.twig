@@ -1,0 +1,529 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mes Absences — Humania{% endblock %}
+
+{% set today = "now"|date("Y-m-d") %}
+
+{% block stylesheets %}
+<style>
+/* Animation cartes */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.abs-card {
+    animation: fadeInUp 0.3s ease-out;
+}
+.abs-card:nth-child(1) { animation-delay: 0s; }
+.abs-card:nth-child(2) { animation-delay: 0.05s; }
+.abs-card:nth-child(3) { animation-delay: 0.1s; }
+.abs-card:nth-child(4) { animation-delay: 0.15s; }
+.abs-card:nth-child(5) { animation-delay: 0.2s; }
+.abs-card:nth-child(6) { animation-delay: 0.25s; }
+    :root {
+        --purple:      #667eea;
+        --purple-dark: #5a67d8;
+        --purple-light:#eef2ff;
+        --green:       #10b981;
+        --green-light: #d1fae5;
+        --green-bg:    #ecfdf5;
+        --red:         #ef4444;
+        --red-light:   #fee2e2;
+        --orange:      #f59e0b;
+        --orange-light:#fef3c7;
+        --s8:#1e293b; --s6:#475569; --s4:#94a3b8; --s2:#e2e8f0; --s1:#f1f5f9;
+        --white:#fff;
+        --shadow-sm:0 1px 3px rgba(0,0,0,.08);
+        --shadow-md:0 4px 14px rgba(0,0,0,.08);
+        --radius:14px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'DM Sans','Segoe UI',sans-serif;background:#f0f4ff;color:var(--s8);}
+    .abs-wrap{max-width:1200px;margin:0 auto;padding:32px 28px;display:flex;flex-direction:column;gap:22px;}
+
+    /* Header */
+    .abs-header{background:linear-gradient(135deg,#667eea,#764ba2);border-radius:16px;padding:24px 28px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 8px 24px rgba(102,126,234,.32);}
+    .abs-header h1{font-size:22px;font-weight:700;color:#fff;display:flex;align-items:center;gap:10px;}
+    .abs-header p{font-size:12px;color:rgba(255,255,255,.82);margin-top:4px;}
+    .abs-btn-new{display:inline-flex;align-items:center;gap:8px;background:#fff;color:var(--purple-dark);border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.12);transition:transform .15s;}
+    .abs-btn-new:hover{transform:translateY(-1px);}
+
+    /* Search */
+    .abs-search{background:#fff;border-radius:var(--radius);padding:14px 20px;display:flex;align-items:center;gap:16px;box-shadow:var(--shadow-sm);border:1px solid var(--s2);}
+    .abs-search-in{flex:1;display:flex;align-items:center;gap:10px;}
+    .abs-search-in input{border:none;outline:none;font-size:13px;color:var(--s8);background:transparent;width:100%;}
+    .abs-search-in input::placeholder{color:var(--s4);}
+    .abs-sdiv{width:1px;height:32px;background:var(--s2);}
+    .abs-fg{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--s6);font-weight:600;}
+    .abs-fg select{border:1px solid var(--s2);border-radius:8px;padding:6px 10px;font-size:12px;background:var(--s1);cursor:pointer;outline:none;}
+    .abs-btn-ref{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1.5px solid var(--purple);color:var(--purple-dark);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;text-decoration:none;transition:background .15s;}
+    .abs-btn-ref:hover{background:var(--purple-light);}
+
+    /* Form card */
+    .abs-form-card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow-md);border:1px solid #e0e7ff;overflow:hidden;}
+    .abs-form-head{background:linear-gradient(to right,#eef2ff,#f0f4ff);padding:16px 24px;border-bottom:1px solid #e0e7ff;display:flex;align-items:center;justify-content:space-between;}
+    .abs-form-head-left{display:flex;align-items:center;gap:10px;}
+    .abs-form-head h2{font-size:15px;font-weight:700;color:var(--s8);}
+    .abs-form-head p{font-size:11px;color:var(--s4);margin-top:2px;}
+    .abs-badge-limit{background:linear-gradient(135deg,#fef3c7,#fde68a);color:#b45309;border:1.5px solid #fde68a;border-radius:20px;padding:5px 14px;font-size:11px;font-weight:700;white-space:nowrap;}
+    .abs-form-body{padding:24px;display:flex;flex-direction:column;gap:20px;}
+
+    /* Ligne 1 : Date + HH:MM début + flèche + HH:MM fin + Durée */
+    .abs-row-top{display:grid;grid-template-columns:1fr auto auto auto auto auto 180px;gap:10px;align-items:end;}
+    .abs-row-bottom{display:grid;grid-template-columns:200px 1fr 1fr;gap:16px;}
+    .abs-row-bottom.abs-row-2cols{grid-template-columns:1fr 1fr;}
+    @media (max-width:900px){.abs-row-bottom,.abs-row-bottom.abs-row-2cols{grid-template-columns:1fr;}}
+
+    .abs-grp{display:flex;flex-direction:column;gap:6px;}
+    .abs-grp label{font-size:9px;font-weight:700;color:var(--s4);letter-spacing:1.2px;text-transform:uppercase;}
+    .abs-grp input,
+    .abs-grp select{border:1.5px solid var(--s2);border-radius:9px;padding:10px 14px;font-size:13px;color:var(--s8);background:#fff;outline:none;transition:border-color .2s;font-family:inherit;width:100%;}
+    .abs-grp input:focus,.abs-grp select:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(102,126,234,.12);}
+
+    /* Selects heures style image 1 */
+    .time-wrap{display:flex;align-items:center;gap:4px;background:#fff;border:1.5px solid var(--s2);border-radius:9px;padding:4px 8px;transition:border-color .2s;}
+    .time-wrap:focus-within{border-color:var(--purple);box-shadow:0 0 0 3px rgba(102,126,234,.12);}
+    .time-wrap select{border:none!important;box-shadow:none!important;padding:6px 4px!important;font-size:14px!important;font-weight:700!important;color:var(--s8)!important;background:transparent!important;width:54px!important;border-radius:0!important;outline:none;}
+    .time-sep{font-size:18px;font-weight:700;color:var(--purple);line-height:1;}
+
+    /* Flèche */
+    .abs-arrow{display:flex;align-items:flex-end;padding-bottom:12px;font-size:20px;color:var(--s2);justify-content:center;}
+
+    /* Durée calculée */
+    #abs-duree-display{
+        border:1.5px solid #c7d2fe;border-radius:9px;padding:10px 14px;
+        font-size:14px;font-weight:700;width:100%;min-height:42px;
+        background:#f0f4ff;color:var(--purple-dark);cursor:default;
+        font-family:inherit;display:flex;align-items:center;
+        transition:all .2s;
+    }
+    #abs-duree-display.empty{color:var(--s4);background:var(--s1);border-color:var(--s2);font-weight:400;}
+    #abs-duree-display.ok{background:#f0fdf4;color:#059669;border-color:#d1fae5;}
+    #abs-duree-display.warn{background:#fef3c7;color:#b45309;border-color:#fde68a;}
+    #abs-duree-display.err{background:var(--red-light);color:var(--red);border-color:#fca5a5;}
+
+    /* Actions */
+    .abs-actions{display:flex;justify-content:flex-end;gap:12px;}
+    .abs-btn-cancel{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1.5px solid var(--s2);color:var(--s6);border-radius:9px;padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;}
+    .abs-btn-cancel:hover{background:var(--s1);}
+    .abs-btn-submit{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:9px;padding:9px 22px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(102,126,234,.32);transition:transform .15s;}
+    .abs-btn-submit:hover{transform:translateY(-1px);}
+
+    /* Cartes */
+    .abs-list{display:flex;flex-direction:column;gap:12px;}
+    .abs-card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow-sm);border:1px solid var(--s2);display:flex;overflow:hidden;transition:box-shadow .2s,transform .15s;}
+    .abs-card:hover{box-shadow:var(--shadow-md);transform:translateY(-1px);}
+    .abs-accent{width:4px;flex-shrink:0;}
+    .aa-ju{background:var(--green);} .aa-in{background:var(--red);} .aa-me{background:var(--purple);} .aa-at{background:var(--orange);} .aa-ar{background:var(--s4);}
+    .abs-av{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;margin:18px 12px 18px 16px;}
+    .av-ju{background:var(--green-light);} .av-in{background:var(--red-light);} .av-me{background:var(--purple-light);} .av-at{background:var(--orange-light);} .av-ar{background:var(--s1);}
+    .abs-main{flex:1;padding:16px 0;display:flex;flex-direction:column;gap:8px;}
+    .abs-main h3{font-size:14px;font-weight:700;color:var(--s8);display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+    .abs-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+    .abs-chip{display:inline-flex;align-items:center;gap:5px;background:var(--s1);border:1px solid var(--s2);border-radius:20px;padding:4px 12px;font-size:11px;color:var(--s6);font-weight:600;}
+    .abs-badge{display:inline-flex;align-items:center;padding:4px 14px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border:1.5px solid transparent;}
+    .bd-ju{background:var(--green-light);color:#065f46;border-color:#a7f3d0;}
+    .bd-in{background:var(--red-light);color:var(--red);border-color:#fca5a5;}
+    .bd-me{background:var(--purple-light);color:var(--purple-dark);border-color:#c7d2fe;}
+    .bd-at{background:var(--orange-light);color:#b45309;border-color:#fde68a;}
+    .bd-ar{background:var(--s1);color:var(--s6);border-color:var(--s2);}
+    .abs-btns{display:flex;flex-direction:column;gap:8px;padding:14px 18px 14px 16px;justify-content:center;border-left:1px solid var(--s1);margin-left:16px;}
+    .abs-ba{display:inline-flex;align-items:center;gap:6px;border-radius:8px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none;border:1.5px solid transparent;transition:background .15s,transform .1s;white-space:nowrap;background:none;}
+    .abs-ba:hover{transform:translateY(-1px);}
+    .ba-edit{background:var(--purple-light);color:var(--purple-dark);border-color:#c7d2fe;}
+    .ba-arch{background:var(--orange-light);color:#b45309;border-color:#fde68a;}
+
+    /* Flash / empty */
+    .abs-flash{border-radius:10px;padding:12px 18px;font-size:13px;font-weight:600;border:1.5px solid;}
+    .af-ok{background:var(--green-bg);color:#065f46;border-color:#a7f3d0;}
+    .af-err{background:var(--red-light);color:var(--red);border-color:#fca5a5;}
+    .abs-empty{background:#fff;border-radius:var(--radius);padding:60px 40px;text-align:center;border:1px dashed var(--s2);}
+    .abs-empty .ico{font-size:48px;margin-bottom:16px;}
+    .abs-empty h3{font-size:16px;font-weight:700;color:var(--s4);}
+    .abs-empty p{font-size:13px;color:var(--s4);margin-top:6px;}
+
+    #abs-form-wrap{display:none;}
+    #abs-form-wrap.open{display:block;}
+    .abs-hidden{display:none!important;}
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="abs-wrap">
+
+{% for msg in app.flashes('success') %}<div class="abs-flash af-ok">✓ {{ msg }}</div>{% endfor %}
+{% for msg in app.flashes('error')   %}<div class="abs-flash af-err">✕ {{ msg }}</div>{% endfor %}
+
+{# ── Header ── #}
+<div class="abs-header">
+    <div>
+        <h1>⏰ Autorisations d'absence</h1>
+        <p>Gérez vos demandes d'autorisation de sortie</p>
+    </div>
+
+    
+    <button class="abs-btn-new" id="abs-toggle-btn" type="button">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Nouvelle autorisation
+    </button>
+</div>
+
+{# ── Search ── #}
+<div class="abs-search">
+    <div class="abs-search-in">
+        <svg width="16" height="16" fill="none" stroke="#94a3b8" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="abs-search-input" placeholder="Rechercher une autorisation..." oninput="absFilter()">
+    </div>
+    <div class="abs-sdiv"></div>
+    <div class="abs-fg">Statut :
+        <select id="abs-filter-statut" onchange="absFilter()">
+            <option value="">Tous les statuts</option>
+            <option value="en attente">En attente</option>
+            <option value="justifiée">Justifiée</option>
+            <option value="injustifiée">Injustifiée</option>
+            <option value="archivé">Archivé</option>
+        </select>
+    </div>
+    <div class="abs-fg">Type :
+        <select id="abs-filter-type" onchange="absFilter()">
+            <option value="">Tous les types</option>
+            {% for ta in typesAbsence|default([]) %}
+                <option value="{{ ta.id }}">{{ ta.libelle }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <a href="{{ path('app_absence_index') }}" class="abs-btn-ref">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+        Actualiser
+    </a>
+</div>
+
+{# ── Formulaire ── #}
+<div id="abs-form-wrap">
+    <div class="abs-form-card">
+        <div class="abs-form-head">
+            <div class="abs-form-head-left">
+                <svg width="18" height="18" fill="none" stroke="#667eea" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <div>
+                    <h2>Nouvelle demande d'autorisation</h2>
+                    <p>Renseignez les informations ci-dessous</p>
+                </div>
+            </div>
+            <span class="abs-badge-limit">30 min – 4h maximum</span>
+        </div>
+
+        <div class="abs-form-body">
+            {{ form_start(formNew, {'attr': {'novalidate': 'novalidate', 'id': 'abs-new-form'}}) }}
+
+            {# Champs cachés mappés ── remplis par JS avant submit #}
+            {{ form_widget(formNew.utilisateurId, {'attr': {'value': '1', 'style': 'display:none'}}) }}
+            {{ form_widget(formNew.heureDebut,    {'attr': {'style': 'display:none', 'id': 'abs-hd-hidden'}}) }}
+            {{ form_widget(formNew.heureFin,      {'attr': {'style': 'display:none', 'id': 'abs-hf-hidden'}}) }}
+            {{ form_widget(formNew.dureeMinutes,  {'attr': {'style': 'display:none', 'id': 'abs-dur-hidden'}}) }}
+            {{ form_widget(formNew.nbrJours,      {'attr': {'style': 'display:none'}}) }}
+            {{ form_widget(formNew.dateFin,       {'attr': {'style': 'display:none', 'id': 'abs-datefin-hidden'}}) }}
+
+            {# ── Ligne 1 : Date + HH:MM début + → + HH:MM fin + Durée ── #}
+            <div class="abs-row-top">
+
+                {# Date #}
+                <div class="abs-grp">
+                    <label>Date</label>
+                    {{ form_widget(formNew.dateDebut, {'attr': {
+                        'id':  'abs-date-debut',
+                        'min': today
+                    }}) }}
+                </div>
+
+                {# Heure début HH : MM #}
+                <div class="abs-grp">
+                    <label>Heure début</label>
+                    <div class="time-wrap">
+                        {{ form_widget(formNew.heureDebutH, {'attr': {'onchange': 'absCalcDuree()'}}) }}
+                        <span class="time-sep">:</span>
+                        {{ form_widget(formNew.heureDebutM, {'attr': {'onchange': 'absCalcDuree()'}}) }}
+                    </div>
+                </div>
+
+                {# Flèche #}
+                <div class="abs-arrow">→</div>
+
+                {# Heure fin HH : MM #}
+                <div class="abs-grp">
+                    <label>Heure fin</label>
+                    <div class="time-wrap">
+                        {{ form_widget(formNew.heureFinH, {'attr': {'onchange': 'absCalcDuree()'}}) }}
+                        <span class="time-sep">:</span>
+                        {{ form_widget(formNew.heureFinM, {'attr': {'onchange': 'absCalcDuree()'}}) }}
+                    </div>
+                </div>
+
+                {# Durée calculée — DIV mis à jour par JS #}
+                <div class="abs-grp">
+                    <label>Durée calculée</label>
+                    <div id="abs-duree-display" class="empty">—</div>
+                </div>
+
+            </div>
+
+            {# ── Ligne 2 : Statut (si RH/Admin/Manager) + Type + Motif ── #}
+            {% set absStatutHidden = 'hidden' in formNew.statut.vars.block_prefixes %}
+            {% if absStatutHidden %}
+                {{ form_widget(formNew.statut) }}
+            {% endif %}
+            <div class="abs-row-bottom{{ absStatutHidden ? ' abs-row-2cols' : '' }}">
+                {% if not absStatutHidden %}
+                <div class="abs-grp">
+                    <label>Statut</label>
+                    {{ form_widget(formNew.statut) }}
+                </div>
+                {% endif %}
+                <div class="abs-grp">
+                    <label>Type d'autorisation</label>
+                    {{ form_widget(formNew.typeAbsenceId) }}
+                </div>
+                <div class="abs-grp">
+                    <label>Motif <span style="color:#ef4444;font-size:10px;">*requis*</span></label>
+                    {{ form_widget(formNew.motif) }}
+                </div>
+            </div>
+
+            <div class="abs-actions">
+                <button type="button" class="abs-btn-cancel" id="abs-cancel-btn">✕ Annuler</button>
+                <button type="submit" class="abs-btn-submit">💾 Enregistrer la demande</button>
+            </div>
+
+            {{ form_end(formNew) }}
+        </div>
+    </div>
+</div>
+
+{# ── Liste des absences (libellés types depuis la BDD) ── #}
+{% set typeLabels = {} %}
+{% for ta in typesAbsence|default([]) %}
+    {% set typeLabels = typeLabels|merge({ (ta.id): ta.libelle }) %}
+{% endfor %}
+
+<div class="abs-list" id="abs-list">
+    {% if absences is empty %}
+        <div class="abs-empty">
+            <div class="ico">⏰</div>
+            <h3>Aucune absence enregistrée</h3>
+            <p>Cliquez sur « Nouvelle autorisation » pour créer votre première demande</p>
+        </div>
+    {% else %}
+        {% for absence in absences %}
+            {% set s = absence.statut|default('')|lower %}
+            {% set tid = absence.typeAbsenceId %}
+            {% set dm = absence.dureeMinutes %}
+            {% if tid == 1 or s in ['justifiée','justifie'] %}
+                {% set ac='aa-ju' %}{% set av='av-ju' %}{% set bd='bd-ju' %}{% set ico='✅' %}
+            {% elseif tid == 2 or s in ['injustifiée','injustifie'] %}
+                {% set ac='aa-in' %}{% set av='av-in' %}{% set bd='bd-in' %}{% set ico='❌' %}
+            {% elseif tid == 3 %}
+                {% set ac='aa-me' %}{% set av='av-me' %}{% set bd='bd-me' %}{% set ico='💊' %}
+            {% elseif s in ['archivé','archive'] %}
+                {% set ac='aa-ar' %}{% set av='av-ar' %}{% set bd='bd-ar' %}{% set ico='📦' %}
+            {% else %}
+                {% set ac='aa-at' %}{% set av='av-at' %}{% set bd='bd-at' %}{% set ico='⏳' %}
+            {% endif %}
+
+            <div class="abs-card" data-statut="{{ s|e('html_attr') }}" data-type="{{ tid|default('') }}">
+                <div class="abs-accent {{ ac }}"></div>
+                <div class="abs-av {{ av }}">{{ ico }}</div>
+                <div class="abs-main">
+                    <h3>
+                        {{ tid ? (typeLabels[tid] ?? ('Type #' ~ tid)) : 'Type non renseigné' }}
+                        <span class="abs-badge {{ bd }}">{{ absence.statut }}</span>
+                    </h3>
+                    <div class="abs-meta">
+                        <span class="abs-chip">📅 {% if absence.dateDebut %}le {{ absence.dateDebut|date('d/m/Y') }}{% else %}—{% endif %}</span>
+                        {% if absence.heureDebut %}
+                            <span class="abs-chip">🕐 {{ absence.heureDebut }} → {{ absence.heureFin ?? '?' }}</span>
+                        {% endif %}
+                        <span class="abs-chip">⏱ {% apply spaceless %}
+                            {% if dm is not null and dm > 0 %}
+                                {% if dm >= 60 %}
+                                    {% set hh = (dm / 60)|round(0, 'floor') %}
+                                    {% set mm = dm - hh * 60 %}
+                                    {{ hh }} h{% if mm > 0 %} {{ mm }} min{% endif %}
+                                {% else %}
+                                    {{ dm }} min
+                                {% endif %}
+                            {% else %}
+                                —
+                            {% endif %}
+                        {% endapply %}</span>
+                        {% if absence.motif %}
+                            <span class="abs-chip">💬 {{ absence.motif }}</span>
+                        {% endif %}
+                        {% if absence.dateDebut %}
+                            {% set joursRestants = (absence.dateDebut|date('U') - "now"|date('U')) / 86400 %}
+                            {% if joursRestants > 0 and joursRestants <= 3 %}
+                                <span class="abs-chip" style="background:#fef3c7; color:#b45309; border-color:#fde68a;">
+                                    ⚠️ Départ dans {{ joursRestants|round }} jour{{ joursRestants|round > 1 ? 's' : '' }}
+                                </span>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="abs-btns">
+                    <a href="{{ path('app_absence_edit', {'id': absence.id}) }}" class="abs-ba ba-edit">✏️ Modifier</a>
+                    {% if s not in ['archivé','archive'] %}
+                        <form action="{{ path('app_absence_archive', {'id': absence.id}) }}" method="post" style="margin:0">
+                            <input type="hidden" name="_token" value="{{ csrf_token('archive' ~ absence.id) }}">
+                            <button type="submit" class="abs-ba ba-arch" onclick="return confirm('Archiver ?')">📦 Archiver</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+</div>
+
+</div>{# /abs-wrap #}
+
+<script>
+(function () {
+
+    /* ── Toggle formulaire ── */
+    var formWrap  = document.getElementById('abs-form-wrap');
+    var toggleBtn = document.getElementById('abs-toggle-btn');
+    var cancelBtn = document.getElementById('abs-cancel-btn');
+
+    if (toggleBtn && formWrap) {
+        toggleBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            formWrap.classList.toggle('open');
+            if (formWrap.classList.contains('open')) {
+                setTimeout(function () { formWrap.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
+            }
+        });
+    }
+    if (cancelBtn && formWrap) {
+        cancelBtn.addEventListener('click', function () { formWrap.classList.remove('open'); });
+    }
+
+    /* ── Synchroniser dateFin = dateDebut (autorisation intra-journée) ── */
+    var inpDateDebut  = document.getElementById('abs-date-debut');
+    var inpDateFin    = document.getElementById('abs-datefin-hidden');
+
+    if (inpDateDebut) {
+        inpDateDebut.addEventListener('change', function () {
+            if (inpDateFin) inpDateFin.value = inpDateDebut.value;
+            absCalcDuree();
+        });
+    }
+
+    /* ── Avant submit : assembler heureDebut/heureFin en "HH:MM" ── */
+    var form = document.getElementById('abs-new-form');
+    if (form) {
+        form.addEventListener('submit', function () {
+            var hd_h = document.querySelector('[id$="heureDebutH"]');
+            var hd_m = document.querySelector('[id$="heureDebutM"]');
+            var hf_h = document.querySelector('[id$="heureFinH"]');
+            var hf_m = document.querySelector('[id$="heureFinM"]');
+            var hdHidden = document.getElementById('abs-hd-hidden');
+            var hfHidden = document.getElementById('abs-hf-hidden');
+            var durHidden= document.getElementById('abs-dur-hidden');
+
+            if (hd_h && hd_m && hdHidden)
+                hdHidden.value = (hd_h.value || '00') + ':' + (hd_m.value || '00');
+            if (hf_h && hf_m && hfHidden)
+                hfHidden.value = (hf_h.value || '00') + ':' + (hf_m.value || '00');
+
+            /* dureeMinutes → calculé en JS */
+            var dur = parseInt(document.getElementById('abs-duree-display').dataset.minutes || '0');
+            if (durHidden) durHidden.value = dur;
+
+            /* dateFin = dateDebut */
+            if (inpDateFin && inpDateDebut) inpDateFin.value = inpDateDebut.value;
+        });
+    }
+})();
+
+/* ── Calcul durée ── */
+function absCalcDuree() {
+    var hd_h = document.querySelector('[id$="heureDebutH"]');
+    var hd_m = document.querySelector('[id$="heureDebutM"]');
+    var hf_h = document.querySelector('[id$="heureFinH"]');
+    var hf_m = document.querySelector('[id$="heureFinM"]');
+    var box  = document.getElementById('abs-duree-display');
+
+    if (!hd_h || !hd_m || !hf_h || !hf_m || !box) return;
+
+    var vHdH = hd_h.value, vHdM = hd_m.value;
+    var vHfH = hf_h.value, vHfM = hf_m.value;
+
+    if (!vHdH || !vHdM || !vHfH || !vHfM) {
+        box.textContent   = '—';
+        box.className     = 'empty';
+        box.dataset.minutes = '0';
+        return;
+    }
+
+    var minDebut = parseInt(vHdH) * 60 + parseInt(vHdM);
+    var minFin   = parseInt(vHfH) * 60 + parseInt(vHfM);
+    var diff     = minFin - minDebut;
+
+    box.dataset.minutes = diff > 0 ? diff : 0;
+
+    if (diff <= 0) {
+        box.textContent = '❌ Fin avant début';
+        box.className   = 'err';
+        return;
+    }
+
+    var h = Math.floor(diff / 60), m = diff % 60;
+    var label = h > 0 ? (m > 0 ? h + 'h' + String(m).padStart(2,'0') : h + 'h') : m + ' min';
+
+    if (diff < 30) {
+        box.textContent = '⚠️ ' + label + ' (min 30 min)';
+        box.className   = 'warn';
+    } else if (diff > 240) {
+        box.textContent = '⚠️ ' + label + ' (max 4h)';
+        box.className   = 'warn';
+    } else {
+        box.textContent = '✓ ' + label;
+        box.className   = 'ok';
+    }
+}
+
+/* ── Filtrage ── */
+function absFilter() {
+    var s = document.getElementById('abs-search-input').value.toLowerCase();
+    var t = document.getElementById('abs-filter-statut').value.toLowerCase();
+    var y = document.getElementById('abs-filter-type').value;
+    
+    var visibleCount = 0;
+    document.querySelectorAll('.abs-card').forEach(function (c) {
+        var ok = (!s || c.innerText.toLowerCase().includes(s))
+              && (!t || c.dataset.statut.includes(t))
+              && (!y || c.dataset.type === y);
+        c.style.display = ok ? '' : 'none';
+        if (ok) visibleCount++;
+    });
+    
+    // Afficher/masquer le message "aucun résultat"
+    var emptyMsg = document.getElementById('empty-filter-message');
+    if (visibleCount === 0) {
+        if (!emptyMsg) {
+            var msgDiv = document.createElement('div');
+            msgDiv.id = 'empty-filter-message';
+            msgDiv.className = 'abs-empty';
+            msgDiv.innerHTML = '<div class="ico">🔍</div><h3>Aucune absence trouvée</h3><p>Essayez d\'autres critères de recherche</p>';
+            document.getElementById('abs-list').appendChild(msgDiv);
+        }
+    } else {
+        if (emptyMsg) emptyMsg.remove();
+    }
+}
+</script>
+
+{% endblock %}

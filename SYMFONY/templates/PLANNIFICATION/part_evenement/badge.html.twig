@@ -1,0 +1,147 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Badge — {{ evenement.titre }}{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+body { background: #f1f5f9; }
+
+.badge-page {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 80vh; padding: 2rem;
+}
+
+.badge-card {
+    background: #fff; border-radius: 20px;
+    box-shadow: 0 8px 40px rgba(15,23,42,.15);
+    width: 420px; max-width: 95vw;
+    overflow: hidden;
+    font-family: inherit;
+}
+
+.badge-header {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #fff; padding: 1.5rem 2rem; text-align: center;
+}
+.badge-header h1 { margin: 0 0 .25rem; font-size: 1.3rem; font-weight: 800; }
+.badge-header p  { margin: 0; font-size: .85rem; opacity: .8; }
+
+.badge-body { padding: 1.5rem 2rem; }
+
+.badge-section-title {
+    font-size: .72rem; font-weight: 700; color: #94a3b8;
+    text-transform: uppercase; letter-spacing: .06em; margin-bottom: .75rem;
+}
+
+.badge-info-row {
+    display: flex; gap: .5rem; align-items: flex-start;
+    font-size: .88rem; color: #374151; margin-bottom: .6rem;
+}
+.badge-info-row strong { min-width: 140px; color: #0f172a; font-weight: 700; }
+
+.badge-divider {
+    border: none; border-top: 1.5px dashed #e2e8f0;
+    margin: 1.25rem 0;
+}
+
+.qr-wrap {
+    display: flex; flex-direction: column; align-items: center;
+    gap: .75rem; padding: 1rem;
+    background: #f8fafc; border-radius: 14px;
+    border: 1.5px dashed #e2e8f0;
+}
+.qr-wrap img { border-radius: 8px; }
+.qr-label { font-size: .75rem; color: #94a3b8; font-weight: 600; text-align: center; }
+
+.statut-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 14px; border-radius: 99px;
+    font-size: .78rem; font-weight: 700;
+    background: #d1fae5; color: #065f46; border: 1.5px solid #6ee7b7;
+}
+
+.badge-footer {
+    display: flex; gap: 10px; padding: 1rem 2rem 1.5rem;
+    border-top: 1.5px solid #f1f5f9;
+}
+.btn-print {
+    flex: 1; padding: .65rem; border-radius: 10px;
+    background: #2563eb; color: #fff; border: none;
+    font-size: .9rem; font-weight: 700; cursor: pointer;
+    font-family: inherit; transition: background .18s;
+}
+.btn-print:hover { background: #1d4ed8; }
+
+.btn-back {
+    flex: 1; padding: .65rem; border-radius: 10px;
+    background: #fff; color: #64748b; border: 1.5px solid #e2e8f0;
+    font-size: .9rem; font-weight: 600; cursor: pointer;
+    font-family: inherit; text-decoration: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background .15s, border-color .15s;
+}
+.btn-back:hover { background: #f8fafc; border-color: #cbd5e1; }
+
+@media print {
+    .badge-footer, nav, header, aside { display: none !important; }
+    body { background: #fff; }
+    .badge-card { box-shadow: none; }
+}
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="badge-page">
+
+    <div class="badge-card">
+        <div class="badge-header">
+            <h1>🎫 Badge de Participation</h1>
+            <p>Humania — {{ "now"|date("Y") }}</p>
+        </div>
+
+        <div class="badge-body">
+
+            {# ── Event info ── #}
+            <div class="badge-section-title">📅 Événement</div>
+            <div class="badge-info-row"><strong>Titre :</strong>         {{ evenement.titre }}</div>
+            <div class="badge-info-row"><strong>Lieu :</strong>          {{ evenement.lieu ?: '—' }}</div>
+            <div class="badge-info-row"><strong>Date :</strong>          {{ evenement.dateEvenement ? evenement.dateEvenement|date('d/m/Y') : '—' }}</div>
+            <div class="badge-info-row"><strong>Début :</strong>         {{ evenement.dateHeureDebut ? evenement.dateHeureDebut|date('H:i') : '—' }}</div>
+            <div class="badge-info-row"><strong>Fin :</strong>           {{ evenement.dateHeureFin   ? evenement.dateHeureFin|date('H:i')   : '—' }}</div>
+
+            <hr class="badge-divider">
+
+            {# ── Participant info ── #}
+            <div class="badge-section-title">👤 Participant</div>
+            <div class="badge-info-row"><strong>Prénom :</strong>            {{ employee.firstName }}</div>
+            <div class="badge-info-row"><strong>Nom :</strong>               {{ employee.lastName }}</div>
+            <div class="badge-info-row"><strong>Référence employé :</strong> {{ employee.reference }}</div>
+            <div class="badge-info-row"><strong>Date inscription :</strong>  {{ participation.dateParticipation|date('d/m/Y') }}</div>
+            <div class="badge-info-row"><strong>Statut :</strong>
+                <span class="statut-pill">✅ {{ participation.statut|capitalize }}</span>
+            </div>
+
+            <hr class="badge-divider">
+
+            {# ── QR Code — contains: user ID, event ID, event name, event date ── #}
+            <div class="qr-wrap">
+                <img src="{{ qrDataUri }}"
+                     alt="QR Code de participation"
+                     width="220" height="220">
+                <p class="qr-label">
+                    Scannez ce QR code pour vérifier la participation<br>
+                    <small>Contient uniquement l'identité employé et les métadonnées de validation</small>
+                </p>
+            </div>
+
+        </div>
+
+        <div class="badge-footer">
+            <a href="{{ path('app_part_evenement_index') }}" class="btn-back">← Retour</a>
+            <button class="btn-print" onclick="window.print()">🖨 Imprimer</button>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

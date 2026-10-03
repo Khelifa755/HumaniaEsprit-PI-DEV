@@ -1,0 +1,212 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Offboarding — Humania{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="{{ asset('css/planification/boarding.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="boarding-wrapper offboarding">
+
+    {# ── Header ─────────────────────────────────────────────────────────── #}
+    <header class="boarding-header">
+        <div class="boarding-header__inner">
+            <div class="boarding-header__title">
+                <span class="boarding-header__icon">👋</span>
+                <div>
+                    <h1>Offboarding</h1>
+                    <p>Génération du parcours de départ structuré</p>
+                </div>
+            </div>
+            <div style="display:flex;gap:10px;">
+                <a href="{{ path('app_boarding_history') }}" class="btn btn--ghost btn--sm">
+                    📁 Historique
+                </a>
+                <a href="{{ path('app_onboarding_index') }}" class="btn btn--ghost btn--sm">
+                    🚀 Onboarding
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="boarding-layout">
+
+        {# ── Left sidebar — form ─────────────────────────────────────────── #}
+        <aside class="boarding-sidebar">
+
+            <div class="card">
+                <div class="card__header">
+                    <h2 class="card__title">⚙️ Configuration</h2>
+                </div>
+                <div class="card__body">
+                    <div class="form-group">
+                        <label class="form-label" for="employeeSelect">Employé</label>
+                        <select id="employeeSelect" class="form-control">
+                            <option value="">Sélectionner un employé…</option>
+                            {% for utilisateur in utilisateurs %}
+                                <option value="{{ utilisateur.id }}">
+                                    {{ utilisateur.prenom }} {{ utilisateur.nom }}
+                                    {% if utilisateur.departement %} — {{ utilisateur.departement }}{% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="reasonSelect">Motif de départ</label>
+                        <select id="reasonSelect" class="form-control">
+                            <option value="">Sélectionner un motif…</option>
+                            {% for reason in reasons %}
+                                <option value="{{ reason }}">{{ reason }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="departureDate">Date de départ</label>
+                        <input type="date" id="departureDate" class="form-control"
+                               value="{{ '+30 days'|date('Y-m-d') }}">
+                    </div>
+
+                    <button id="generateBtn" class="btn btn--danger btn--full">
+                        📋 Générer le parcours
+                    </button>
+
+                    {# Publish post button — shown after generate #}
+                    <button id="publishPostBtn" class="btn btn--full" style="display:none;margin-top:10px;background:#7c3aed;color:#fff;">
+                        📢 Publier un post
+                    </button>
+                </div>
+            </div>
+
+            {# Employee info card — filled via JS #}
+            <div id="employeeCard" class="card card--hidden">
+                <div class="card__header">
+                    <h2 class="card__title">👤 Informations employé</h2>
+                </div>
+                <div class="card__body" id="employeeCardBody"></div>
+            </div>
+
+            {# Auto-actions card — filled via JS #}
+            <div id="autoActionsCard" class="card card--hidden">
+                <div class="card__header">
+                    <h2 class="card__title">⚙️ Actions automatiques</h2>
+                    <p class="card__subtitle">Déclenchées à la génération du parcours</p>
+                </div>
+                <div class="card__body" id="autoActionsBody"></div>
+                <div class="card__footer" id="autoActionsFooter"></div>
+            </div>
+
+        </aside>
+
+        {# ── Main area — stats + checklist ──────────────────────────────── #}
+        <main class="boarding-main">
+
+            {# Stats row — filled via JS #}
+            <div id="statsRow" class="stats-row"></div>
+
+            {# Task panel #}
+            <div class="card card--tasks">
+                <div id="taskPanel">
+                    <div class="empty-state">
+                        <div class="empty-state__icon">👋</div>
+                        <p class="empty-state__text">
+                            Sélectionnez un employé et le motif de départ,<br>
+                            puis cliquez sur <strong>« Générer le parcours »</strong>.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+</div>
+
+{# Flash-style alert #}
+<div id="alertBox" class="alert-box alert-box--hidden"></div>
+
+{# ── Post Preview Modal ─────────────────────────────────────────────────── #}
+<div id="postModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;
+     align-items:center;justify-content:center;padding:20px;">
+    <div style="background:#fff;border-radius:20px;width:100%;max-width:540px;
+                box-shadow:0 24px 60px rgba(0,0,0,.18);overflow:hidden;">
+
+        {# Modal header #}
+        <div style="padding:20px 24px 16px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:36px;height:36px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center;font-size:1.1rem;">👋</div>
+                <div>
+                    <div style="font-weight:700;font-size:.95rem;color:#1e293b;">Publication Offboarding</div>
+                    <div style="font-size:.75rem;color:#94a3b8;">Humania RH · Public</div>
+                </div>
+            </div>
+            <button onclick="closePostModal()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:#94a3b8;">✕</button>
+        </div>
+
+        {# Post content editable #}
+        <div style="padding:20px 24px;">
+            <textarea id="postContent" rows="7"
+                style="width:100%;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;
+                       font-size:.88rem;line-height:1.6;color:#1e293b;resize:vertical;
+                       font-family:inherit;outline:none;box-sizing:border-box;"
+                placeholder="Le contenu du post sera généré automatiquement…"></textarea>
+
+            <div style="margin-top:12px;padding:10px 14px;background:#fef9c3;border-radius:10px;font-size:.78rem;color:#92400e;">
+                ✏️ Vous pouvez modifier le texte avant de publier.
+            </div>
+        </div>
+
+        {# Visibility badge #}
+        <div style="padding:0 24px 12px;display:flex;align-items:center;gap:8px;">
+            <span style="padding:4px 12px;background:#dcfce7;color:#16a34a;border-radius:50px;font-size:.75rem;font-weight:700;">🌍 Public</span>
+            <span style="padding:4px 12px;background:#f1f5f9;color:#64748b;border-radius:50px;font-size:.75rem;font-weight:600;">Offboarding</span>
+        </div>
+
+        {# Modal footer #}
+        <div style="padding:14px 24px 20px;border-top:1px solid #f1f5f9;display:flex;gap:10px;justify-content:flex-end;">
+            <button onclick="closePostModal()"
+                style="padding:9px 20px;border-radius:10px;border:1.5px solid #e2e8f0;
+                       background:#fff;color:#64748b;font-weight:600;cursor:pointer;font-size:.85rem;">
+                Annuler
+            </button>
+            <button id="confirmPublishBtn"
+                style="padding:9px 22px;border-radius:10px;border:none;background:#ef4444;
+                       color:#fff;font-weight:700;cursor:pointer;font-size:.85rem;">
+                📢 Publier maintenant
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        const GENERATE_URL   = '{{ path('app_offboarding_generate') }}';
+        const BOARDING_MODE  = 'offboarding';
+        const TOGGLE_URL_BASE = '{{ path('app_offboarding_index') }}/../task/';
+        const MARK_ALL_URL   = '{{ path('app_offboarding_index') }}/../';
+        const PUBLISH_URL    = '{{ path('app_offboarding_index') }}/../';
+        const LOAD_URL_BASE  = '{{ path('app_offboarding_index') }}/../load/';
+
+        // Auto-load if redirected from history page
+        const _urlParams = new URLSearchParams(window.location.search);
+        const _autoLoad  = _urlParams.get('load');
+
+        function closePostModal() {
+            document.getElementById('postModal').style.display = 'none';
+        }
+    </script>
+    <script src="{{ asset('js/planification/boarding.js') }}"></script>
+    <script>
+        // Auto-load employee session from history link
+        if (_autoLoad) {
+            document.getElementById('employeeSelect').value = _autoLoad;
+            document.getElementById('employeeSelect').dispatchEvent(new Event('change'));
+        }
+    </script>
+{% endblock %}

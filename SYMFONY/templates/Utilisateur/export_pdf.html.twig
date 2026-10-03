@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Rapport des Utilisateurs - Humania</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        html, body {
+            font-family: 'Calibri', 'Arial', sans-serif;
+            font-size: 11pt;
+            color: #333;
+            line-height: 1.5;
+        }
+        
+        @media print {
+            body { background: white; }
+            .no-print { display: none; }
+            page-break-after: always;
+        }
+        
+        @page {
+            size: A4;
+            margin: 15mm 10mm;
+        }
+        
+        .page {
+            page-break-inside: avoid;
+            break-inside: avoid;
+            page-break-after: always;
+            padding: 20px;
+            background: white;
+        }
+        
+        .page:last-child { page-break-after: avoid; }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            border-bottom: 3px solid #7c3aed;
+            padding-bottom: 12px;
+        }
+        
+        .header h1 {
+            font-size: 20pt;
+            color: #7c3aed;
+            margin-bottom: 3px;
+            font-weight: bold;
+        }
+        
+        .header .subtitle {
+            font-size: 12pt;
+            color: #333;
+            margin-bottom: 2px;
+            font-weight: bold;
+        }
+        
+        .header .generated {
+            font-size: 9pt;
+            color: #666;
+        }
+        
+        .info-bar {
+            background: #f3f4f6;
+            padding: 10px 12px;
+            margin-bottom: 15px;
+            font-size: 10pt;
+            border-left: 4px solid #7c3aed;
+        }
+        
+        .info-bar span {
+            margin-right: 25px;
+        }
+        
+        .info-bar strong { color: #7c3aed; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        thead { background: #7c3aed; color: white; }
+        
+        th {
+            padding: 8px 6px;
+            text-align: left;
+            font-weight: bold;
+            border: 1px solid #ccc;
+            font-size: 10pt;
+        }
+        
+        td {
+            padding: 7px 6px;
+            border: 1px solid #ddd;
+            font-size: 10pt;
+        }
+        
+        tbody tr:nth-child(even) {
+            background: #f9fafb;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 9pt;
+        }
+        
+        .status-actif {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .status-archive {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status-bloque {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+        
+        .role {
+            font-weight: bold;
+            color: #7c3aed;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+            text-align: right;
+            font-size: 8pt;
+            color: #999;
+        }
+        
+        .page-number {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 9pt;
+            color: #999;
+        }
+        
+        .print-button {
+            display: block;
+            margin: 20px auto;
+            padding: 12px 30px;
+            background: #7c3aed;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .print-button:hover {
+            background: #6d28d9;
+        }
+        
+        @media print {
+            .print-button { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <button class="print-button no-print" onclick="window.print()">🖨️ Imprimer / Exporter en PDF</button>
+    
+    {% set utilisateurs_per_page = 18 %}
+    {% set total_pages = (utilisateurs|length / utilisateurs_per_page)|round(0, 'ceil') %}
+    
+    {% for page_num in 1..total_pages %}
+    <div class="page">
+        {# Header #}
+        <div class="header">
+            <h1>HUMANIA</h1>
+            <div class="subtitle">Rapport de Gestion des Utilisateurs</div>
+            <div class="generated">Généré le {{ generatedAt|date('d/m/Y à H:i:s') }}</div>
+        </div>
+        
+        {# Info bar #}
+        <div class="info-bar">
+            <span><strong>Total:</strong> {{ utilisateurs|length }} utilisateurs</span>
+            <span><strong>Page:</strong> {{ page_num }} / {{ total_pages }}</span>
+        </div>
+        
+        {# Table #}
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 8%;">ID</th>
+                    <th style="width: 13%;">Nom</th>
+                    <th style="width: 13%;">Prénom</th>
+                    <th style="width: 18%;">Email</th>
+                    <th style="width: 12%;">Tél.</th>
+                    <th style="width: 12%;">Rôle</th>
+                    <th style="width: 10%;">Statut</th>
+                    <th style="width: 14%;">Poste</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set start = (page_num - 1) * utilisateurs_per_page %}
+                {% set end = start + utilisateurs_per_page %}
+                
+                {% for user in utilisateurs|slice(start, utilisateurs_per_page) %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td><strong>{{ user.nom }}</strong></td>
+                    <td>{{ user.prenom }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.numtel ?: '—' }}</td>
+                    <td><span class="role">{{ user.roleValue }}</span></td>
+                    <td>
+                        <span class="status {% if user.statut == 'Actif' %}status-actif{% elseif user.statut == 'Archive' %}status-archive{% elseif user.statut == 'Bloqué' %}status-bloque{% endif %}">
+                            {{ user.statut }}
+                        </span>
+                    </td>
+                    <td>{{ user.posteActuel ?: '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        {# Footer #}
+        <div class="footer">
+            Document confidentiel • Système de Gestion RH Humania
+        </div>
+        
+        <div class="page-number">
+            — Page {{ page_num }} / {{ total_pages }} —
+        </div>
+    </div>
+    {% endfor %}
+</body>
+</html>

@@ -1,0 +1,956 @@
+{% extends 'base.html.twig' %}
+
+{% block stylesheets %}
+<style>
+    :root {
+        --ss-w: 210px;
+        --violet: #6C5CE7;
+        --violet-bg: rgba(108,92,231,0.10);
+        --violet-mid: rgba(108,92,231,0.16);
+        --border: #E8EAF6;
+        --surface: #FFFFFF;
+        --bg: #EEF0FB;
+        --text-dark: #1A1D2E;
+        --text-mid: #4A5080;
+        --text-light: #A0A8CC;
+    }
+
+    /* Hide the main sidebar on social feed */
+    .sidebar {
+        display: none !important;
+    }
+
+    /* Overrider le main-wrapper pour faire de la place à la sidebar sociale */
+    .main-wrapper {
+        margin-left: var(--ss-w) !important;
+        background: var(--bg);
+    }
+    .main-content {
+        padding: 0 !important;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        padding-top: 0 !important;
+        margin-top: 0 !important;
+    }
+
+    /* ══ SIDEBAR SOCIALE ══ */
+    .ss {
+        width: var(--ss-w);
+        min-width: var(--ss-w);
+        background: var(--bg);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        height: auto;
+        max-height: calc(100vh - 72px);
+        position: fixed;
+        left: 0;
+        top: 72px;
+        padding: 14px 10px;
+        overflow-y: auto;
+        z-index: 99;
+        box-shadow: none;
+    }
+    
+    .ss::-webkit-scrollbar { width: 4px; }
+    .ss::-webkit-scrollbar-thumb { background: var(--violet-bg); border-radius: 10px; }
+    .ss-header {
+        display: none;
+    }
+    .ss-label {
+        display: none;
+    }
+    .ss-btn {
+        display: none;
+    }
+    .ss-back-btn {
+        display: none;
+    }
+    
+    /* Sidebar action buttons styling */
+    .sidebar-action-btn.active {
+        background: #F4F5FB !important;
+    }
+    .sidebar-action-btn.active span:last-child {
+        color: var(--violet) !important;
+        font-weight: 700 !important;
+    }
+
+    /* ══ ZONE CONTENU SOCIAL ══ */
+    .social-body {
+        flex: 1;
+        display: flex;
+        padding: 22px;
+        gap: 18px;
+        max-width: 1050px;
+        margin: 32px auto 0 auto;
+        width: 100%;
+        align-items: flex-start;
+    }
+    .feed-col  { flex: 1; min-width: 0; max-width: 640px; }
+    .right-col { width: 240px; flex-shrink: 0; position: sticky; top: 56px; max-height: calc(100vh - 88px); overflow-y: auto; scrollbar-width: none; }
+    .right-col::-webkit-scrollbar { display: none; }
+</style>
+{% endblock %}
+
+{% block body %}
+
+{# ══ TOP HEADER ══ #}
+{% include 'SOCIALMEDIA/components/_header.html.twig' %}
+
+{# ══ SIDEBAR SOCIALE (positionnée en fixed) ══ #}
+<nav class="ss" style="width: 300px !important; padding: 12px 12px 24px 12px !important; margin-left: 24px !important; background: #f3f4f6 !important;">
+    {# ══ PROFILE CARD (LinkedIn-style) ══ #}
+    {% if currentUser %}
+    <div style="background: #fff; border-radius: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid #e5e7eb; height: auto; overflow: visible;">
+        {# Cover Image #}
+        <div style="height: 80px; background: linear-gradient(135deg, #AFA9EC 0%, #7F77DD 100%); position: relative; border-radius: 16px 16px 0 0;"></div>
+        
+        {# Profile Info #}
+        <div style="padding: 0 16px 20px 16px; text-align: center; position: relative;">
+            {# Avatar (overlapping cover) #}
+            <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #AFA9EC, #7F77DD); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 28px; font-weight: 700; overflow: hidden; border: 4px solid #fff; margin: 0 auto -42px auto; position: relative; z-index: 10; flex-shrink: 0;">
+                {% if currentUser.avatarUrl %}
+                    <img src="{{ currentUser.avatarUrl }}" style="width: 100%; height: 100%; object-fit: cover;">
+                {% else %}
+                    {{ currentUser.firstName|first|upper }}{{ currentUser.lastName|first|upper }}
+                {% endif %}
+            </div>
+
+            {# Name #}
+            <div style="margin-top: 44px; font-size: 15px; font-weight: 700; color: #000; line-height: 1.3;">
+                {{ currentUser.firstName }} {{ currentUser.lastName }}
+            </div>
+
+            {# Title · Company #}
+            <div style="font-size: 13px; color: #65676b; margin-top: 2px; line-height: 1.3;">
+                {% if currentUser.posteActuel %}{{ currentUser.posteActuel }}{% else %}Software Engineer{% endif %} · {% if currentUser.departement %}{{ currentUser.departement }}{% else %}Humania{% endif %}
+            </div>
+
+            {# Bio #}
+            {% if userProfile is defined and userProfile and userProfile.bio %}
+            <div style="font-size: 12px; color: #65676b; margin-top: 6px; line-height: 1.4; font-style: italic;">
+                {{ userProfile.bio }}
+            </div>
+            {% endif %}
+
+            {# View Profile Button #}
+            <a href="{{ path('social_profile_me') }}" style="display: inline-block; margin-top: 16px; margin-bottom: 8px; padding: 8px 24px; color: #7F77DD; text-decoration: none; font-size: 13px; font-weight: 600; border: 2px solid #7F77DD; border-radius: 20px; cursor: pointer; transition: all 0.2s; background: transparent;" onmouseover="this.style.background='#7F77DD'; this.style.color='#fff'" onmouseout="this.style.background='transparent'; this.style.color='#7F77DD'">
+                Voir le profil
+            </a>
+        </div>
+    </div>
+
+    {# ══ NAVIGATION SECTION CARD ══ #}
+    <div style="background: #fff; border-radius: 16px; margin-bottom: 12px; margin-top: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid #e5e7eb; padding-bottom: 24px; height: auto; overflow: visible;">
+        {# Posts sauvegardés #}
+        <a href="{{ path('social_feed', {'mode': 'saved'}) }}" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; text-decoration: none; color: #000; transition: all 0.2s; border-bottom: 1px solid #f0f0f0;{% if app.request.get('mode') == 'saved' %} background: #f5f3ff; color: #7F77DD;{% endif %}" onmouseover="this.style.background='#f5f3ff'; this.style.color='#7F77DD'" onmouseout="{% if app.request.get('mode') != 'saved' %}this.style.background='transparent'; this.style.color='#000'{% endif %}">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d32f2f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>
+                <span style="font-size: 13px; color: #65676b;">Posts sauvegardés</span>
+            </div>
+            <span style="font-size: 13px; font-weight: 600; color: #7F77DD;">{{ userSavedCount|default(0) }}</span>
+        </a>
+
+        {# Groupes #}
+        <a href="{{ path('social_groups_index') }}" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; text-decoration: none; color: #000; transition: all 0.2s; border-bottom: 1px solid #f0f0f0;{% if app.request.attributes.get('_route') == 'social_groups_index' or app.request.attributes.get('_route') == 'social_groups_show' %} background: #f5f3ff; color: #7F77DD;{% endif %}" onmouseover="this.style.background='#f5f3ff'; this.style.color='#7F77DD'" onmouseout="{% if app.request.attributes.get('_route') != 'social_groups_index' and app.request.attributes.get('_route') != 'social_groups_show' %}this.style.background='transparent'; this.style.color='#000'{% endif %}">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span style="font-size: 13px; color: #65676b;">Groupes</span>
+            </div>
+            <span style="font-size: 13px; font-weight: 600; color: #7F77DD;">{% if userGroups is defined %}{{ userGroups|length }}{% else %}0{% endif %}</span>
+        </a>
+
+        {# Mon réseau #}
+        <a href="{{ path('social_network_index') }}" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; text-decoration: none; color: #000; transition: all 0.2s; border-bottom: 1px solid #f0f0f0;{% if app.request.attributes.get('_route') == 'social_network_index' %} background: #f5f3ff; color: #7F77DD;{% endif %}" onmouseover="this.style.background='#f5f3ff'; this.style.color='#7F77DD'" onmouseout="{% if app.request.attributes.get('_route') != 'social_network_index' %}this.style.background='transparent'; this.style.color='#000'{% endif %}">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                <span style="font-size: 13px; color: #65676b;">Mon réseau</span>
+            </div>
+            <span style="font-size: 13px; font-weight: 600; color: #7F77DD;">{{ followersCount|default(0) }}</span>
+        </a>
+
+        {# Événements #}
+        <a href="#" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; text-decoration: none; color: #000; transition: all 0.2s; border-bottom: 1px solid #f0f0f0;" onmouseover="this.style.background='#f5f3ff'; this.style.color='#7F77DD'" onmouseout="this.style.background='transparent'; this.style.color='#000'">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span style="font-size: 13px; color: #65676b;">Événements</span>
+            </div>
+            <span style="font-size: 13px; font-weight: 600; color: #7F77DD;">{{ eventsCount|default(0) }}</span>
+        </a>
+
+        {# Anniversaires #}
+        <a href="#" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; text-decoration: none; color: #000; transition: all 0.2s;" onmouseover="this.style.background='#f5f3ff'; this.style.color='#7F77DD'" onmouseout="this.style.background='transparent'; this.style.color='#000'">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                <span style="font-size: 13px; color: #65676b;">Anniversaires</span>
+            </div>
+            <span style="font-size: 13px; font-weight: 600; color: #7F77DD;">{{ birthdaysCount|default(0) }}</span>
+        </a>
+    </div>
+
+    {# ══ RECENT SECTION CARD ══ #}
+    <div style="background: #fff; border-radius: 12px; margin-top: 12px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid #e5e7eb; padding: 16px;">
+        <div style="font-size: 11px; font-weight: 700; color: #999; text-transform: none; letter-spacing: 0.5px; margin-bottom: 12px;">Récent</div>
+        
+        <a href="#" style="display: block; padding: 8px 0; text-decoration: none; color: #7F77DD; font-size: 13px; transition: all 0.2s; border-bottom: 1px solid #f0f0f0;" onmouseover="this.style.color='#6C5CE7'; this.style.fontWeight='600'" onmouseout="this.style.color='#7F77DD'; this.style.fontWeight='400'">
+            # DEVS
+        </a>
+        <a href="#" style="display: block; padding: 8px 0; text-decoration: none; color: #7F77DD; font-size: 13px; transition: all 0.2s; border-bottom: 1px solid #f0f0f0;" onmouseover="this.style.color='#6C5CE7'; this.style.fontWeight='600'" onmouseout="this.style.color='#7F77DD'; this.style.fontWeight='400'">
+            # markenting
+        </a>
+        <a href="#" style="display: block; padding: 8px 0; text-decoration: none; color: #7F77DD; font-size: 13px; transition: all 0.2s;" onmouseover="this.style.color='#6C5CE7'; this.style.fontWeight='600'" onmouseout="this.style.color='#7F77DD'; this.style.fontWeight='400'">
+            # design-team
+        </a>
+    </div>
+    {% endif %}
+</nav>
+
+{# ══ CORPS SOCIAL ══ #}
+<div class="social-body">
+
+    {# Colonne feed (centre) #}
+    <div class="feed-col">
+        {# Flash messages #}
+        {% for msg in app.flashes('success') %}
+            <div style="margin-bottom:14px;padding:11px 16px;background:#d1fae5;border-radius:10px;color:#065f46;font-size:13px;font-weight:600">
+                ✅ {{ msg }}
+            </div>
+        {% endfor %}
+        {% for msg in app.flashes('error') %}
+            <div style="margin-bottom:14px;padding:11px 16px;background:#fee2e2;border-radius:10px;color:#991b1b;font-size:13px;font-weight:600">
+                ❌ {{ msg }}
+            </div>
+        {% endfor %}
+
+        {% block feed_content %}{% endblock %}
+    </div>
+
+    {# Colonne droite #}
+    <div class="right-col">
+        {% block right_sidebar %}
+
+            {# ══ TRENDING TOPICS (Hybrid: Keywords + Departments) ══ #}
+            {% if trendingTopics is defined and trendingTopics|length > 0 %}
+                <div style="background:#fff;border-radius:14px;border:1.5px solid #E8EAF6;padding:14px;margin-bottom:14px;box-shadow:0 2px 10px rgba(108,92,231,0.05)">
+                    <div style="font-size:10px;font-weight:700;color:#A0A8CC;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px">
+                        🔥 Tendances maintenant
+                    </div>
+
+                    {% for topic in trendingTopics %}
+                        <button onclick="toggleTopicFilter('{{ topic.name }}', '{{ topic.type }}')" 
+                           id="topic-{{ topic.name }}"
+                           class="topic-btn"
+                           data-topic="{{ topic.name }}"
+                           data-topic-type="{{ topic.type }}"
+                           style="display:flex;align-items:center;justify-content:space-between;padding:10px;margin-bottom:10px;background:#F4F5FB;border:1.5px solid #E8EAF6;border-radius:10px;transition:all 0.2s;text-decoration:none;cursor:pointer;width:100%;font-family:inherit;color:inherit" 
+                           onmouseover="this.style.background='#EFEFFF'; this.style.borderColor='#D9D5F0'" 
+                           onmouseout="if(!this.classList.contains('active')) { this.style.background='#F4F5FB'; this.style.borderColor='#E8EAF6' }">
+                            
+                            {# Topic Name & Badge #}
+                            <div style="flex:1;min-width:0;text-align:left">
+                                <div style="font-size:12px;font-weight:600;color:#1A1D2E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                                    {{ topic.name }}
+                                </div>
+                                <div style="font-size:9px;color:#A0A8CC;margin-top:2px">
+                                    {{ topic.type == 'department' ? '🏢 Département' : '💬 Tendance' }}
+                                </div>
+                            </div>
+
+                            {# Match Count #}
+                            <div class="topic-match-count" style="background:rgba(108,92,231,0.1);color:#6C5CE7;padding:4px 8px;border-radius:6px;font-size:10px;font-weight:600;white-space:nowrap;margin-left:8px;flex-shrink:0">
+                                {{ topic.count }}
+                            </div>
+                        </button>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {# ══ SUGGESTIONS D'UTILISATEURS ══ #}
+            {% if suggestedUsers is defined and suggestedUsers|length > 0 %}
+                <div style="background:#fff;border-radius:14px;border:1.5px solid #E8EAF6;padding:14px;margin-bottom:14px;box-shadow:0 2px 10px rgba(108,92,231,0.05)">
+                    <div style="font-size:10px;font-weight:700;color:#A0A8CC;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px">
+                        👥 Suggestions pour vous
+                    </div>
+
+                    {% for user in suggestedUsers %}
+                        <a href="{{ path('social_profile_show', {id: user.id}) }}" style="display:flex;align-items:center;gap:10px;padding:10px;margin-bottom:10px;background:#F4F5FB;border-radius:10px;transition:all 0.2s;text-decoration:none;border:1.5px solid transparent" onmouseover="this.style.background='#EFEFFF'; this.style.borderColor='#D9D5F0'" onmouseout="this.style.background='#F4F5FB'; this.style.borderColor='transparent'">
+                            
+                            {# Avatar #}
+                            <div style="width:40px;height:40px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;overflow:hidden">
+                                {% if user.avatarUrl %}
+                                    <img src="{{ user.avatarUrl }}" style="width:100%;height:100%;object-fit:cover">
+                                {% else %}
+                                    {{ user.firstName|first|upper }}{{ user.lastName|first|upper }}
+                                {% endif %}
+                            </div>
+
+                            {# Info #}
+                            <div style="flex:1;min-width:0">
+                                <div style="font-size:12px;font-weight:600;color:#1A1D2E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                                    {{ user.firstName }} {{ user.lastName }}
+                                </div>
+                                <div style="font-size:10px;color:#A0A8CC;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                                    {% if user.posteActuel %}{{ user.posteActuel }}{% else %}No Title{% endif %}
+                                </div>
+                                <div style="font-size:9px;color:#A0A8CC;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                                    @{{ user.username }}
+                                </div>
+                            </div>
+
+                            {# Button Suivre #}
+                            <button class="suggest-follow-btn" data-user-id="{{ user.id }}" onclick="event.preventDefault(); followUserSuggest({{ user.id }}, this)"
+                                    style="padding:5px 10px;background:linear-gradient(135deg,#6C5CE7,#5B4FD3);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s;flex-shrink:0">
+                                + Suivre
+                            </button>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+        {% endblock %}
+    </div>
+
+</div>
+
+{# Notifications Modal #}
+<div id="notificationsModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center;">
+    <div style="background: #fff; border-radius: 16px; width: 90%; max-width: 450px; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+        {# Header #}
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 18px 20px; border-bottom: 1.5px solid #E8EAF6;">
+            <h2 style="margin: 0; font-size: 16px; font-weight: 700; color: #1A1D2E;">Notifications</h2>
+            <button onclick="closeNotificationsModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #A0A8CC;">×</button>
+        </div>
+        
+        {# Content #}
+        <div id="notificationsModalContent" style="padding: 12px 0;">
+            <div style="text-align: center; padding: 30px 20px; color: #A0A8CC;">
+                📬 Chargement...
+            </div>
+        </div>
+        
+        {# Footer #}
+        <div style="padding: 12px 20px; border-top: 1.5px solid #E8EAF6; text-align: center;">
+            <button onclick="markAllNotificationsRead()" style="background: #6C5CE7; color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#5a4ab8'" onmouseout="this.style.background='#6C5CE7'">Marquer tout comme lu</button>
+        </div>
+    </div>
+</div>
+
+{# Modals #}
+{% block modals %}{% endblock %}
+
+<script>
+// ── IMPROVED TRENDING TOPICS FILTER WITH TYPE SUPPORT ──
+let activeFilters = new Map();  // Changed from Set to Map to store {name: type}
+
+function toggleTopicFilter(topicName, topicType) {
+    if (activeFilters.has(topicName)) {
+        activeFilters.delete(topicName);
+    } else {
+        activeFilters.set(topicName, topicType);  // Store type along with name
+    }
+    
+    if (activeFilters.size === 0) {
+        clearFilter();
+    } else {
+        applyFilters();
+    }
+}
+
+function applyFilters() {
+    const publications = document.querySelectorAll('[data-publication]');
+    let visibleCount = 0;
+
+    publications.forEach(pub => {
+        const pubFullText = (pub.getAttribute('data-publication') || '').toLowerCase();
+        const pubDepartment = (pub.getAttribute('data-department') || '').toLowerCase();
+        const pubGroup = (pub.getAttribute('data-group') || '').toLowerCase();
+        
+        const matches = Array.from(activeFilters.entries()).some(([filterName, filterType]) => {
+            const filterLower = filterName.toLowerCase();
+            
+            try {
+                // Create regex for word boundary matching
+                const regex = new RegExp('(^|\\s)' + filterLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(\\s|$)');
+                
+                // Filter based on type
+                if (filterType === 'department') {
+                    // For department filters, ONLY match against the department field
+                    const result = regex.test(pubDepartment);
+                    console.log(`[DEPT] Filter: "${filterLower}" | Dept: "${pubDepartment}" | Match: ${result}`);
+                    return result;
+                } else if (filterType === 'group') {
+                    // For group filters, ONLY match against the group field
+                    const result = regex.test(pubGroup);
+                    console.log(`[GROUP] Filter: "${filterLower}" | Group: "${pubGroup}" | Match: ${result}`);
+                    return result;
+                } else {
+                    // For keyword filters, match against full content (but NOT department or group)
+                    const contentWithoutDeptAndGroup = pubFullText.replace(pubDepartment, '').replace(pubGroup, '').trim();
+                    const result = regex.test(contentWithoutDeptAndGroup);
+                    console.log(`[KEYWORD] Filter: "${filterLower}" | Content: "${contentWithoutDeptAndGroup.substring(0, 50)}..." | Match: ${result}`);
+                    return result;
+                }
+            } catch (e) {
+                console.error('Regex error:', e);
+                // Fallback to includes if regex fails
+                if (filterType === 'department') {
+                    return pubDepartment.includes(filterLower);
+                } else if (filterType === 'group') {
+                    return pubGroup.includes(filterLower);
+                } else {
+                    const contentWithoutDeptAndGroup = pubFullText.replace(pubDepartment, '').replace(pubGroup, '').trim();
+                    return contentWithoutDeptAndGroup.includes(filterLower);
+                }
+            }
+        });
+
+        if (matches) {
+            pub.style.display = 'block';
+            pub.style.opacity = '1';
+            pub.style.animation = 'fadeIn 0.3s ease-in';
+            visibleCount++;
+        } else {
+            pub.style.display = 'none';
+            pub.style.opacity = '0.3';
+        }
+    });
+
+    // Update topic button styling
+    document.querySelectorAll('.topic-btn').forEach(btn => {
+        const topic = btn.getAttribute('data-topic');
+        if (activeFilters.has(topic)) {
+            btn.classList.add('active');
+            btn.style.background = '#6C5CE7';
+            btn.style.borderColor = '#6C5CE7';
+            btn.style.color = '#fff';
+            btn.querySelector('div').style.color = '#fff';
+            const countDiv = btn.querySelector('.topic-match-count');
+            if (countDiv) {
+                countDiv.style.background = 'rgba(255,255,255,0.2)';
+                countDiv.style.color = '#fff';
+            }
+        } else {
+            btn.classList.remove('active');
+            btn.style.background = '#F4F5FB';
+            btn.style.borderColor = '#E8EAF6';
+            btn.style.color = 'inherit';
+            btn.querySelector('div').style.color = '#1A1D2E';
+            const countDiv = btn.querySelector('.topic-match-count');
+            if (countDiv) {
+                countDiv.style.background = 'rgba(108,92,231,0.1)';
+                countDiv.style.color = '#6C5CE7';
+            }
+        }
+    });
+
+    // Show/update filter indicator
+    if (visibleCount === 0) {
+        showNoResults();
+    } else {
+        showFilterIndicator(Array.from(activeFilters.keys()), visibleCount);
+    }
+}
+
+function showFilterIndicator(topics, count) {
+    // Remove existing indicator
+    const existing = document.getElementById('filter-indicator');
+    if (existing) existing.remove();
+    const noResults = document.getElementById('no-results-indicator');
+    if (noResults) noResults.remove();
+
+    // Create filter indicator
+    const indicator = document.createElement('div');
+    indicator.id = 'filter-indicator';
+    indicator.style.cssText = `
+        position: fixed;
+        top: 92px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(135deg, #6C5CE7, #5B4FD3);
+        color: #fff;
+        padding: 14px 20px;
+        border-radius: 24px;
+        font-size: 13px;
+        font-weight: 600;
+        box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        animation: slideDown 0.3s ease-out;
+        max-width: 90vw;
+        flex-wrap: wrap;
+        justify-content: center;
+    `;
+
+    const topicsList = topics.map((t, i) => `<strong>${t}</strong>${i < topics.length - 1 ? ' + ' : ''}`).join('');
+    const resultText = count === 1 ? '1 résultat' : `${count} résultats`;
+    
+    indicator.innerHTML = `
+        <span>🔍 ${topicsList} • ${resultText}</span>
+        <button onclick="clearFilter()" style="background: rgba(255,255,255,0.2); border: 1px solid #fff; color: #fff; padding: 6px 12px; border-radius: 14px; font-size: 12px; cursor: pointer; transition: all 0.2s; font-weight: 600;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+            ✕ Réinitialiser
+        </button>
+    `;
+
+    document.body.appendChild(indicator);
+}
+
+function showNoResults() {
+    // Remove existing indicators
+    const existing = document.getElementById('filter-indicator');
+    if (existing) existing.remove();
+    const noResults = document.getElementById('no-results-indicator');
+    if (noResults) return; // Already showing
+
+    // Create no results indicator
+    const indicator = document.createElement('div');
+    indicator.id = 'no-results-indicator';
+    indicator.style.cssText = `
+        position: fixed;
+        top: 92px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(135deg, #EF4444, #DC2626);
+        color: #fff;
+        padding: 14px 20px;
+        border-radius: 24px;
+        font-size: 13px;
+        font-weight: 600;
+        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        animation: slideDown 0.3s ease-out;
+    `;
+
+    indicator.innerHTML = `
+        <span>😕 Aucun résultat pour cette sélection</span>
+        <button onclick="clearFilter()" style="background: rgba(255,255,255,0.2); border: 1px solid #fff; color: #fff; padding: 6px 12px; border-radius: 14px; font-size: 12px; cursor: pointer; transition: all 0.2s; font-weight: 600;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+            ✕ Effacer
+        </button>
+    `;
+
+    document.body.appendChild(indicator);
+}
+
+function clearFilter() {
+    activeFilters.clear();
+    
+    // Show all publications with smooth animation
+    const publications = document.querySelectorAll('[data-publication]');
+    publications.forEach(pub => {
+        pub.style.display = 'block';
+        pub.style.opacity = '1';
+        pub.style.animation = 'fadeIn 0.3s ease-in';
+    });
+
+    // Reset all topic buttons
+    document.querySelectorAll('.topic-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.background = '#F4F5FB';
+        btn.style.borderColor = '#E8EAF6';
+        btn.style.color = 'inherit';
+        btn.querySelector('div').style.color = '#1A1D2E';
+        const countDiv = btn.querySelector('.topic-match-count');
+        if (countDiv) {
+            countDiv.style.background = 'rgba(108,92,231,0.1)';
+            countDiv.style.color = '#6C5CE7';
+        }
+    });
+
+    // Remove filter indicators with animation
+    const indicator = document.getElementById('filter-indicator');
+    const noResults = document.getElementById('no-results-indicator');
+    if (indicator) {
+        indicator.style.animation = 'slideUp 0.3s ease-out';
+        setTimeout(() => indicator.remove(), 300);
+    }
+    if (noResults) {
+        noResults.style.animation = 'slideUp 0.3s ease-out';
+        setTimeout(() => noResults.remove(), 300);
+    }
+}
+
+// Fallback search function
+function searchTopic(topicName) {
+    const searchInput = document.querySelector('input[name="q"]');
+    if (searchInput) {
+        searchInput.value = topicName;
+        searchInput.focus();
+    }
+    window.location.href = `/social/feed?search=${encodeURIComponent(topicName)}`;
+}
+
+function toggleComments(pubId) {
+    const el = document.getElementById('comments-' + pubId);
+    if (!el) return;
+    const isHidden = el.style.display === 'none' || el.style.display === '';
+    el.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+        const inp = el.querySelector('input[name="contenu"]');
+        if (inp) inp.focus();
+    }
+}
+
+// ── SUGGESTION UTILISATEURS ──
+function followUserSuggest(userId, btn) {
+    const originalText = btn.textContent;
+    btn.textContent = '⏳...';
+    btn.disabled = true;
+
+    fetch(`/social/network/follow/${userId}`, {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(async r => {
+        const text = await r.text();
+        console.log('Response status:', r.status);
+        console.log('Response text:', text);
+        
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            console.error('Failed to parse JSON:', text);
+            throw new Error('Invalid JSON response');
+        }
+    })
+    .then(data => {
+        console.log('Data:', data);
+        if (data.success) {
+            // Show status based on returned status
+            if (data.status === 'PENDING') {
+                btn.textContent = '⏳ Demande envoyée';
+                btn.style.background = '#FFA500';
+            } else if (data.status === 'ACTIVE') {
+                btn.textContent = '✓ Suivi';
+                btn.style.background = '#4CAF50';
+            }
+            btn.disabled = true;
+            
+            // Fade out the suggestion card
+            const card = btn.closest('div[style*="background:#F4F5FB"]');
+            if (card) {
+                setTimeout(() => {
+                    card.style.opacity = '0.5';
+                    card.style.pointerEvents = 'none';
+                }, 300);
+            }
+        } else {
+            alert('Erreur: ' + (data.error || 'Impossible de suivre cet utilisateur'));
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    })
+    .catch(err => {
+        console.error('Erreur suivi:', err);
+        alert('Erreur: ' + err.message);
+        btn.textContent = originalText;
+        btn.disabled = false;
+    });
+}
+
+// Fermer modal en cliquant sur le fond
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('createPostModal');
+    if (modal && e.target === modal) modal.style.display = 'none';
+});
+
+// ══ NOTIFICATIONS SYSTEM (WebSocket/Polling) ══
+class NotificationSystem {
+    constructor() {
+        this.pollInterval = 5000; // 5 secondes
+        this.lastCount = -1;
+        this.init();
+    }
+
+    init() {
+        // Demander la permission pour les notifications navigateur
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+        
+        // Démarrer le polling
+        this.startPolling();
+    }
+
+    startPolling() {
+        setInterval(() => this.poll(), this.pollInterval);
+        // First poll immediately
+        this.poll();
+    }
+
+    async poll() {
+        try {
+            const response = await fetch('/social/notifications/unread-count');
+            const data = await response.json();
+            const count = data.count;
+
+            if (this.lastCount === -1) {
+                // Premier poll - initialiser sans notifier
+                this.lastCount = count;
+                this.updateBadge(count);
+                return;
+            }
+
+            if (count > this.lastCount) {
+                // Nouvelle(s) notification(s) !
+                const newCount = count - this.lastCount;
+                await this.showLatestNotification(newCount);
+                this.updateBadge(count);
+            }
+
+            this.lastCount = count;
+        } catch (e) {
+            console.error('❌ Erreur polling notifications:', e);
+        }
+    }
+
+    async showLatestNotification(newCount) {
+        try {
+            const response = await fetch('/social/notifications/list');
+            const notifs = await response.json();
+            
+            if (notifs.length > 0) {
+                const latest = notifs[0];
+                this.showToast(latest);
+                
+                // Notification navigateur si app en arrière-plan
+                if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+                    new Notification(latest.titre, {
+                        body: latest.message,
+                        icon: latest.icon || '🔔',
+                        badge: '🔔',
+                        tag: 'notification-' + latest.id
+                    });
+                }
+            }
+        } catch (e) {
+            console.error('❌ Erreur récupération notif:', e);
+        }
+    }
+
+    showToast(notif) {
+        const toast = document.createElement('div');
+        toast.id = 'notif-toast-' + notif.id;
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #fff;
+            border: 1.5px solid #E8EAF6;
+            border-radius: 12px;
+            padding: 14px 18px;
+            box-shadow: 0 8px 24px rgba(108,92,231,0.15);
+            max-width: 320px;
+            z-index: 9999;
+            animation: slideIn 0.3s ease-out;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+        `;
+
+        const html = `
+            <div style="display: flex; gap: 10px; align-items: flex-start;">
+                <span style="font-size: 20px;">${notif.icon}</span>
+                <div style="flex: 1;">
+                    <div style="font-size: 12px; font-weight: 700; color: #6C5CE7;">${notif.titre}</div>
+                    <div style="font-size: 13px; color: #4A5080; margin-top: 2px; line-height: 1.4;">${notif.message}</div>
+                </div>
+                <button onclick="this.parentElement.parentElement.remove()" 
+                        style="background: none; border: none; font-size: 16px; cursor: pointer; color: #A0A8CC;">×</button>
+            </div>
+        `;
+
+        toast.innerHTML = html;
+        document.body.appendChild(toast);
+
+        // Auto-remove after 6s
+        setTimeout(() => {
+            toast.style.animation = 'slideOut 0.3s ease-out';
+            setTimeout(() => toast.remove(), 300);
+        }, 6000);
+    }
+
+    updateBadge(count) {
+        const badge = document.getElementById('notification-badge');
+        if (badge) {
+            if (count > 0) {
+                badge.textContent = count > 99 ? '99+' : count;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+    }
+}
+
+// Init notifications au chargement
+// Initialize all suggestion buttons with their current follow status
+function initializeSuggestionButtons() {
+    const buttons = document.querySelectorAll('.suggest-follow-btn');
+    buttons.forEach(btn => {
+        const userId = btn.dataset.userId;
+        if (userId) {
+            fetch(`/social/network/check-follow/${userId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.isFollowing) {
+                        if (data.status === 'PENDING') {
+                            btn.textContent = '⏳ Demande envoyée';
+                            btn.style.background = '#FFA500';
+                        } else if (data.status === 'ACTIVE') {
+                            btn.textContent = '✓ Suivi';
+                            btn.style.background = '#4CAF50';
+                        }
+                        btn.disabled = true;
+                    }
+                })
+                .catch(err => console.error('Error checking follow status:', err));
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new NotificationSystem();
+    
+    // Initialize suggestion buttons with follow status
+    initializeSuggestionButtons();
+});
+
+// ══ NOTIFICATIONS MODAL FUNCTIONS ══
+async function openNotificationsModal(e) {
+    e.preventDefault();
+    document.getElementById('notificationsModal').style.display = 'flex';
+    await loadNotifications();
+}
+
+function closeNotificationsModal() {
+    document.getElementById('notificationsModal').style.display = 'none';
+}
+
+async function loadNotifications() {
+    try {
+        const response = await fetch('/social/notifications/list');
+        const notifs = await response.json();
+        
+        const content = document.getElementById('notificationsModalContent');
+        
+        if (notifs.length === 0) {
+            content.innerHTML = '<div style="text-align: center; padding: 30px 20px; color: #A0A8CC;">📭 Pas de notifications</div>';
+            return;
+        }
+        
+        content.innerHTML = notifs.map(notif => `
+            <div style="display: flex; gap: 12px; padding: 14px 20px; border-bottom: 1px solid #E8EAF6; cursor: pointer; transition: all 0.18s;" onmouseover="this.style.background='#f8f9fc'" onmouseout="this.style.background='transparent'" onclick="markNotificationRead(${notif.id})">
+                <span style="font-size: 20px; flex-shrink: 0;">${notif.icon}</span>
+                <div style="flex: 1; min-width: 0;">
+                    <div style="font-size: 12px; font-weight: 700; color: #6C5CE7;">${notif.titre}</div>
+                    <div style="font-size: 13px; color: #4A5080; margin-top: 3px; line-height: 1.4;">${notif.message}</div>
+                    <div style="font-size: 11px; color: #A0A8CC; margin-top: 6px;">${new Date(notif.dateCreation).toLocaleString('fr-FR')}</div>
+                </div>
+                ${!notif.seen ? '<span style="width: 8px; height: 8px; background: #6C5CE7; border-radius: 50%; flex-shrink: 0; margin-top: 6px;"></span>' : ''}
+            </div>
+        `).join('');
+    } catch (e) {
+        console.error('❌ Erreur:', e);
+        document.getElementById('notificationsModalContent').innerHTML = '<div style="text-align: center; padding: 30px 20px; color: #991b1b;">❌ Erreur de chargement</div>';
+    }
+}
+
+async function markNotificationRead(notifId) {
+    try {
+        await fetch(`/social/notifications/mark-read/${notifId}`, { method: 'POST' });
+        await loadNotifications();
+    } catch (e) {
+        console.error('❌ Erreur:', e);
+    }
+}
+
+async function markAllNotificationsRead() {
+    try {
+        await fetch('/social/notifications/mark-all-read', { method: 'POST' });
+        // Reload to show updated state
+        location.reload();
+    } catch (e) {
+        console.error('❌ Erreur:', e);
+    }
+}
+
+// Close modal on escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeNotificationsModal();
+});
+
+// CSS animations
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+    }
+    @keyframes slideDown {
+        from {
+            transform: translateX(-50%) translateY(-20px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+    }
+    @keyframes slideUp {
+        from {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(-50%) translateY(-20px);
+            opacity: 0;
+        }
+    }
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+    .topic-btn {
+        transition: all 0.2s ease !important;
+    }
+    .topic-btn.active {
+        background: #6C5CE7 !important;
+        border-color: #6C5CE7 !important;
+        color: #fff !important;
+    }
+`;
+document.head.appendChild(style);
+
+</script>
+
+{% block social_js %}{% endblock %}
+
+{% endblock %}

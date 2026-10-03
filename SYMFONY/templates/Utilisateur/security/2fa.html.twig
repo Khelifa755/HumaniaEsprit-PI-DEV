@@ -1,0 +1,319 @@
+{% extends "base.html.twig" %}
+
+{% block title %}Vérification MFA - Humania{% endblock %}
+
+{% block body %}
+<div class="login-wrapper">
+
+    {# ── LEFT PANEL ── #}
+    <div class="login-left">
+        <div class="login-brand">
+            <div class="brand-logo">
+                <span class="brand-h">H</span>
+            </div>
+            <span class="brand-name">HUMANIA</span>
+        </div>
+
+        <div class="login-hero">
+            <h2><strong>Vérification</strong></h2>
+            <h2 class="hero-accent">en deux étapes.</h2>
+            <div class="hero-line"></div>
+            <p class="hero-sub">Votre compte est protégé par une authentification à deux facteurs. Saisissez le code généré par votre application authentificateur.</p>
+        </div>
+
+        <div class="login-features">
+            <div class="feature-row">
+                <div class="feature-icon-box">📱</div>
+                <span>Ouvrez Google Authenticator ou Authy</span>
+            </div>
+            <div class="feature-row">
+                <div class="feature-icon-box">🔢</div>
+                <span>Saisissez le code à 6 chiffres affiché</span>
+            </div>
+            <div class="feature-row">
+                <div class="feature-icon-box">⏱️</div>
+                <span>Le code se renouvelle toutes les 30 secondes</span>
+            </div>
+        </div>
+
+        <div class="login-quote">
+            <em>"&nbsp;La sécurité est un processus, pas un produit&nbsp;"</em><br>
+            <span>— Bruce Schneier</span>
+        </div>
+
+        <div class="deco-circle deco-circle-1"></div>
+        <div class="deco-circle deco-circle-2"></div>
+    </div>
+
+    {# ── RIGHT PANEL ── #}
+    <div class="login-right">
+        <div class="login-card">
+
+            <div class="mfa-badge">🛡️</div>
+            <h1 class="login-title">Code de vérification</h1>
+            <p class="login-sub">Saisissez le code à 6 chiffres de votre application d'authentification.</p>
+
+            {% for msg in app.flashes('error') %}
+                <div class="alert alert-danger">
+                    ❌ {{ msg }}
+                </div>
+            {% endfor %}
+
+            <form method="post" action="{{ path('app_login_mfa') }}" data-turbo="false" autocomplete="off">
+
+                <div class="form-field">
+                    <label for="otp-code">Code à 6 chiffres</label>
+                    <div class="input-group otp-group">
+                        <span class="input-prefix">🔑</span>
+                        <input type="text"
+                               id="otp-code"
+                               name="_auth_code"
+                               inputmode="numeric"
+                               pattern="[0-9]{6}"
+                               maxlength="6"
+                               placeholder="000000"
+                               autocomplete="one-time-code"
+                               autofocus
+                               required>
+                    </div>
+                </div>
+
+                {# 30-second TOTP countdown bar #}
+                <div class="timer-wrap">
+                    <div class="timer-bar" id="timer-bar"></div>
+                </div>
+                <p class="timer-label">Prochain code dans <strong id="timer-count">30</strong>s</p>
+
+                <button type="submit" class="btn-primary-full" id="submit-btn">
+                    Vérifier →
+                </button>
+            </form>
+
+            <div class="divider"><span>ou</span></div>
+
+            <div class="social-buttons">
+                <a href="{{ path('app_login') }}" class="btn-social btn-back">
+                    ← Retour à la connexion
+                </a>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+/* ── Full-page reset (mirrors login page exactly) ── */
+body {
+    margin: 0; padding: 0;
+    display: flex; min-height: 100vh;
+    background: #f0f0f8;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.login-wrapper { display: flex; width: 100%; min-height: 100vh; }
+
+/* ── LEFT PANEL ── */
+.login-left {
+    flex: 1 1 45%;
+    background: #f5f4ff;
+    padding: 2.5rem 3rem;
+    display: flex; flex-direction: column; gap: 2rem;
+    position: relative; overflow: hidden;
+}
+
+.login-brand { display: flex; align-items: center; gap: 0.75rem; }
+
+.brand-logo {
+    width: 52px; height: 52px;
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+}
+.brand-h { color: white; font-size: 1.8rem; font-weight: 800; }
+.brand-name { font-size: 1.3rem; font-weight: 800; color: #1e1b4b; letter-spacing: 2px; }
+
+.login-hero { flex: 1; }
+.login-hero h2 { margin: 0; font-size: 2.8rem; color: #1e1b4b; line-height: 1.1; }
+.hero-accent { color: #7c3aed !important; }
+
+.hero-line { display: flex; gap: 6px; margin: 0.8rem 0 1rem; }
+.hero-line::before, .hero-line::after {
+    content: ''; height: 3px; border-radius: 2px; background: #7c3aed;
+}
+.hero-line::before { width: 40px; }
+.hero-line::after  { width: 20px; opacity: .5; }
+
+.hero-sub { color: #6b7280; font-size: 0.95rem; line-height: 1.6; }
+
+.login-features { display: flex; flex-direction: column; gap: 0.9rem; }
+
+.feature-row {
+    display: flex; align-items: center; gap: 1rem;
+    background: white; border-radius: 12px; padding: 0.75rem 1rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    font-size: 0.9rem; color: #374151; font-weight: 500;
+}
+.feature-icon-box {
+    width: 36px; height: 36px; background: #f5f3ff;
+    border-radius: 8px; display: flex; align-items: center;
+    justify-content: center; font-size: 1.1rem; flex-shrink: 0;
+}
+
+.login-quote { font-size: 0.82rem; color: #9ca3af; line-height: 1.6; }
+
+.deco-circle {
+    position: absolute; border-radius: 50%;
+    border: 40px solid rgba(124,58,237,0.06); pointer-events: none;
+}
+.deco-circle-1 { width: 320px; height: 320px; top: -80px; right: -80px; }
+.deco-circle-2 { width: 240px; height: 240px; bottom: 60px; right: 20px; border-width: 30px; }
+
+/* ── RIGHT PANEL ── */
+.login-right {
+    flex: 1 1 55%;
+    display: flex; align-items: center; justify-content: center;
+    padding: 2rem; background: white;
+}
+
+.login-card { width: 100%; max-width: 420px; }
+
+/* Shield badge */
+.mfa-badge {
+    font-size: 3.5rem; text-align: center; margin-bottom: 0.5rem;
+    display: block;
+    animation: shield-pulse 2.5s ease-in-out infinite;
+}
+@keyframes shield-pulse {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(124,58,237,0)); }
+    50% { transform: scale(1.07); filter: drop-shadow(0 4px 12px rgba(124,58,237,0.3)); }
+}
+
+.login-title { font-size: 2rem; font-weight: 800; color: #111827; margin: 0 0 0.4rem; }
+.login-sub { color: #6b7280; font-size: 0.9rem; margin: 0 0 1.5rem; }
+
+/* Alerts */
+.alert {
+    padding: 0.8rem 1rem; border-radius: 8px;
+    font-size: 0.88rem; margin-bottom: 1rem;
+}
+.alert-danger { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+
+/* Form field */
+.form-field { margin-bottom: 1rem; }
+.form-field label {
+    display: block; font-size: 0.88rem; font-weight: 600;
+    color: #374151; margin-bottom: 0.5rem;
+}
+
+/* Input group — matches login page exactly */
+.input-group {
+    position: relative; display: flex; align-items: center;
+}
+.input-prefix {
+    position: absolute; left: 0.9rem; font-size: 1rem;
+    color: #9ca3af; pointer-events: none;
+}
+.input-group input {
+    width: 100%;
+    padding: 0.85rem 1rem 0.85rem 2.6rem;
+    border: 1.5px solid #e5e7eb; border-radius: 10px;
+    font-size: 1.5rem; font-weight: 700; letter-spacing: 0.4rem;
+    text-align: center; color: #1e1b4b;
+    background: #fafafa; outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+    font-family: 'Courier New', monospace;
+}
+.input-group input::placeholder { letter-spacing: 0.4rem; color: #d1d5db; font-size: 1.3rem; }
+.input-group input:focus {
+    border-color: #7c3aed; background: white;
+    box-shadow: 0 0 0 3px rgba(124,58,237,0.12);
+}
+
+/* TOTP countdown */
+.timer-wrap {
+    background: #f3f4f6; border-radius: 99px;
+    height: 5px; margin: 1rem 0 0.3rem; overflow: hidden;
+}
+.timer-bar {
+    height: 100%; border-radius: 99px;
+    background: linear-gradient(90deg, #7c3aed, #a855f7);
+    transition: width 1s linear;
+    width: 100%;
+}
+.timer-label { font-size: 0.8rem; color: #9ca3af; text-align: right; margin: 0 0 1.2rem; }
+
+/* Submit button */
+.btn-primary-full {
+    width: 100%; padding: 0.9rem;
+    background: linear-gradient(135deg, #7c3aed, #9333ea);
+    color: white; border: none; border-radius: 10px;
+    font-size: 1rem; font-weight: 700; cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s; margin-top: 0.2rem;
+}
+.btn-primary-full:hover { opacity: 0.92; transform: translateY(-1px); }
+
+/* Divider — same as login */
+.divider {
+    text-align: center; margin: 1.4rem 0;
+    position: relative; color: #9ca3af; font-size: 0.85rem;
+}
+.divider::before, .divider::after {
+    content: ''; position: absolute; top: 50%;
+    width: 38%; height: 1px; background: #e5e7eb;
+}
+.divider::before { left: 0; }
+.divider::after  { right: 0; }
+.divider span { background: white; padding: 0 0.75rem; position: relative; }
+
+/* Social / back button */
+.social-buttons { display: flex; gap: 1rem; }
+.btn-social {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    gap: 0.6rem; padding: 0.75rem; border-radius: 10px;
+    font-size: 0.9rem; font-weight: 600; text-decoration: none;
+    transition: all 0.2s; border: 1.5px solid #e5e7eb;
+}
+.btn-back { background: white; color: #374151; }
+.btn-back:hover { border-color: #7c3aed; color: #7c3aed; box-shadow: 0 2px 8px rgba(124,58,237,0.12); }
+
+@media (max-width: 768px) {
+    .login-left { display: none; }
+    .login-right { flex: 1; }
+}
+</style>
+
+<script>
+// ── 30-second TOTP countdown bar ──
+(function () {
+    const bar   = document.getElementById('timer-bar');
+    const count = document.getElementById('timer-count');
+    if (!bar || !count) return;
+
+    function tick() {
+        const now = Math.floor(Date.now() / 1000);
+        const remaining = 30 - (now % 30);
+        bar.style.width = ((remaining / 30) * 100) + '%';
+        bar.style.background = remaining <= 5
+            ? 'linear-gradient(90deg, #ef4444, #f87171)'
+            : 'linear-gradient(90deg, #7c3aed, #a855f7)';
+        count.textContent = remaining;
+    }
+
+    tick();
+    setInterval(tick, 1000);
+})();
+
+// ── Auto-submit when exactly 6 digits are entered ──
+document.addEventListener('DOMContentLoaded', function () {
+    const input = document.getElementById('otp-code');
+    if (!input) return;
+    input.addEventListener('input', function () {
+        this.value = this.value.replace(/\D/g, '').slice(0, 6);
+        if (this.value.length === 6) {
+            setTimeout(() => document.getElementById('submit-btn').click(), 150);
+        }
+    });
+});
+</script>
+{% endblock %}

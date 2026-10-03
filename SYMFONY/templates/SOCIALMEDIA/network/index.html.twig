@@ -1,0 +1,383 @@
+{% extends 'SOCIALMEDIA/profile/base.html.twig' %}
+
+{% block title %}Mon Réseau{% endblock %}
+
+{% block social_content %}
+
+<div class="network-container">
+    {# ── HEADER WITH STATS ── #}
+    <div class="network-header">
+        <h1>Mon Réseau</h1>
+        <p class="network-stats">
+            {{ followingCount }} abonnements · {{ followersCount }} suiveurs · {{ pendingCount }} en attente
+        </p>
+    </div>
+
+    {# ── TABS ── #}
+    <div class="network-tabs">
+        <a href="{{ path('social_network_index', {'tab': 'following'}) }}" 
+           class="tab-btn {% if tab == 'following' %}active{% endif %}">
+            🔗 Abonnements ({{ followingCount }})
+        </a>
+        <a href="{{ path('social_network_index', {'tab': 'followers'}) }}" 
+           class="tab-btn {% if tab == 'followers' %}active{% endif %}">
+            👥 Suiveurs ({{ followersCount }})
+        </a>
+        <a href="{{ path('social_network_index', {'tab': 'pending'}) }}" 
+           class="tab-btn {% if tab == 'pending' %}active{% endif %}">
+            ⏳ En attente ({{ pendingCount }})
+        </a>
+    </div>
+
+    {# ── CONTENT GRID ── #}
+    <div class="network-grid">
+        {% if items|length == 0 %}
+            <div class="empty-state">
+                {% if tab == 'following' %}
+                    <p>👤 Vous ne suivez personne pour le moment.</p>
+                {% elseif tab == 'followers' %}
+                    <p>👥 Vous n'avez aucun suiveur pour le moment.</p>
+                {% else %}
+                    <p>⏳ Aucune demande en attente.</p>
+                {% endif %}
+            </div>
+        {% else %}
+            {% for item in items %}
+                <div class="user-card">
+                    {# Avatar #}
+                    <div class="user-avatar-wrapper">
+                        {% if item.user.avatarUrl %}
+                            <img src="{{ item.user.avatarUrl }}" alt="{{ item.user.firstName }} {{ item.user.lastName }}" class="user-avatar">
+                        {% else %}
+                            <div class="user-avatar-initials">{{ item.user.firstName|first|upper }}{{ item.user.lastName|first|upper }}</div>
+                        {% endif %}
+                    </div>
+
+                    {# Name & Username #}
+                    <h3 class="user-name">{{ item.user.firstName }} {{ item.user.lastName }}</h3>
+                    {% if item.user.username %}
+                        <p class="user-username">@{{ item.user.username }}</p>
+                    {% endif %}
+
+                    {# Badges #}
+                    <div class="user-badges">
+                        {% if item.isMutual %}
+                            <span class="badge mutual">Mutuel</span>
+                        {% endif %}
+                        {% if item.status == 'PENDING' or item.type == 'PENDING' or tab == 'pending' %}
+                            <span class="badge pending">⏳ En attente</span>
+                        {% endif %}
+                    </div>
+
+                    {# Action Buttons #}
+                    <div class="user-actions">
+                        <a href="{{ path('social_profile_show', {'id': item.user.id}) }}" class="btn btn-outline">
+                            Voir profil
+                        </a>
+
+                        {% if item.type == 'FOLLOWING' %}
+                            <button class="btn btn-danger" onclick="unfollow({{ item.user.id }}, this)">
+                                Se désabonner
+                            </button>
+                        {% elseif item.type == 'FOLLOWER' %}
+                            <button class="btn btn-danger" onclick="removeFollower({{ item.user.id }}, this)">
+                                Supprimer
+                            </button>
+                        {% elseif item.type == 'PENDING' %}
+                            <button class="btn btn-success" onclick="acceptFollow({{ item.user.id }}, this)">
+                                Accepter
+                            </button>
+                            <button class="btn btn-danger" onclick="rejectFollow({{ item.user.id }}, this)">
+                                Refuser
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .network-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .network-header {
+        margin-bottom: 2rem;
+    }
+
+    .network-header h1 {
+        margin: 0;
+        font-size: 2rem;
+        color: #1A1D2E;
+        font-weight: 900;
+    }
+
+    .network-stats {
+        margin: 0.5rem 0 0 0;
+        color: #6B7280;
+        font-size: 0.95rem;
+    }
+
+    {# TABS #}
+    .network-tabs {
+        display: flex;
+        gap: 0.5rem;
+        border-bottom: 2px solid #E5E7EB;
+        margin-bottom: 2rem;
+    }
+
+    .tab-btn {
+        padding: 1rem 1.5rem;
+        background: transparent;
+        border: none;
+        border-bottom: 3px solid transparent;
+        color: #6B7280;
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+
+    .tab-btn:hover {
+        color: #6C5CE7;
+    }
+
+    .tab-btn.active {
+        color: #6C5CE7;
+        border-bottom-color: #6C5CE7;
+    }
+
+    {# GRID #}
+    .network-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 1.5rem;
+    }
+
+    {# USER CARD #}
+    .user-card {
+        background: white;
+        border: 1px solid #E8EAF6;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .user-card:hover {
+        border-color: #D4CAFF;
+        box-shadow: 0 4px 16px rgba(108, 92, 231, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .user-avatar-wrapper {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 1rem;
+        border-radius: 50%;
+        overflow: hidden;
+    }
+
+    .user-avatar {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .user-avatar-initials {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        font-weight: 800;
+        font-size: 1.8rem;
+    }
+
+    .user-name {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 800;
+        color: #1A1D2E;
+    }
+
+    .user-username {
+        margin: 0.25rem 0 1rem;
+        font-size: 0.85rem;
+        color: #A0A8CC;
+    }
+
+    {# BADGES #}
+    .user-badges {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 0.4rem 1rem;
+        border-radius: 50px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+        font-weight: 600;
+    }
+
+    .badge.mutual {
+        background: #EDE9FE;
+        color: #7C3AED;
+    }
+
+    .badge.pending {
+        background: #FEF3C7 !important;
+        color: #B45309 !important;
+        border: 1px solid #FBBF24;
+    }
+
+    {# BUTTONS #}
+    .user-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .btn {
+        padding: 0.6rem 1rem;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-outline {
+        background: #F3F4F6;
+        color: #374151;
+        border: 1px solid #E5E7EB;
+    }
+
+    .btn-outline:hover {
+        background: #E5E7EB;
+    }
+
+    .btn-success {
+        background: linear-gradient(135deg, #6C5CE7, #5B4FD3);
+        color: white;
+        box-shadow: 0 2px 8px rgba(108, 92, 231, 0.3);
+    }
+
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(108, 92, 231, 0.4);
+    }
+
+    .btn-danger {
+        background: #FEE2E2;
+        color: #EF4444;
+    }
+
+    .btn-danger:hover {
+        background: #FECACA;
+    }
+
+    {# EMPTY STATE #}
+    .empty-state {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 3rem;
+        color: #9ca3af;
+    }
+
+    .empty-state p {
+        margin: 0;
+        font-size: 1.05rem;
+    }
+
+    @media (max-width: 768px) {
+        .network-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .network-tabs {
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            flex: 1;
+            text-align: center;
+        }
+    }
+</style>
+
+<script>
+function unfollow(userId, btn) {
+    if (!confirm('Êtes-vous sûr?')) return;
+    fetch(`{{ path('social_network_unfollow', {id: 0}) }}`.replace('0', userId), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    });
+}
+
+function removeFollower(userId, btn) {
+    if (!confirm('Êtes-vous sûr?')) return;
+    fetch(`{{ path('social_network_remove', {id: 0}) }}`.replace('0', userId), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    });
+}
+
+function acceptFollow(userId, btn) {
+    fetch(`{{ path('social_network_accept', {id: 0}) }}`.replace('0', userId), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    });
+}
+
+function rejectFollow(userId, btn) {
+    if (!confirm('Êtes-vous sûr?')) return;
+    fetch(`{{ path('social_network_reject', {id: 0}) }}`.replace('0', userId), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    });
+}
+</script>
+
+{% endblock %}

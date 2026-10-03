@@ -1,0 +1,410 @@
+{% extends "base.html.twig" %}
+
+{% block title %}Candidats Acceptés - Humania{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<div class="users-page">
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <div class="page-icon" style="background:linear-gradient(135deg,#10b981,#059669);">
+                <i class="fa-solid fa-user-check" style="color:white;font-size:1.3rem;"></i>
+            </div>
+            <div>
+                <h1>Candidats acceptés</h1>
+                <p><i class="fa-solid fa-circle-dot" style="color:#34d399;font-size:.65rem;margin-right:.3rem;"></i>{{ candidatures|length }} candidat(s) trouvé(s)</p>
+            </div>
+        </div>
+        <div class="page-header-actions">
+            <a href="{{ path('app_admin_users') }}" class="btn-action btn-white">
+                <i class="fa-solid fa-arrow-left"></i> Gestion des utilisateurs
+            </a>
+            <a href="#" class="btn-action btn-white" onclick="window.print()">
+                <i class="fa-regular fa-file-pdf" style="color:#ef4444;"></i> PDF
+            </a>
+            <a href="#" class="btn-action btn-white" id="export-excel">
+                <i class="fa-regular fa-file-excel" style="color:#16a34a;"></i> Excel
+            </a>
+        </div>
+    </div>
+
+    {% for msg in app.flashes('success') %}
+        <div class="flash flash-success"><i class="fa-solid fa-circle-check"></i> {{ msg }}</div>
+    {% endfor %}
+    {% for msg in app.flashes('error') %}
+        <div class="flash flash-error"><i class="fa-solid fa-circle-xmark"></i> {{ msg }}</div>
+    {% endfor %}
+
+    <div class="filters-bar">
+        <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass" style="color:#9ca3af;"></i>
+            <input type="text" id="search-input" placeholder="Rechercher par nom, prénom ou type de candidat...">
+        </div>
+        <div class="select-wrapper">
+            <i class="fa-solid fa-users" style="color:#10b981;font-size:.85rem;"></i>
+            <select id="type-filter">
+                <option value="">Tous les types</option>
+                <option value="Interne">Interne</option>
+                <option value="Externe">Externe</option>
+            </select>
+            <i class="fa-solid fa-chevron-down" style="color:#9ca3af;font-size:.75rem;"></i>
+        </div>
+        <div class="select-wrapper">
+            <i class="fa-solid fa-list-check" style="color:#10b981;font-size:.85rem;"></i>
+            <select id="etape-filter">
+                <option value="">Toutes les étapes</option>
+                <option value="Candidature reçue">Candidature reçue</option>
+                <option value="Pré-sélection">Pré-sélection</option>
+                <option value="Entretien">Entretien</option>
+                <option value="Offre">Offre</option>
+            </select>
+            <i class="fa-solid fa-chevron-down" style="color:#9ca3af;font-size:.75rem;"></i>
+        </div>
+    </div>
+
+    {% if candidatures is empty %}
+        <div class="empty-state">
+            <i class="fa-solid fa-user-slash" style="font-size:2.5rem;color:#d1d5db;margin-bottom:1rem;display:block;"></i>
+            <p>Aucun candidat accepté à convertir.</p>
+        </div>
+    {% else %}
+        <div class="candidates-grid" id="candidates-grid">
+            {% for c in candidatures %}
+            <div class="candidate-card {% if c.alreadyConverted %}converted{% endif %}"
+                 data-name="{{ c.nom|lower }} {{ c.prenom|lower }}"
+                 data-type="{{ c.typeCandidat }}"
+                 data-etape="{{ c.etapePipeline }}">
+
+                {# Top accent #}
+                <div class="card-accent {% if c.alreadyConverted %}accent-converted{% else %}accent-pending{% endif %}"></div>
+
+                <div class="card-body">
+                    {# Avatar + Name #}
+                    <div class="cand-header">
+                        <div class="cand-avatar {% if c.alreadyConverted %}avatar-converted{% endif %}">
+                            {{ c.prenom|first|upper }}{{ c.nom|first|upper }}
+                        </div>
+                        <div class="cand-identity">
+                            <div class="cand-name">{{ c.prenom }} {{ c.nom }}</div>
+                            <div class="cand-type-badge {% if c.typeCandidat == 'Interne' %}badge-interne{% else %}badge-externe{% endif %}">
+                                {% if c.typeCandidat == 'Interne' %}
+                                    <i class="fa-solid fa-building"></i>
+                                {% else %}
+                                    <i class="fa-solid fa-globe"></i>
+                                {% endif %}
+                                {{ c.typeCandidat }}
+                            </div>
+                        </div>
+                    </div>
+
+                    {# Info rows #}
+                    <div class="cand-details">
+                        <div class="cand-detail-row">
+                            <span class="detail-icon"><i class="fa-solid fa-stairs"></i></span>
+                            <span class="detail-text">{{ c.etapePipeline }}</span>
+                        </div>
+                        <div class="cand-detail-row scoring-row">
+                            <span class="detail-icon"><i class="fa-solid fa-robot"></i></span>
+                            <span class="detail-text">
+                                <span class="scoring-label">Scoring IA :</span>
+                                <span class="scoring-bar-wrap">
+                                    <span class="scoring-bar-track">
+                                        <span class="scoring-bar-fill" style="width:{{ c.scoringIa ? (c.scoringIa * 100)|round : 0 }}%;"></span>
+                                    </span>
+                                    <strong class="scoring-pct">{{ c.scoringIa ? (c.scoringIa * 100)|round ~ '%' : '0%' }}</strong>
+                                </span>
+                            </span>
+                        </div>
+                        <div class="cand-detail-row">
+                            <span class="detail-icon"><i class="fa-regular fa-calendar"></i></span>
+                            <span class="detail-text">{{ c.dateDepot ? c.dateDepot|date('d/m/Y H:i') : '—' }}</span>
+                        </div>
+                    </div>
+
+                    {# Action button #}
+                    {% if c.alreadyConverted %}
+                        <div class="btn-converted">
+                            <i class="fa-solid fa-circle-check"></i> Déjà converti
+                        </div>
+                    {% else %}
+                        <button type="button" class="btn-convert btn-convert-modal"
+                                data-id="{{ c.id }}"
+                                data-nom="{{ c.nom }}"
+                                data-prenom="{{ c.prenom }}"
+                                data-email="{{ c.email }}">
+                            <i class="fa-solid fa-user-plus"></i> Convertir en utilisateur
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="pagination" id="pagination"></div>
+    {% endif %}
+</div>
+
+{# ── CONVERSION MODAL ── #}
+<div id="convert-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div style="display:flex;align-items:center;gap:.75rem;">
+                <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#d1fae5,#a7f3d0);display:flex;align-items:center;justify-content:center;">
+                    <i class="fa-solid fa-user-plus" style="color:#059669;font-size:.95rem;"></i>
+                </div>
+                <h3>Convertir en utilisateur</h3>
+            </div>
+            <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form method="POST" id="convert-form" action="" accept-charset="UTF-8">
+            <input type="hidden" name="_token" value="{{ csrf_token('convertir_candidat') }}">
+            <div class="modal-body">
+                <div class="modal-grid">
+                    <div class="form-field">
+                        <label><i class="fa-solid fa-user"></i> Nom *</label>
+                        <input type="text" name="nom" id="m-nom" required>
+                    </div>
+                    <div class="form-field">
+                        <label><i class="fa-solid fa-user"></i> Prénom *</label>
+                        <input type="text" name="prenom" id="m-prenom" required>
+                    </div>
+                    <div class="form-field full">
+                        <label><i class="fa-solid fa-envelope"></i> Email *</label>
+                        <input type="email" name="email" id="m-email" required>
+                    </div>
+                    <div class="form-field">
+                        <label><i class="fa-solid fa-shield-halved"></i> Rôle</label>
+                        <select name="role">
+                            {% for role in roles %}
+                                <option value="{{ role.value }}">{{ role.label() }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label><i class="fa-solid fa-user-tie"></i> Manager</label>
+                        <select name="manager_id">
+                            <option value="">— Aucun —</option>
+                            {% for mgr in managers %}
+                                <option value="{{ mgr.id }}">{{ mgr.prenom }} {{ mgr.nom }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label><i class="fa-solid fa-id-badge"></i> Matricule</label>
+                        <input type="text" name="matricule" placeholder="ex: MAT-001">
+                    </div>
+                    <div class="form-field">
+                        <label><i class="fa-solid fa-briefcase"></i> Poste actuel</label>
+                        <input type="text" name="poste_actuel" placeholder="ex: Développeur">
+                    </div>
+                    <div class="form-field full">
+                        <label><i class="fa-solid fa-building"></i> Département</label>
+                        <input type="text" name="departement" placeholder="ex: Informatique">
+                    </div>
+                </div>
+                <p class="modal-note">
+                    <i class="fa-solid fa-circle-info"></i> Un mot de passe sécurisé sera généré et envoyé par email au candidat.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeModal()">
+                    <i class="fa-solid fa-xmark"></i> Annuler
+                </button>
+                <button type="submit" class="btn-confirm">
+                    <i class="fa-solid fa-circle-check"></i> Créer le compte
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openModal(id, nom, prenom, email) {
+    document.getElementById('m-nom').value = nom || '';
+    document.getElementById('m-prenom').value = prenom || '';
+    document.getElementById('m-email').value = email || '';
+    document.getElementById('convert-form').action = '/admin/candidats-acceptes/' + id + '/convertir';
+    document.getElementById('convert-modal').style.display = 'flex';
+}
+function closeModal() { document.getElementById('convert-modal').style.display = 'none'; }
+
+document.querySelectorAll('.btn-convert-modal').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        openModal(this.dataset.id, this.dataset.nom, this.dataset.prenom, this.dataset.email);
+    });
+});
+document.getElementById('convert-modal').addEventListener('click', function(e) { if(e.target===this) closeModal(); });
+document.querySelector('.modal-close')?.addEventListener('click', closeModal);
+
+const ITEMS_PER_PAGE = 8;
+let currentPage = 1;
+let filtered = [];
+function getCards() { return Array.from(document.querySelectorAll('.candidate-card')); }
+function applyFilters() {
+    const q = document.getElementById('search-input').value.toLowerCase().trim();
+    const type = document.getElementById('type-filter').value;
+    const etape = document.getElementById('etape-filter').value;
+    filtered = getCards().filter(c=>{
+        const matchQ = !q||(c.dataset.name||'').includes(q)||(c.dataset.type||'').toLowerCase().includes(q);
+        const matchT = !type||c.dataset.type===type;
+        const matchE = !etape||c.dataset.etape===etape;
+        return matchQ&&matchT&&matchE;
+    });
+    currentPage=1; render();
+}
+function render() {
+    const start=(currentPage-1)*ITEMS_PER_PAGE;
+    getCards().forEach(c=>c.style.display='none');
+    filtered.slice(start,start+ITEMS_PER_PAGE).forEach(c=>c.style.display='');
+    renderPagination();
+}
+function renderPagination() {
+    const pages=Math.ceil(filtered.length/ITEMS_PER_PAGE)||1;
+    const pg=document.getElementById('pagination'); if(!pg)return;
+    pg.innerHTML='';
+    const info=document.createElement('span'); info.className='page-info'; info.textContent=`Page ${currentPage} sur ${pages}`; pg.appendChild(info);
+    const prev=document.createElement('button'); prev.innerHTML='<i class="fa-solid fa-chevron-left"></i>'; prev.disabled=currentPage===1; prev.onclick=()=>{currentPage--;render();}; pg.appendChild(prev);
+    const next=document.createElement('button'); next.innerHTML='<i class="fa-solid fa-chevron-right"></i>'; next.disabled=currentPage>=pages; next.onclick=()=>{currentPage++;render();}; pg.appendChild(next);
+}
+document.getElementById('search-input')?.addEventListener('input', applyFilters);
+document.getElementById('type-filter')?.addEventListener('change', applyFilters);
+document.getElementById('etape-filter')?.addEventListener('change', applyFilters);
+window.addEventListener('DOMContentLoaded', ()=>{ filtered=getCards(); render(); });
+</script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+.users-page { max-width:1300px;margin:0 auto;padding:0 1rem 3rem;font-family:'Plus Jakarta Sans',sans-serif; }
+
+.page-header { display:flex;justify-content:space-between;align-items:center;padding:1.5rem 2rem;margin-bottom:2rem;background:linear-gradient(135deg,#ffffff,#f0fdf4);border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,.06);border:1px solid rgba(255,255,255,.5);flex-wrap:wrap;gap:1.5rem;transition:all .3s ease; }
+.page-header:hover { box-shadow:0 8px 30px rgba(0,0,0,.08); }
+.page-header-left { display:flex;align-items:center;gap:1.5rem; }
+.page-icon { width:56px;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 15px rgba(16,185,129,.3); }
+.page-header h1 { margin:0;font-size:1.5rem;color:#111827;font-weight:800;letter-spacing:-.5px; }
+.page-header p { margin:.35rem 0 0;color:#6b7280;font-size:.88rem;font-weight:500;display:flex;align-items:center;gap:.3rem; }
+.page-header-actions { display:flex;align-items:center;gap:.7rem;flex-wrap:wrap; }
+.btn-action { padding:.6rem 1.2rem;border-radius:10px;font-size:.84rem;font-weight:600;text-decoration:none;transition:all .25s ease;border:1.5px solid transparent;display:inline-flex;align-items:center;gap:.45rem;white-space:nowrap;font-family:inherit;cursor:pointer; }
+.btn-white { background:white;color:#374151;border-color:#e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.05); }
+.btn-white:hover { transform:translateY(-2px);box-shadow:0 5px 15px rgba(0,0,0,.08);background:#f9fafb; }
+.flash { padding:.9rem 1.25rem;border-radius:12px;font-size:.87rem;margin-bottom:1.25rem;border-left:4px solid;animation:slideIn .3s ease;display:flex;align-items:center;gap:.6rem; }
+.flash-success { background:#f0fdf4;color:#166534;border-left-color:#22c55e; }
+.flash-error { background:#fef2f2;color:#b91c1c;border-left-color:#ef4444; }
+@keyframes slideIn { from{opacity:0;transform:translateX(-16px);}to{opacity:1;transform:translateX(0);} }
+.filters-bar { display:flex;gap:1rem;margin-bottom:2rem;flex-wrap:wrap; }
+.search-box { flex:1;min-width:240px;display:flex;align-items:center;gap:.75rem;padding:.8rem 1.2rem;background:white;border:1.5px solid #e5e7eb;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.04);transition:all .3s ease; }
+.search-box:focus-within { border-color:#10b981;box-shadow:0 4px 16px rgba(16,185,129,.12); }
+.search-box input { flex:1;border:none;outline:none;font-size:.9rem;color:#111827;background:transparent;font-family:inherit; }
+.search-box input::placeholder { color:#9ca3af; }
+.select-wrapper { display:flex;align-items:center;gap:.6rem;padding:.8rem 1.2rem;background:white;border:1.5px solid #e5e7eb;border-radius:14px;min-width:165px;box-shadow:0 2px 8px rgba(0,0,0,.04);transition:all .3s ease; }
+.select-wrapper:focus-within { border-color:#10b981;box-shadow:0 4px 16px rgba(16,185,129,.12); }
+.select-wrapper select { border:none;outline:none;font-size:.9rem;color:#374151;background:transparent;flex:1;font-family:inherit;cursor:pointer; }
+
+/* Candidate grid */
+.candidates-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem; }
+
+/* Candidate card */
+.candidate-card {
+    background:white;border-radius:20px;
+    box-shadow:0 2px 12px rgba(0,0,0,.06);border:1.5px solid #f3f4f6;
+    transition:all .35s cubic-bezier(.4,0,.2,1);
+    display:flex;flex-direction:column;overflow:hidden;
+}
+.candidate-card:hover { transform:translateY(-7px);box-shadow:0 20px 40px rgba(0,0,0,.12); }
+.candidate-card.converted { border-color:#d1fae5;background:linear-gradient(160deg,#f0fdf4,white); }
+.candidate-card.converted:hover { border-color:#6ee7b7; }
+
+.card-accent { height:5px;width:100%;flex-shrink:0; }
+.accent-pending { background:linear-gradient(90deg,#10b981,#34d399,#059669); }
+.accent-converted { background:linear-gradient(90deg,#6ee7b7,#a7f3d0,#34d399); }
+
+.card-body { padding:1.4rem;display:flex;flex-direction:column;gap:1rem;flex:1; }
+
+.cand-header { display:flex;align-items:center;gap:.85rem; }
+.cand-avatar {
+    width:52px;height:52px;border-radius:14px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    font-size:1rem;font-weight:800;
+    background:linear-gradient(135deg,#d1fae5,#6ee7b7);color:#065f46;
+    box-shadow:0 4px 12px rgba(16,185,129,.2);
+}
+.avatar-converted { background:linear-gradient(135deg,#d1fae5,#a7f3d0);color:#047857; }
+.cand-identity { flex:1;min-width:0; }
+.cand-name { font-size:1rem;font-weight:800;color:#111827;margin-bottom:.35rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.2px; }
+.cand-type-badge { display:inline-flex;align-items:center;gap:.35rem;font-size:.72rem;font-weight:700;padding:.3rem .7rem;border-radius:8px;letter-spacing:.2px; }
+.badge-interne { background:#ede9fe;color:#6d28d9; }
+.badge-externe { background:#dbeafe;color:#1e40af; }
+
+.cand-details { display:flex;flex-direction:column;gap:.5rem; }
+.cand-detail-row { display:flex;align-items:center;gap:.7rem;padding:.5rem .75rem;background:#f9fafb;border-radius:9px;font-size:.83rem;color:#374151;font-weight:500; }
+.detail-icon { width:22px;display:flex;justify-content:center;flex-shrink:0; }
+.detail-icon i { color:#10b981;font-size:.8rem; }
+.detail-text { flex:1; }
+.detail-text strong { color:#111827; }
+
+/* Scoring IA progress bar */
+.scoring-row .detail-text { display:flex;flex-direction:column;gap:.3rem;flex:1; }
+.scoring-label { font-size:.78rem;color:#6b7280;font-weight:600; }
+.scoring-bar-wrap { display:flex;align-items:center;gap:.6rem; }
+.scoring-bar-track { flex:1;height:6px;background:#d1fae5;border-radius:99px;overflow:hidden; }
+.scoring-bar-fill { display:block;height:100%;background:linear-gradient(90deg,#10b981,#059669);border-radius:99px;transition:width .5s ease; }
+.scoring-pct { font-size:.82rem;font-weight:800;color:#059669;white-space:nowrap;min-width:32px;text-align:right; }
+
+.btn-convert {
+    display:flex;align-items:center;justify-content:center;gap:.55rem;
+    width:100%;margin-top:.25rem;padding:.85rem;
+    background:linear-gradient(135deg,#10b981,#059669);color:white;
+    border:none;border-radius:12px;font-size:.88rem;font-weight:700;
+    cursor:pointer;transition:all .3s ease;box-shadow:0 4px 15px rgba(16,185,129,.3);
+    font-family:inherit;
+}
+.btn-convert:hover { transform:translateY(-2px);box-shadow:0 8px 25px rgba(16,185,129,.4); }
+.btn-convert:active { transform:translateY(0); }
+.btn-converted {
+    display:flex;align-items:center;justify-content:center;gap:.55rem;
+    width:100%;margin-top:.25rem;padding:.85rem;
+    background:#f0fdf4;color:#15803d;border-radius:12px;
+    font-size:.88rem;font-weight:700;text-align:center;
+    border:2px solid #86efac;
+}
+
+.empty-state { background:white;border-radius:18px;padding:4rem 2rem;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.05);border:1.5px solid #f3f4f6; }
+.empty-state p { color:#6b7280;font-size:1rem;margin-top:.75rem; }
+.pagination { display:flex;align-items:center;justify-content:flex-end;gap:.5rem;margin-top:1.75rem; }
+.page-info { font-size:.83rem;color:#6b7280;margin-right:.5rem;font-weight:600; }
+.pagination button { width:34px;height:34px;border:1.5px solid #e5e7eb;border-radius:10px;background:white;cursor:pointer;font-size:.85rem;color:#374151;transition:all .25s ease;display:flex;align-items:center;justify-content:center; }
+.pagination button:hover:not(:disabled) { border-color:#10b981;color:#059669;transform:translateY(-2px);box-shadow:0 4px 12px rgba(16,185,129,.15); }
+.pagination button:disabled { opacity:.35;cursor:default; }
+
+/* Modal */
+.modal-overlay { position:fixed;inset:0;background:rgba(10,30,20,.45);display:flex;align-items:center;justify-content:center;z-index:1000;padding:1rem;backdrop-filter:blur(4px); }
+.modal-box { background:white;border-radius:24px;width:100%;max-width:580px;box-shadow:0 30px 80px rgba(0,0,0,.2);overflow:hidden;max-height:88vh;display:flex;flex-direction:column;border:1px solid rgba(255,255,255,.8);font-family:'Plus Jakarta Sans',sans-serif; }
+.modal-header { display:flex;justify-content:space-between;align-items:center;padding:1.4rem 1.75rem;border-bottom:1.5px solid #f3f4f6;background:linear-gradient(135deg,#ffffff,#f0fdf4); }
+.modal-header h3 { margin:0;font-size:1.15rem;font-weight:800;color:#111827;letter-spacing:-.3px; }
+.modal-close { background:none;border:none;cursor:pointer;color:#9ca3af;border-radius:10px;transition:all .25s;display:flex;align-items:center;justify-content:center;width:34px;height:34px;font-size:1rem; }
+.modal-close:hover { background:#f3f4f6;color:#374151;transform:rotate(90deg); }
+.modal-body { padding:1.75rem;overflow-y:auto;flex:1; }
+.modal-grid { display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem; }
+.modal-grid .full { grid-column:span 2; }
+.form-field { display:flex;flex-direction:column;gap:.45rem; }
+.form-field label { font-size:.83rem;font-weight:700;color:#374151;display:flex;align-items:center;gap:.4rem; }
+.form-field label i { color:#10b981;font-size:.8rem; }
+.form-field input,.form-field select { padding:.8rem 1rem;border:1.5px solid #e5e7eb;border-radius:12px;font-size:.9rem;color:#111827;outline:none;transition:all .25s ease;background:#fafafa;font-family:inherit; }
+.form-field input:hover,.form-field select:hover { border-color:#d1d5db;background:white; }
+.form-field input:focus,.form-field select:focus { border-color:#10b981;background:white;box-shadow:0 0 0 4px rgba(16,185,129,.1); }
+.modal-note { font-size:.83rem;color:#065f46;background:#f0fdf4;border:1.5px solid #86efac;padding:.9rem 1.1rem;border-radius:12px;margin:0;font-weight:500;display:flex;align-items:flex-start;gap:.5rem; }
+.modal-note i { flex-shrink:0;margin-top:.1rem;color:#10b981; }
+.modal-footer { display:flex;justify-content:flex-end;gap:.75rem;padding:1.25rem 1.75rem;border-top:1.5px solid #f3f4f6;background:#f9fafb; }
+.btn-cancel { padding:.75rem 1.5rem;border:none;border-radius:10px;background:#f3f4f6;color:#374151;font-size:.88rem;font-weight:700;cursor:pointer;transition:all .25s;display:flex;align-items:center;gap:.45rem;font-family:inherit; }
+.btn-cancel:hover { background:#e5e7eb;transform:translateY(-2px); }
+.btn-confirm { padding:.75rem 1.75rem;background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;border-radius:10px;font-size:.88rem;font-weight:700;cursor:pointer;transition:all .25s;box-shadow:0 4px 15px rgba(16,185,129,.3);display:flex;align-items:center;gap:.45rem;font-family:inherit; }
+.btn-confirm:hover { transform:translateY(-2px);box-shadow:0 8px 25px rgba(16,185,129,.4); }
+.btn-confirm:active { transform:translateY(0); }
+
+@media(max-width:1100px){ .candidates-grid{grid-template-columns:repeat(3,1fr);} }
+@media(max-width:768px){ .candidates-grid{grid-template-columns:repeat(2,1fr);}.modal-grid{grid-template-columns:1fr;}.modal-grid .full{grid-column:1;} }
+@media(max-width:480px){ .candidates-grid{grid-template-columns:1fr;}.modal-body{padding:1.5rem;} }
+</style>
+{% endblock %}

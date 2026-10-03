@@ -1,0 +1,71 @@
+{{ form_start(form) }}
+{{ form_row(form.espace) }}
+{{ form_row(form.dateReservation) }}
+{{ form_row(form.dateHeureDebut) }}
+{{ form_row(form.dateHeureFin) }}
+{{ form_row(form.objectif) }}
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">{{ button_label|default('Enregistrer') }}</button>
+        <a href="{{ path('app_reservation_espaces_index') }}" class="btn btn-secondary">Annuler</a>
+    </div>
+{{ form_end(form) }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    if (!form) return;
+
+    form.addEventListener('submit', function(e) {
+        let valid = true;
+        const errors = [];
+
+        // Espace required
+        const espace = form.querySelector('[name*="[espace]"]');
+        if (!espace.value) {
+            espace.classList.add('is-invalid');
+            errors.push('Sélectionnez un espace.');
+            valid = false;
+        } else {
+            espace.classList.remove('is-invalid');
+        }
+
+        // Dates - debut > today, fin > debut
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const dateRes = form.querySelector('[name*="[dateReservation]"]');
+        const debut = form.querySelector('[name*="[dateHeureDebut]"]');
+        const fin = form.querySelector('[name*="[dateHeureFin]"]');
+        if (dateRes.value && debut.value && fin.value) {
+            const debutDt = new Date(debut.value);
+            const finDt = new Date(fin.value);
+            if (debutDt <= today) {
+                debut.classList.add('is-invalid');
+                errors.push('Date de début doit être après aujourd\'hui.');
+                valid = false;
+            } else if (debutDt >= finDt) {
+                [debut, fin].forEach(f => f.classList.add('is-invalid'));
+                errors.push('Heure de fin doit être après le début.');
+                valid = false;
+            } else {
+                [debut, fin].forEach(f => f.classList.remove('is-invalid'));
+            }
+        }
+
+        if (!valid) {
+            e.preventDefault();
+            alert(errors.join('\\n'));
+        }
+    });
+
+    // Real-time validation
+    ['change', 'input'].forEach(event => {
+        form.querySelectorAll('input, select').forEach(field => {
+            field.addEventListener(event, function() {
+                this.classList.remove('is-invalid');
+            });
+        });
+    });
+});
+</script>
+<style>
+.is-invalid { border-color: #dc3545 !important; box-shadow: 0 0 0 0.2rem rgba(220,53,69,.25) !important; }
+</style>

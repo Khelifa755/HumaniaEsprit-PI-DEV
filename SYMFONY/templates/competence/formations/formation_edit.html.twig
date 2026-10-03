@@ -1,0 +1,281 @@
+{% extends 'base.html.twig' %}
+{% block title %}Modifier Formation – Humania{% endblock %}
+
+{% block body %}
+<div class="form-wrapper">
+
+  {# ══ FORMULAIRE MODIFICATION ════════════════════════ #}
+  <div class="form-card">
+    <div class="form-head">
+      <div>
+        <h2 class="form-title">✏ Modifier la Formation</h2>
+        <p class="form-sub">{{ formation.titre }}</p>
+      </div>
+      <a href="{{ path('formation_catalog') }}" class="btn-back">← Retour</a>
+    </div>
+
+    {% for msg in app.flashes('error') %}
+      <div class="f-alert-error">{{ msg }}</div>
+    {% endfor %}
+    {% for msg in app.flashes('success') %}
+      <div class="f-alert-ok">{{ msg }}</div>
+    {% endfor %}
+
+    <form method="post" action="{{ path('formation_edit', {id: formation.id}) }}"
+          novalidate id="editForm">
+      <input type="hidden" name="_token" value="{{ csrf_token('edit'~formation.id) }}">
+
+      <div class="f-group" id="g-titre">
+        <label class="f-label">TITRE <span class="req">*</span></label>
+        <input type="text" name="titre" id="titre" class="f-input"
+               value="{{ formation.titre }}" minlength="3" maxlength="255" required
+               oninput="validateField(this)">
+        <span class="f-hint" id="hint-titre"></span>
+      </div>
+
+      <div class="f-group">
+        <label class="f-label">DESCRIPTION</label>
+        <textarea name="description" class="f-input f-textarea" rows="3">{{ formation.description }}</textarea>
+      </div>
+
+      <div class="f-row">
+        <div class="f-group" id="g-duree">
+          <label class="f-label">DURÉE (heures) <span class="req">*</span></label>
+          <input type="number" name="duree" id="duree" class="f-input"
+                 value="{{ formation.duree }}" min="1" max="500" required
+                 oninput="validateField(this)">
+          <span class="f-hint" id="hint-duree"></span>
+        </div>
+        <div class="f-group">
+          <label class="f-label">COÛT (DTN)</label>
+          <input type="number" name="cout" class="f-input"
+                 value="{{ formation.cout }}" min="0" step="0.01">
+        </div>
+      </div>
+
+      <div class="f-row">
+        <div class="f-group" id="g-typeFormation">
+          <label class="f-label">TYPE <span class="req">*</span></label>
+          <select name="typeFormation" id="typeFormation" class="f-input" required
+                  onchange="validateField(this)">
+            <option value="">— Choisir —</option>
+            {% for key, t in types %}
+              <option value="{{ key }}" {{ formation.typeFormation == key ? 'selected' : '' }}>
+                {{ t.icon }} {{ t.label }}
+              </option>
+            {% endfor %}
+          </select>
+          <span class="f-hint" id="hint-typeFormation"></span>
+        </div>
+        <div class="f-group">
+          <label class="f-label">CATÉGORIE</label>
+          <select name="categorie_id" class="f-input">
+            <option value="">— Aucune —</option>
+            {% for cat in categories %}
+              <option value="{{ cat.id }}" {{ formation.categorie_id == cat.id ? 'selected' : '' }}>
+                {{ cat.libelle }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="f-group">
+        <label class="f-label">FORMATEUR</label>
+        <select name="formateur_id" class="f-input">
+          <option value="">— Non assigné —</option>
+          {% for f in formateurs %}
+            <option value="{{ f.id }}" {{ formation.formateur_id == f.id ? 'selected' : '' }}>
+              {{ f.nom }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="f-footer">
+        <a href="{{ path('formation_catalog') }}" class="btn-cancel">Annuler</a>
+        <button type="submit" class="btn-submit">💾 Enregistrer</button>
+      </div>
+    </form>
+  </div>
+
+  {# ══ SESSIONS ════════════════════════════════════════ #}
+  <div class="form-card" style="margin-top:1.5rem">
+    <h3 class="sessions-title">📅 Sessions ({{ sessions|length }})</h3>
+
+    {% if sessions|length == 0 %}
+      <div class="sessions-empty">Aucune session configurée.</div>
+    {% else %}
+      <div class="sessions-list">
+        {% for s in sessions %}
+          {% set isPast = s.dateFin < 'now'|date('Y-m-d') %}
+          <div class="session-row {{ isPast ? 'session-past' : '' }}">
+            <div class="session-info">
+              <span class="session-dates">
+                📅 {{ s.dateDebut|date('d/m/Y') }} → {{ s.dateFin|date('d/m/Y') }}
+              </span>
+              <span class="session-lieu">📍 {{ s.lieu ?? 'N/A' }}</span>
+              <span class="session-statut session-statut-{{ s.statut|lower|replace({' ':'-','é':'e','é':'e'}) }}">
+                {{ s.statut }}
+              </span>
+              <span class="session-inscrits">👤 {{ s.nb_inscrits }} inscrit(s)</span>
+            </div>
+            <div class="session-actions">
+              {% if s.nb_inscrits == 0 %}
+                <form method="post"
+                      action="{{ path('formation_session_delete', {sid: s.id}) }}"
+                      style="display:inline"
+                      onsubmit="return confirm('Supprimer cette session ?')">
+                  <input type="hidden" name="_token" value="{{ csrf_token('sdel'~s.id) }}">
+                  <button class="btn-del-session">🗑</button>
+                </form>
+              {% else %}
+                <span class="session-locked" title="Session avec inscriptions — non supprimable">🔒</span>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {# Ajouter une session #}
+    <div class="add-session-section">
+      <div class="add-session-title">+ Ajouter une session</div>
+      <form method="post" action="{{ path('formation_session_add', {id: formation.id}) }}"
+            novalidate id="sessionForm">
+        <input type="hidden" name="_token" value="{{ csrf_token('sadd'~formation.id) }}">
+        <div class="f-row">
+          <div class="f-group" id="g-dateDebut">
+            <label class="f-label">DATE DÉBUT <span class="req">*</span></label>
+            <input type="date" name="dateDebut" id="sdebut" class="f-input"
+                   onchange="validateSessionDates()">
+            <span class="f-hint" id="hint-sdebut"></span>
+          </div>
+          <div class="f-group" id="g-dateFin">
+            <label class="f-label">DATE FIN <span class="req">*</span></label>
+            <input type="date" name="dateFin" id="sfin" class="f-input"
+                   onchange="validateSessionDates()">
+            <span class="f-hint" id="hint-sfin"></span>
+          </div>
+        </div>
+        <div class="f-group">
+          <label class="f-label">LIEU</label>
+          <input type="text" name="lieu" class="f-input" value="En ligne"
+                 placeholder="En ligne / Salle 101 ...">
+        </div>
+        <div style="text-align:right;margin-top:.75rem">
+          <button type="submit" class="btn-submit" id="sessionSubmit">+ Ajouter la session</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function validateField(el) {
+  const id = el.id;
+  const hint = document.getElementById('hint-' + id);
+  const group = document.getElementById('g-' + id);
+  if (!hint || !group) return;
+  let msg = '';
+  const v = el.value.trim();
+  if (id === 'titre') {
+    if (!v) msg = 'Obligatoire.';
+    else if (v.length < 3) msg = 'Min 3 caractères.';
+    else if (v.length > 255) msg = 'Max 255 caractères.';
+  } else if (id === 'duree') {
+    const n = parseInt(v);
+    if (!v) msg = 'Obligatoire.';
+    else if (n < 1) msg = 'Min 1h.';
+    else if (n > 500) msg = 'Max 500h.';
+  } else if (id === 'typeFormation') {
+    if (!v) msg = 'Obligatoire.';
+  }
+  hint.textContent = msg;
+  group.classList.toggle('f-group-error', !!msg);
+  group.classList.toggle('f-group-ok', !msg && !!v);
+}
+
+function validateSessionDates() {
+  const debut = document.getElementById('sdebut').value;
+  const fin   = document.getElementById('sfin').value;
+  const hint  = document.getElementById('hint-sfin');
+  const group = document.getElementById('g-dateFin');
+  if (debut && fin && debut > fin) {
+    hint.textContent = 'La date de fin doit être après le début.';
+    group.classList.add('f-group-error');
+    return false;
+  }
+  if (hint) hint.textContent = '';
+  if (group) group.classList.remove('f-group-error');
+  return true;
+}
+
+document.getElementById('sessionForm').addEventListener('submit', function(e) {
+  if (!document.getElementById('sdebut').value) {
+    document.getElementById('hint-sdebut').textContent = 'Date de début obligatoire.';
+    document.getElementById('g-dateDebut')?.classList.add('f-group-error');
+    e.preventDefault(); return;
+  }
+  if (!document.getElementById('sfin').value) {
+    document.getElementById('hint-sfin').textContent = 'Date de fin obligatoire.';
+    document.getElementById('g-dateFin')?.classList.add('f-group-error');
+    e.preventDefault(); return;
+  }
+  if (!validateSessionDates()) e.preventDefault();
+});
+
+document.getElementById('editForm').addEventListener('submit', function(e) {
+  ['titre','duree','typeFormation'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) validateField(el);
+  });
+  if (document.querySelectorAll('.f-group-error').length > 0) {
+    e.preventDefault();
+    document.querySelector('.f-group-error')?.scrollIntoView({behavior:'smooth',block:'center'});
+  }
+});
+</script>
+
+<style>
+:root{--p:#4F46E5;--g100:#F3F4F6;--g200:#E5E7EB;--g500:#6B7280;--g900:#111827;--red:#DC2626;--green:#059669}
+*{box-sizing:border-box}
+.form-wrapper{padding:2rem;max-width:780px;margin:0 auto}
+.form-card{background:white;border-radius:20px;border:1px solid var(--g200);padding:2rem;box-shadow:0 4px 20px rgba(0,0,0,.07)}
+.form-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.75rem}
+.form-title{font-size:1.5rem;font-weight:800;color:var(--g900);margin:0}
+.form-sub{font-size:.88rem;color:var(--g500);margin:4px 0 0}
+.btn-back{color:var(--p);text-decoration:none;font-weight:600;font-size:.9rem}
+.f-alert-error{background:#FEF2F2;color:var(--red);border:1px solid #FECACA;padding:10px 14px;border-radius:10px;font-size:.85rem;margin-bottom:1rem}
+.f-alert-ok{background:#D1FAE5;color:#065F46;padding:10px 14px;border-radius:10px;font-size:.85rem;margin-bottom:1rem}
+.f-group{margin-bottom:1.1rem}
+.f-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.f-label{display:block;font-size:.72rem;font-weight:800;color:var(--g500);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.req{color:var(--red)}
+.f-input{width:100%;padding:10px 14px;border:1px solid var(--g200);border-radius:10px;font-size:.9rem;outline:none;transition:border-color .2s;background:white}
+.f-input:focus{border-color:var(--p);box-shadow:0 0 0 3px #4F46E518}
+.f-textarea{resize:vertical;min-height:90px}
+.f-hint{display:block;font-size:.75rem;margin-top:4px;min-height:18px;color:var(--red)}
+.f-group-error .f-input{border-color:var(--red)!important;box-shadow:0 0 0 2px #FEE2E2}
+.f-group-ok .f-input{border-color:var(--green)}
+.f-footer{display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.75rem;padding-top:1.25rem;border-top:1px solid var(--g100)}
+.btn-cancel{padding:10px 20px;border-radius:10px;text-decoration:none;font-weight:700;color:var(--g500);background:var(--g100)}
+.btn-submit{padding:10px 24px;border-radius:10px;border:none;background:var(--p);color:white;font-weight:700;cursor:pointer;font-size:.9rem}
+.sessions-title{font-size:1.1rem;font-weight:800;color:var(--g900);margin:0 0 1.25rem}
+.sessions-empty{color:var(--g500);font-size:.88rem;text-align:center;padding:1rem;background:var(--g100);border-radius:10px}
+.sessions-list{display:flex;flex-direction:column;gap:.6rem;margin-bottom:1.5rem}
+.session-row{display:flex;justify-content:space-between;align-items:center;background:var(--g100);border-radius:10px;padding:.75rem 1rem;gap:.5rem}
+.session-past{opacity:.6}
+.session-info{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;font-size:.82rem;color:var(--g500)}
+.session-dates{font-weight:700;color:var(--g900)}
+.session-statut{font-size:.7rem;font-weight:800;padding:3px 10px;border-radius:20px;background:#EEF2FF;color:var(--p)}
+.session-inscrits{font-size:.78rem}
+.session-actions{flex-shrink:0}
+.btn-del-session{background:#FEF2F2;color:var(--red);border:1px solid #FECACA;padding:5px 10px;border-radius:7px;cursor:pointer;font-size:.85rem}
+.session-locked{font-size:1rem;cursor:help}
+.add-session-section{border-top:1px dashed var(--g200);padding-top:1.25rem;margin-top:1rem}
+.add-session-title{font-size:.9rem;font-weight:700;color:var(--p);margin-bottom:.75rem}
+@media(max-width:600px){.f-row{grid-template-columns:1fr}}
+</style>
+{% endblock %}

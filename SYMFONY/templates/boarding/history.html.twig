@@ -1,0 +1,249 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Historique Boarding — Humania{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .history-wrapper {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .history-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+        .history-title {
+            font-family: var(--font-serif, 'DM Serif Display');
+            font-size: 2rem;
+            color: var(--text-dark, #1e293b);
+            margin: 0;
+        }
+        .history-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 20px;
+        }
+        .boarding-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            border: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .boarding-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+        }
+        .bc-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+        .bc-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 50px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .bc-badge.onboarding {
+            background: #ede9fe;
+            color: #667eea;
+        }
+        .bc-badge.offboarding {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+        .bc-status {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 50px;
+        }
+        .bc-status.in_progress { background: #fef3c7; color: #d97706; }
+        .bc-status.completed { background: #dcfce7; color: #16a34a; }
+        
+        .bc-user {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .bc-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            background: #f1f5f9;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+        .bc-info {
+            flex: 1;
+        }
+        .bc-name {
+            font-weight: 700;
+            color: #1e293b;
+            font-size: 1rem;
+            margin-bottom: 2px;
+        }
+        .bc-detail {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+        
+        .bc-progress-wrap {
+            margin-bottom: 16px;
+        }
+        .bc-progress-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-bottom: 6px;
+        }
+        .bc-progress-bar {
+            height: 6px;
+            background: #f1f5f9;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .bc-progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+        .bc-progress-fill.onboarding { background: #667eea; }
+        .bc-progress-fill.offboarding { background: #ef4444; }
+        
+        .bc-footer {
+            margin-top: auto;
+            border-top: 1px solid #f1f5f9;
+            padding-top: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .bc-date {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+        .bc-action {
+            padding: 6px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+        .bc-action.onboarding {
+            background: #667eea;
+            color: #fff;
+        }
+        .bc-action.offboarding {
+            background: #ef4444;
+            color: #fff;
+        }
+        .bc-action:hover {
+            opacity: 0.9;
+            color: #fff;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="history-wrapper">
+    <div class="history-header">
+        <div>
+            <h1 class="history-title">Historique des Parcours</h1>
+            <p style="color: #64748b; margin-top: 4px;">Gérez et reprenez les intégrations et les départs de vos employés.</p>
+        </div>
+        <div style="display:flex;gap:10px;">
+            <a href="{{ path('app_onboarding_index') }}" class="btn" style="background:#667eea;color:#fff;border-radius:8px;">🚀 Nouvel Onboarding</a>
+            <a href="{{ path('app_offboarding_index') }}" class="btn" style="background:#ef4444;color:#fff;border-radius:8px;">👋 Nouvel Offboarding</a>
+        </div>
+    </div>
+
+    <div class="history-grid">
+        {% for item in history %}
+            <div class="boarding-card">
+                <div class="bc-header">
+                    {% if item.type == 'onboarding' %}
+                        <span class="bc-badge onboarding">🚀 Onboarding</span>
+                    {% else %}
+                        <span class="bc-badge offboarding">👋 Offboarding</span>
+                    {% endif %}
+
+                    {% if item.status == 'completed' %}
+                        <span class="bc-status completed">Terminé</span>
+                    {% else %}
+                        <span class="bc-status in_progress">En cours</span>
+                    {% endif %}
+                </div>
+
+                <div class="bc-user">
+                    <div class="bc-avatar">
+                        {{ item.utilisateur.prenom|first|upper }}{{ item.utilisateur.nom|first|upper }}
+                    </div>
+                    <div class="bc-info">
+                        <div class="bc-name">{{ item.utilisateur.prenom }} {{ item.utilisateur.nom }}</div>
+                        <div class="bc-detail">
+                            {% if item.type == 'onboarding' %}
+                                Dpt : {{ item.detail }}
+                            {% else %}
+                                Motif : {{ item.detail }}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bc-progress-wrap">
+                    <div class="bc-progress-header">
+                        <span>Progression</span>
+                        <strong>{{ item.progress.done }} / {{ item.progress.total }}</strong>
+                    </div>
+                    <div class="bc-progress-bar">
+                        <div class="bc-progress-fill {{ item.type }}" style="width: {{ item.progress.percentage }}%"></div>
+                    </div>
+                </div>
+
+                <div class="bc-footer">
+                    <div class="bc-date">
+                        {% if item.startedAt %}
+                            Créé le {{ item.startedAt|date('d/m/Y') }}
+                        {% else %}
+                            Date inconnue
+                        {% endif %}
+                    </div>
+                    {% set resumeUrl = item.type == 'onboarding' ? path('app_onboarding_index') : path('app_offboarding_index') %}
+                    <a href="{{ resumeUrl }}?load={{ item.utilisateur.id }}" class="bc-action {{ item.type }}">
+                        {% if item.status == 'completed' %}
+                            Voir le détail
+                        {% else %}
+                            Reprendre
+                        {% endif %}
+                    </a>
+                </div>
+            </div>
+        {% else %}
+            <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; background: #fff; border-radius: 16px; border: 1px dashed #cbd5e1;">
+                <div style="font-size: 3rem; margin-bottom: 16px;">📂</div>
+                <h3 style="color: #1e293b; font-weight: 600;">Aucun historique</h3>
+                <p style="color: #64748b;">Commencez un nouvel onboarding ou offboarding pour le voir apparaître ici.</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

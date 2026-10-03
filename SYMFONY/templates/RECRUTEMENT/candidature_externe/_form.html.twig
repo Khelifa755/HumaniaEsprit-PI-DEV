@@ -1,0 +1,125 @@
+{% set form_start_opts = {'attr': {'class': 'humania-form', 'novalidate': 'novalidate'}} %}
+{% if form_action is defined %}
+  {% set form_start_opts = form_start_opts|merge({'action': form_action}) %}
+{% endif %}
+{{ form_start(form, form_start_opts) }}
+
+<div class="form-grid">
+
+  <div class="form-group">
+    {{ form_label(form.nom, 'Nom') }}
+    {{ form_widget(form.nom, {'attr': {'placeholder': 'Ex : Khlelifa'}}) }}
+    {{ form_errors(form.nom) }}
+  </div>
+
+  <div class="form-group">
+    {{ form_label(form.prenom, 'Prénom') }}
+    {{ form_widget(form.prenom, {'attr': {'placeholder': 'Ex : Amine'}}) }}
+    {{ form_errors(form.prenom) }}
+  </div>
+
+  <div class="form-group">
+    {{ form_label(form.dateDepot, 'Date de dépôt') }}
+    {{ form_widget(form.dateDepot) }}
+    {{ form_errors(form.dateDepot) }}
+  </div>
+
+  <div class="form-group">
+    {{ form_label(form.statut, 'Statut') }}
+    {{ form_widget(form.statut) }}
+    {{ form_errors(form.statut) }}
+  </div>
+
+  <div class="form-group">
+    {{ form_label(form.etapePipeline, 'Étape pipeline') }}
+    {{ form_widget(form.etapePipeline) }}
+    {{ form_errors(form.etapePipeline) }}
+  </div>
+
+  {% if form.scoringIa is defined %}
+  <div class="form-group">
+    {{ form_label(form.scoringIa, 'Scoring IA') }}
+    {{ form_widget(form.scoringIa, {'attr': {'placeholder': '0–100'}}) }}
+    {{ form_errors(form.scoringIa) }}
+  </div>
+  {% endif %}
+
+  {% if form.posteExterneId is defined %}
+  <div class="form-group full">
+    {{ form_label(form.posteExterneId, 'Poste externe') }}
+    {{ form_widget(form.posteExterneId) }}
+    {{ form_errors(form.posteExterneId) }}
+  </div>
+  {% endif %}
+
+  {% if form.cvUrl is defined %}
+  <div class="form-group full">
+    {{ form_label(form.cvUrl, 'URL du CV') }}
+    {{ form_widget(form.cvUrl, {'attr': {'placeholder': 'https://…'}}) }}
+    {{ form_errors(form.cvUrl) }}
+  </div>
+  {% endif %}
+
+  {% if form.lettreMotivationUrl is defined %}
+  <div class="form-group full">
+    {{ form_label(form.lettreMotivationUrl, 'URL lettre de motivation') }}
+    {{ form_widget(form.lettreMotivationUrl, {'attr': {'placeholder': 'https://…'}}) }}
+    {{ form_errors(form.lettreMotivationUrl) }}
+  </div>
+  {% endif %}
+
+</div>
+
+{# Hidden remaining fields (auto-rendered) #}
+{{ form_rest(form) }}
+
+<div class="modal-footer" style="margin-top:22px">
+  <button type="submit" class="btn-save">
+    {{ button_label|default('Enregistrer') }}
+  </button>
+</div>
+
+{{ form_end(form) }}
+
+<style>
+  .humania-form .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .humania-form .form-group.full { grid-column: 1 / -1; }
+  .humania-form .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .humania-form label {
+    font-size: .8rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .humania-form input,
+  .humania-form select,
+  .humania-form textarea {
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: .9rem;
+    font-family: 'DM Sans', sans-serif;
+    color: #1e293b;
+    background: #f4f6fb;
+    outline: none;
+    transition: border-color .2s, background .2s;
+    width: 100%;
+  }
+  .humania-form input:focus,
+  .humania-form select:focus,
+  .humania-form textarea:focus {
+    border-color: #6c3fc5;
+    background: #fff;
+  }
+  .humania-form ul.errors {
+    list-style: none;
+    color: #dc2626;
+    font-size: .78rem;
+    margin-top: 3px;
+  }
+</style>

@@ -1,0 +1,97 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ reunion.titre }} — Réunion{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="{{ asset('css/reunion_modal.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-2 px-md-3 py-2">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h1 class="h4 fw-bold mb-1">{{ reunion.titre }}</h1>
+            <p class="text-muted small mb-0">
+                {{ reunion.dateHeureDebut|date('d/m/Y H:i') }}
+                → {{ reunion.dateHeureFin|date('d/m/Y H:i') }}
+            </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ path('app_reunion_index') }}" class="btn btn-outline-secondary btn-sm rounded-3">Liste</a>
+            <a href="{{ path('app_reunion_calendar') }}" class="btn btn-outline-secondary btn-sm rounded-3">Calendrier</a>
+            <button type="button" class="btn btn-sm rounded-3 text-white border-0"
+                    style="background:#7F77DD"
+                    data-rm-edit-url="{{ path('app_reunion_edit', { id: reunion.id }) }}">Modifier</button>
+        </div>
+    </div>
+
+    <div class="card border rounded-3 shadow-sm">
+        <div class="card-body">
+            <dl class="row mb-0 small">
+                <dt class="col-sm-3 text-muted">Statut</dt>
+                <dd class="col-sm-9">{{ reunion.statut ? 'Active' : 'Annulée' }}</dd>
+
+                <dt class="col-sm-3 text-muted">Lieu</dt>
+                <dd class="col-sm-9">
+                    {% if reunion.enLigne %}
+                        Visioconférence
+                    {% elseif reunion.idSalle %}
+                        {{ reunion.idSalle.nom }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </dd>
+
+                <dt class="col-sm-3 text-muted">Organisateur</dt>
+                <dd class="col-sm-9">{{ reunion.nomOrganisateur }} — {{ reunion.emailOrganisateur }}</dd>
+
+                <dt class="col-sm-3 text-muted">Participants</dt>
+                <dd class="col-sm-9">{{ reunion.participants ?: '—' }}</dd>
+
+                <dt class="col-sm-3 text-muted">Description</dt>
+                <dd class="col-sm-9">{{ reunion.description|nl2br }}</dd>
+            </dl>
+        </div>
+    </div>
+</div>
+{# ── Shell du modal — le contenu est injecté en AJAX par reunion_modal.js ── #}
+<div id="rm-overlay" class="rm-overlay" aria-hidden="true" role="presentation">
+    <div class="rm-dialog" role="dialog" aria-modal="true" aria-labelledby="rm-dialog-title">
+    </div>
+</div>
+
+{% if reunion.enLigne and reunion.zoom_join_url %}
+<div class="zoom-card">
+    <div class="zoom-card__header">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        Réunion Zoom
+    </div>
+    <div class="zoom-card__body">
+        <div class="zoom-info-row">
+            <span class="zoom-info-label">ID Meeting</span>
+            <code>{{ reunion.zoom_meeting_id }}</code>
+        </div>
+        {% if reunion.zoom_password %}
+        <div class="zoom-info-row">
+            <span class="zoom-info-label">Mot de passe</span>
+            <code>{{ reunion.zoom_password }}</code>
+        </div>
+        {% endif %}
+        <div class="zoom-actions mt-3">
+            <a href="{{ reunion.zoom_join_url }}" target="_blank" class="btn btn-primary btn-sm rounded-3">
+                🔗 Rejoindre la réunion
+            </a>
+            <a href="{{ reunion.zoom_start_url }}" target="_blank" class="btn btn-outline-secondary btn-sm rounded-3">
+                ▶ Démarrer (hôte)
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script src="{{ asset('js/reunion_modal.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,169 @@
+{% set form_start_opts = {'attr': {'class': 'pe-form', 'novalidate': 'novalidate'}} %}
+{% if form_action is defined %}
+  {% set form_start_opts = form_start_opts|merge({'action': form_action}) %}
+{% endif %}
+{{ form_start(form, form_start_opts) }}
+
+<div class="pe-grid">
+
+  {# Row 1: Titre (full width) #}
+  <div class="pe-group pe-full">
+    {{ form_label(form.titre, 'Titre du poste') }}
+    {{ form_widget(form.titre, {'attr': {'placeholder': 'Ex : Développeur Full-Stack Java/Angular'}}) }}
+    {{ form_errors(form.titre) }}
+  </div>
+
+  {# Row 2: description (full width) #}
+  {% if form.description is defined %}
+  <div class="pe-group pe-full">
+    {{ form_label(form.description, 'Description') }}
+    {{ form_widget(form.description, {'attr': {'placeholder': 'Décrivez le poste, les responsabilités…', 'rows': 3}}) }}
+    {{ form_errors(form.description) }}
+  </div>
+  {% endif %}
+
+  {# Row 3 : type contrat + salaire #}
+  {% if form.typeContrat is defined %}
+  <div class="pe-group">
+    {{ form_label(form.typeContrat, 'Type de contrat') }}
+    {{ form_widget(form.typeContrat) }}
+    {{ form_errors(form.typeContrat) }}
+  </div>
+  {% endif %}
+
+  {% if form.salaire is defined %}
+  <div class="pe-group">
+    {{ form_label(form.salaire, 'Salaire (TND)') }}
+    {{ form_widget(form.salaire, {'attr': {'placeholder': 'Ex : 3500'}}) }}
+    {{ form_errors(form.salaire) }}
+  </div>
+  {% endif %}
+
+  {# Row 4 : statut + priorite #}
+  {% if form.statut is defined %}
+  <div class="pe-group">
+    {{ form_label(form.statut, 'Statut') }}
+    {{ form_widget(form.statut) }}
+    {{ form_errors(form.statut) }}
+  </div>
+  {% endif %}
+
+  {% if form.priorite is defined %}
+  <div class="pe-group">
+    {{ form_label(form.priorite, 'Priorité') }}
+    {{ form_widget(form.priorite) }}
+    {{ form_errors(form.priorite) }}
+  </div>
+  {% endif %}
+
+  {# Row 5 : dates #}
+  {% if form.datePublication is defined %}
+  <div class="pe-group">
+    {{ form_label(form.datePublication, 'Date de publication') }}
+    {{ form_widget(form.datePublication) }}
+    {{ form_errors(form.datePublication) }}
+  </div>
+  {% endif %}
+
+  {% if form.dateCloture is defined %}
+  <div class="pe-group">
+    {{ form_label(form.dateCloture, 'Date de clôture') }}
+    {{ form_widget(form.dateCloture) }}
+    {{ form_errors(form.dateCloture) }}
+  </div>
+  {% endif %}
+
+  {# Row 6 : experience + niveau + nombre #}
+  {% if form.experienceRequise is defined %}
+  <div class="pe-group">
+    {{ form_label(form.experienceRequise, 'Expérience requise') }}
+    {{ form_widget(form.experienceRequise, {'attr': {'placeholder': 'Ex : 3 ans'}}) }}
+    {{ form_errors(form.experienceRequise) }}
+  </div>
+  {% endif %}
+
+  {% if form.niveauEtudeRequis is defined %}
+  <div class="pe-group">
+    {{ form_label(form.niveauEtudeRequis, 'Niveau d\'étude requis') }}
+    {{ form_widget(form.niveauEtudeRequis) }}
+    {{ form_errors(form.niveauEtudeRequis) }}
+  </div>
+  {% endif %}
+
+  {% if form.nombreEmploye is defined %}
+  <div class="pe-group">
+    {{ form_label(form.nombreEmploye, 'Nombre de postes') }}
+    {{ form_widget(form.nombreEmploye, {'attr': {'placeholder': '1'}}) }}
+    {{ form_errors(form.nombreEmploye) }}
+  </div>
+  {% endif %}
+
+  {# Compétences (full width) #}
+  {% if form.competencesRequises is defined %}
+  <div class="pe-group pe-full">
+    {{ form_label(form.competencesRequises, 'Compétences requises') }}
+    {{ form_widget(form.competencesRequises, {'attr': {'placeholder': 'Java, Spring Boot, Angular, SQL…', 'rows': 2}}) }}
+    {{ form_errors(form.competencesRequises) }}
+  </div>
+  {% endif %}
+
+</div>
+
+{{ form_rest(form) }}
+
+<div class="pe-footer">
+  <button type="button" class="pe-btn-cancel"
+          onclick="closeModal(document.querySelector('.modal-overlay.active')?.id)">
+    Annuler
+  </button>
+  <button type="submit" class="pe-btn-save">
+    {{ button_label|default('Enregistrer') }}
+  </button>
+</div>
+
+{{ form_end(form) }}
+
+<style>
+  .pe-form { }
+  .pe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+  .pe-group { display: flex; flex-direction: column; gap: 5px; }
+  .pe-full  { grid-column: 1 / -1; }
+
+  .pe-form label {
+    font-size: .79rem; font-weight: 600;
+    color: #64748b; text-transform: uppercase; letter-spacing: .04em;
+  }
+  .pe-form input,
+  .pe-form select,
+  .pe-form textarea {
+    border: 1.5px solid #e2e8f0; border-radius: 8px;
+    padding: 10px 14px; font-size: .9rem;
+    font-family: 'DM Sans', sans-serif; color: #1e293b;
+    background: #f4f6fb; outline: none; width: 100%; resize: vertical;
+    transition: border-color .2s, background .2s;
+  }
+  .pe-form input:focus,
+  .pe-form select:focus,
+  .pe-form textarea:focus { border-color: #06b6d4; background: #fff; }
+
+  .pe-form ul.errors { list-style: none; color: #dc2626; font-size: .78rem; margin-top: 3px; }
+
+  .pe-footer {
+    display: flex; justify-content: flex-end; gap: 10px;
+    margin-top: 20px; padding-top: 18px; border-top: 1px solid #e2e8f0;
+  }
+  .pe-btn-cancel {
+    padding: 10px 22px; border-radius: 8px;
+    border: 1.5px solid #e2e8f0; background: transparent;
+    font-size: .9rem; font-family: inherit; font-weight: 600;
+    cursor: pointer; color: #64748b; transition: background .15s;
+  }
+  .pe-btn-cancel:hover { background: #f4f6fb; }
+  .pe-btn-save {
+    padding: 10px 26px; border-radius: 8px; border: none;
+    background: #06b6d4; color: #fff;
+    font-size: .9rem; font-family: inherit; font-weight: 600;
+    cursor: pointer; transition: background .2s, transform .15s;
+  }
+  .pe-btn-save:hover { background: #0891b2; transform: translateY(-1px); }
+</style>

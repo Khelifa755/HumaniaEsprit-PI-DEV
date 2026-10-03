@@ -1,0 +1,18 @@
+# config/packages/twig.yaml
+twig:
+    default_path: '%kernel.project_dir%/templates'
+    debug: '%kernel.debug%'
+    strict_variables: '%kernel.debug%'
+    form_themes: ['bootstrap_5_layout.html.twig']
+
+    # file_name_pattern: "*.twig"
+    # globals:
+    # recaptcha_site_key: "%env(RECAPTCHA_SITE_KEY)%"
+
+when@test:
+    twig:
+        strict_variables: true
+        globals:
+            getTypeLabel: '@App\Controller\CONGE\CongeController::getTypeLabel'
+
+

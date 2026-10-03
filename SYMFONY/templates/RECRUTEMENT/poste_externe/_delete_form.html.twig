@@ -1,0 +1,19 @@
+<form method="post"
+      action="{{ path('app_poste_externe_delete', {'id': poste_externe.id}) }}"
+      onsubmit="return confirm('Confirmer la suppression de ce poste ?');"
+      style="display:inline">
+  <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ poste_externe.id) }}">
+  <button type="submit" style="
+    display:inline-flex;align-items:center;gap:6px;
+    padding:9px 18px;border-radius:8px;border:none;
+    background:#fef2f2;color:#dc2626;
+    font-size:.85rem;font-family:inherit;font-weight:600;
+    cursor:pointer;transition:background .2s;">
+    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <polyline points="3 6 5 6 21 6"/>
+      <path d="M19 6l-1 14H6L5 6"/>
+      <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
+    </svg>
+    Supprimer ce poste
+  </button>
+</form>

@@ -1,0 +1,457 @@
+/* ================================================================
+   reunion_modal.css  →  public/css/reunion_modal.css
+   Système de modal custom (rm-overlay / rm-dialog)
+   ================================================================ */
+
+/* ── Overlay / backdrop ─────────────────────────────────────── */
+.rm-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    background: rgba(15, 23, 42, 0.50);
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+.rm-overlay.rm-overlay--open {
+    display: flex;
+    animation: rm-fade-in 0.18s ease;
+}
+
+@keyframes rm-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* ── Dialog box ─────────────────────────────────────────────── */
+.rm-dialog {
+    background: #ffffff;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 94vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow:
+        0 32px 80px rgba(0, 0, 0, 0.22),
+        0 8px 24px rgba(0, 0, 0, 0.10),
+        0 0 0 1px rgba(255,255,255,.06);
+    animation: rm-slide-up 0.22s cubic-bezier(.34,1.3,.64,1);
+}
+
+@keyframes rm-slide-up {
+    from { opacity: 0; transform: translateY(20px) scale(.97); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);   }
+}
+
+/* ── Header ─────────────────────────────────────────────────── */
+.rm-dialog__head {
+    background: linear-gradient(135deg, #0F6E56 0%, #0a5240 100%);
+    padding: 1.1rem 1.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Decorative circle */
+.rm-dialog__head::before {
+    content: '';
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.05);
+    top: -40px;
+    right: 30px;
+}
+
+.rm-dialog__head-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+}
+
+.rm-dialog__head-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: rgba(157, 225, 203, 0.18);
+    border: 1px solid rgba(157,225,203,.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9FE1CB;
+    flex-shrink: 0;
+}
+
+.rm-dialog__title {
+    color: #E1F5EE;
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: 0.01em;
+}
+
+.rm-dialog__subtitle {
+    color: rgba(159,225,203,.7);
+    font-size: 11.5px;
+    margin: 1px 0 0;
+    font-weight: 400;
+}
+
+.rm-dialog__close {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid rgba(255,255,255,.12);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9FE1CB;
+    transition: background 0.15s;
+    flex-shrink: 0;
+    padding: 0;
+    position: relative;
+}
+.rm-dialog__close:hover {
+    background: rgba(255, 255, 255, 0.20);
+    color: #fff;
+}
+
+/* ── Body ───────────────────────────────────────────────────── */
+.rm-dialog__body {
+    padding: 1.3rem 1.4rem 1.4rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: #fafbfc;
+}
+
+/* Custom scrollbar */
+.rm-dialog__body::-webkit-scrollbar { width: 5px; }
+.rm-dialog__body::-webkit-scrollbar-track { background: transparent; }
+.rm-dialog__body::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 9px; }
+
+/* ── Form ───────────────────────────────────────────────────── */
+.rm-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.rm-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.rm-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+/* Labels */
+.rm-field > label {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0;
+}
+
+/* Inputs, textareas, selects */
+.rm-field input[type="text"],
+.rm-field input[type="email"],
+.rm-field input[type="date"],
+.rm-field input[type="time"],
+.rm-field textarea,
+.rm-field select {
+    background: #ffffff;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 9px;
+    padding: 9px 11px;
+    font-size: 13.5px;
+    color: #111827;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    width: 100%;
+}
+.rm-field textarea {
+    min-height: 75px;
+    resize: vertical;
+}
+.rm-field input:focus,
+.rm-field textarea:focus,
+.rm-field select:focus {
+    border-color: #0F6E56;
+    box-shadow: 0 0 0 3px rgba(15, 110, 86, 0.12);
+    background: #fff;
+}
+
+.rm-field input:hover:not(:focus),
+.rm-field textarea:hover:not(:focus),
+.rm-field select:hover:not(:focus) {
+    border-color: #d1d5db;
+}
+
+/* Error state */
+.rm-field input.rm-field--error,
+.rm-field select.rm-field--error,
+.rm-field textarea.rm-field--error {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239,68,68,.1);
+}
+
+/* Symfony form errors */
+.rm-field .form-error-message,
+.rm-field ul {
+    font-size: 12px;
+    color: #b91c1c;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* ── Alert banners ──────────────────────────────────────────── */
+.rm-form-errors {
+    background: #fef2f2;
+    border: 1.5px solid #fecaca;
+    border-radius: 9px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #b91c1c;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+.rm-form-errors::before {
+    content: '⚠️';
+    flex-shrink: 0;
+    font-size: 14px;
+}
+
+.rm-form-success {
+    background: #f0fdf4;
+    border: 1.5px solid #bbf7d0;
+    border-radius: 9px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #15803d;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.rm-form-success::before {
+    content: '✓';
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+/* ── Section separator ──────────────────────────────────────── */
+.rm-section-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 2px 0 0;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+.rm-section-label::before,
+.rm-section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e5e7eb;
+}
+
+/* ── Toggle (en-ligne) ──────────────────────────────────────── */
+.rm-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 11px 14px;
+    border: 1.5px solid #e5e7eb;
+    cursor: pointer;
+    user-select: none;
+    transition: border-color .15s, box-shadow .15s;
+}
+.rm-toggle-row:hover {
+    border-color: #0F6E56;
+    box-shadow: 0 0 0 3px rgba(15,110,86,.08);
+}
+
+.rm-toggle {
+    position: relative;
+    width: 40px;
+    height: 23px;
+    flex-shrink: 0;
+}
+
+/* hide the real checkbox */
+.rm-toggle input[type="checkbox"] {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+.rm-toggle__slider {
+    position: absolute;
+    inset: 0;
+    background: #d1d5db;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.rm-toggle__slider::before {
+    content: '';
+    position: absolute;
+    width: 17px;
+    height: 17px;
+    left: 3px;
+    bottom: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,.22);
+}
+.rm-toggle input:checked + .rm-toggle__slider          { background: #0F6E56; }
+.rm-toggle input:checked + .rm-toggle__slider::before  { transform: translateX(17px); }
+
+.rm-toggle__text {
+    font-size: 13.5px;
+    color: #111827;
+    font-weight: 500;
+    line-height: 1.4;
+}
+.rm-toggle__text span {
+    display: block;
+    font-size: 11.5px;
+    color: #9ca3af;
+    margin-top: 1px;
+    font-weight: 400;
+}
+
+/* ── Salle disabled state ───────────────────────────────────── */
+#rm-salle-field.rm-field--disabled {
+    opacity: 0.40;
+    pointer-events: none;
+}
+
+/* ── Form footer (buttons) ──────────────────────────────────── */
+.rm-form-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    padding-top: 14px;
+    margin-top: 4px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.rm-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 9px;
+    padding: 9px 20px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s, box-shadow 0.15s;
+    border: none;
+    line-height: 1;
+}
+.rm-btn:active { transform: scale(.98); }
+
+.rm-btn--cancel {
+    background: transparent;
+    border: 1.5px solid #e5e7eb;
+    color: #6b7280;
+}
+.rm-btn--cancel:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+}
+
+.rm-btn--submit {
+    background: linear-gradient(135deg, #0F6E56, #0a5240);
+    color: #E1F5EE;
+    border: 1px solid transparent;
+    box-shadow: 0 2px 8px rgba(15,110,86,.25);
+}
+.rm-btn--submit:hover {
+    background: linear-gradient(135deg, #085041, #063d30);
+    box-shadow: 0 4px 14px rgba(15,110,86,.35);
+}
+.rm-btn--submit:disabled {
+    opacity: .65;
+    cursor: not-allowed;
+}
+
+/* ── Spinner ────────────────────────────────────────────────── */
+.rm-spinner {
+    width: 36px;
+    height: 36px;
+    border: 3.5px solid #e5e7eb;
+    border-top-color: #0F6E56;
+    border-radius: 50%;
+    animation: rm-spin 0.65s linear infinite;
+    margin: auto;
+}
+
+@keyframes rm-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ── Input group (date + time on same row) ──────────────────── */
+.rm-datetime-group {
+    background: #fff;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 9px;
+    overflow: hidden;
+    display: flex;
+    transition: border-color .15s, box-shadow .15s;
+}
+.rm-datetime-group:focus-within {
+    border-color: #0F6E56;
+    box-shadow: 0 0 0 3px rgba(15,110,86,.12);
+}
+.rm-datetime-group input {
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    flex: 1;
+}
+.rm-datetime-group input:not(:last-child) {
+    border-right: 1.5px solid #e5e7eb !important;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 640px) {
+    .rm-dialog { border-radius: 12px; max-height: 96vh; }
+    .rm-row { grid-template-columns: 1fr; }
+    .rm-form-footer { flex-direction: column-reverse; }
+    .rm-btn { width: 100%; justify-content: center; }
+}

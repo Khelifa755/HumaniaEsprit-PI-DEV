@@ -1,0 +1,119 @@
+{% set form_start_opts = {'attr': {'class': 'hi-form', 'novalidate': 'novalidate'}} %}
+{% if form_action is defined %}
+  {% set form_start_opts = form_start_opts|merge({'action': form_action}) %}
+{% endif %}
+{{ form_start(form, form_start_opts) }}
+
+<div class="hi-grid">
+
+  <div class="hi-group">
+    {{ form_label(form.posteActuel, 'Poste actuel') }}
+    {{ form_widget(form.posteActuel, {'attr': {'placeholder': 'Ex : Développeur Junior'}}) }}
+    {{ form_errors(form.posteActuel) }}
+  </div>
+
+  <div class="hi-group">
+    {{ form_label(form.nouveauPoste, 'Nouveau poste souhaité') }}
+    {{ form_widget(form.nouveauPoste, {'attr': {'placeholder': 'Ex : Développeur Senior'}}) }}
+    {{ form_errors(form.nouveauPoste) }}
+  </div>
+
+  <div class="hi-group">
+    {{ form_label(form.dateDemande, 'Date de la demande') }}
+    {{ form_widget(form.dateDemande) }}
+    {{ form_errors(form.dateDemande) }}
+  </div>
+
+  <div class="hi-group">
+    {{ form_label(form.nouveauSalaire, 'Nouveau salaire (TND)') }}
+    {{ form_widget(form.nouveauSalaire, {'attr': {'placeholder': 'Ex : 3500'}}) }}
+    {{ form_errors(form.nouveauSalaire) }}
+  </div>
+
+  <div class="hi-group">
+    {{ form_label(form.statut, 'Statut') }}
+    {{ form_widget(form.statut) }}
+    {{ form_errors(form.statut) }}
+  </div>
+
+  <div class="hi-group hi-full">
+    {{ form_label(form.motif, 'Motif de la demande') }}
+    {{ form_widget(form.motif, {'attr': {'placeholder': 'Décrivez les raisons de votre demande de mobilité…', 'rows': 4}}) }}
+    {{ form_errors(form.motif) }}
+  </div>
+
+</div>
+
+{{ form_rest(form) }}
+
+<div class="hi-footer">
+  <button type="button" class="hi-btn-cancel"
+          onclick="closeModal(document.querySelector('.modal-overlay.active')?.id)">
+    Annuler
+  </button>
+  <button type="submit" class="hi-btn-save">
+    {{ button_label|default('Enregistrer') }}
+  </button>
+</div>
+
+{{ form_end(form) }}
+
+<style>
+  .hi-form { }
+  .hi-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .hi-group       { display: flex; flex-direction: column; gap: 5px; }
+  .hi-full        { grid-column: 1 / -1; }
+
+  .hi-form label {
+    font-size: .79rem; font-weight: 600;
+    color: #64748b; text-transform: uppercase; letter-spacing: .04em;
+  }
+  .hi-form input,
+  .hi-form select,
+  .hi-form textarea {
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: .9rem;
+    font-family: 'DM Sans', sans-serif;
+    color: #1e293b;
+    background: #f4f6fb;
+    outline: none;
+    transition: border-color .2s, background .2s;
+    width: 100%;
+    resize: vertical;
+  }
+  .hi-form input:focus,
+  .hi-form select:focus,
+  .hi-form textarea:focus {
+    border-color: #6c3fc5;
+    background: #fff;
+  }
+  .hi-form ul.errors {
+    list-style: none; color: #dc2626;
+    font-size: .78rem; margin-top: 3px;
+  }
+  .hi-footer {
+    display: flex; justify-content: flex-end; gap: 10px;
+    margin-top: 22px; padding-top: 18px;
+    border-top: 1px solid #e2e8f0;
+  }
+  .hi-btn-cancel {
+    padding: 10px 22px; border-radius: 8px;
+    border: 1.5px solid #e2e8f0; background: transparent;
+    font-size: .9rem; font-family: inherit; font-weight: 600;
+    cursor: pointer; color: #64748b; transition: background .15s;
+  }
+  .hi-btn-cancel:hover { background: #f4f6fb; }
+  .hi-btn-save {
+    padding: 10px 26px; border-radius: 8px; border: none;
+    background: #6c3fc5; color: #fff;
+    font-size: .9rem; font-family: inherit; font-weight: 600;
+    cursor: pointer; transition: background .2s, transform .15s;
+  }
+  .hi-btn-save:hover { background: #5530a8; transform: translateY(-1px); }
+</style>

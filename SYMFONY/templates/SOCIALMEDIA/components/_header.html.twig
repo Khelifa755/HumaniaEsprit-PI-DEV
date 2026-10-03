@@ -1,0 +1,302 @@
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+{# LinkedIn-Style Header with Google-Inspired Logo #}
+<header style="position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: #fff; border-bottom: 1px solid #e0e0e0; padding: 0; margin: 0; height: 60px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); width: 100%;">
+    <div style="display: flex; align-items: center; justify-content: space-between; height: 100%; padding: 0 20px; gap: 20px; max-width: 1400px; margin: 0 auto;">
+        
+        {# LEFT: Logo + Search #}
+        <div style="display: flex; align-items: center; gap: 16px; flex-shrink: 0; min-width: 0;">
+            {# Back arrow to previous page #}
+            <button
+                type="button"
+                onclick="goBackFromSocial()"
+                title="Retour"
+                style="width: 36px; height: 36px; border-radius: 18px; border: 1px solid #d5d9e0; background: #fff; color: #65676b; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;"
+                onmouseover="this.style.background='#f3f4f6'; this.style.color='#000'"
+                onmouseout="this.style.background='#fff'; this.style.color='#65676b'">
+                <i class="fas fa-arrow-left" style="font-size: 13px;"></i>
+            </button>
+
+            {# Simple Gray H Logo #}
+            <a href="{{ path('social_feed') }}" style="display: flex; align-items: center; text-decoration: none; flex-shrink: 0; width: 44px; height: 44px; border-radius: 4px; background: #f0f2f5; color: #65676b; font-size: 24px; font-weight: 900; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; justify-content: center;">
+                H
+            </a>
+
+            {# Search Bar #}
+            <div style="position: relative; flex-grow: 1; max-width: 380px;">
+                <input type="text" id="headerSearch" placeholder="Rechercher des personnes, posts, emplois…" style="width: 100%; height: 40px; border-radius: 24px; border: none; background: #f0f2f5; padding: 0 40px 0 16px; font-size: 14px; color: #000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; outline: none; transition: background 0.2s;" onfocus="this.style.background='#e4e6eb'" onblur="this.style.background='#f0f2f5'">
+                <i class="fas fa-search" style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #65676b; font-size: 13px; pointer-events: none;"></i>
+            </div>
+        </div>
+
+        {# CENTER: Navigation Items with Icons & Labels #}
+        <nav style="display: flex; align-items: stretch; gap: 0; flex: 0 0 auto; height: 100%;">
+            {# Accueil #}
+            <a href="{{ path('social_feed') }}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 8px 16px; text-decoration: none; color: #65676b; transition: all 0.2s; border-bottom: 3px solid transparent; position: relative; min-width: 80px;" class="nav-item {% if app.request.attributes.get('_route') == 'social_feed' and app.request.query.get('mode') != 'popular' %}nav-active{% endif %}" onmouseover="this.style.color='#000'; this.style.borderBottomColor='#ccc'" onmouseout="this.style.color='#65676b'; this.style.borderBottomColor='transparent'">
+                <i class="fas fa-home" style="font-size: 20px;"></i>
+                <span style="font-size: 12px; font-weight: 500;">Accueil</span>
+            </a>
+
+            {# Réseau #}
+            <a href="{{ path('social_network_index') }}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 8px 16px; text-decoration: none; color: #65676b; transition: all 0.2s; border-bottom: 3px solid transparent; position: relative; min-width: 80px;" class="nav-item {% if app.request.attributes.get('_route') starts with 'social_network' %}nav-active{% endif %}" onmouseover="this.style.color='#000'; this.style.borderBottomColor='#ccc'" onmouseout="this.style.color='#65676b'; this.style.borderBottomColor='transparent'">
+                <i class="fas fa-people-group" style="font-size: 20px;"></i>
+                <span style="font-size: 12px; font-weight: 500;">Réseau</span>
+            </a>
+
+            {# Messages — ouvre le widget messagerie (chat.js) #}
+            <button type="button" onclick="openSocialMessenger()" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 8px 16px; margin: 0; color: #65676b; transition: all 0.2s; border: none; border-bottom: 3px solid transparent; background: transparent; position: relative; min-width: 80px; cursor: pointer; font-family: inherit;" class="nav-item" onmouseover="this.style.color='#000'; this.style.borderBottomColor='#ccc'" onmouseout="this.style.color='#65676b'; this.style.borderBottomColor='transparent'" aria-label="Ouvrir la messagerie">
+                <div style="position: relative;">
+                    <i class="fas fa-comment-dots" style="font-size: 20px;"></i>
+                    <span id="header-messages-badge" style="position: absolute; top: -6px; right: -8px; background: #e74c3c; color: white; border-radius: 50%; min-width: 20px; height: 20px; padding: 0 5px; display: none; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; line-height: 1; box-sizing: border-box;"></span>
+                </div>
+                <span style="font-size: 12px; font-weight: 500;">Messages</span>
+            </button>
+
+            {# Notifications #}
+            <a href="#" onclick="toggleNotificationsPanel(event); return false;" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 8px 16px; text-decoration: none; color: #65676b; transition: all 0.2s; border-bottom: 3px solid transparent; position: relative; min-width: 80px; cursor: pointer;" class="nav-item" onmouseover="this.style.color='#000'; this.style.borderBottomColor='#ccc'" onmouseout="this.style.color='#65676b'; this.style.borderBottomColor='transparent'">
+                <div style="position: relative;">
+                    <i class="fas fa-bell" style="font-size: 20px;"></i>
+                    <span id="notification-badge" style="position: absolute; top: -6px; right: -8px; background: #e74c3c; color: white; border-radius: 50%; width: 20px; height: 20px; display: none; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; line-height: 1;"></span>
+                </div>
+                <span style="font-size: 12px; font-weight: 500;">Notifications</span>
+            </a>
+        </nav>
+
+        {# RIGHT: Avatar #}
+        <div style="display: flex; align-items: center; gap: 12px; flex-shrink: 0;">
+            {# Avatar with Dropdown #}
+            {% if currentUser is defined %}
+            <div style="position: relative;">
+                <button onclick="toggleProfileMenu(event)" style="display: flex; align-items: center; gap: 8px; background: #f0f2f5; border: none; border-radius: 20px; padding: 6px 12px; cursor: pointer; transition: all 0.2s; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;" onmouseover="this.style.background='#e4e6eb'" onmouseout="this.style.background='#f0f2f5'">
+                    <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #0a66c2, #0856a6); display: flex; align-items: center; justify-content: center; overflow: hidden; color: white; font-weight: 700; font-size: 12px; flex-shrink: 0;">
+                        {% if currentUser.avatarUrl %}
+                            <img src="{{ currentUser.avatarUrl }}" style="width: 100%; height: 100%; object-fit: cover;">
+                        {% else %}
+                            {{ currentUser.firstName|first|upper }}{{ currentUser.lastName|first|upper }}
+                        {% endif %}
+                    </div>
+                    <span style="color: #65676b; font-size: 13px; font-weight: 500;">
+                        {{ (currentUser.firstName|first|upper) ~ (currentUser.lastName|first|upper) }}
+                    </span>
+                    <i class="fas fa-chevron-down" style="font-size: 11px; color: #65676b;"></i>
+                </button>
+
+                {# Profile Dropdown Menu #}
+                <div id="profileMenu" style="display: none; position: absolute; top: calc(100% + 8px); right: 0; background: #fff; border: 1px solid #d5d9e0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); width: 200px; z-index: 1001; overflow: hidden;">
+                    <a href="{{ path('social_profile_me') }}" style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: #0a66c2; text-decoration: none; font-size: 13px; border-bottom: 1px solid #e8e8e8; transition: all 0.2s; font-weight: 500;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">
+                        <i class="fas fa-user" style="width: 16px; font-size: 13px;"></i>
+                        Voir profil
+                    </a>
+                    <a href="{{ path('social_groups_index') }}" style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: #0a66c2; text-decoration: none; font-size: 13px; border-bottom: 1px solid #e8e8e8; transition: all 0.2s; font-weight: 500;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">
+                        <i class="fas fa-people-group" style="width: 16px; font-size: 13px;"></i>
+                        Voir groupes
+                    </a>
+                    {% if currentUser.role == 'ADMIN' %}
+                    <a href="{{ path('admin_dashboard') }}" style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: #e74c3c; text-decoration: none; font-size: 13px; transition: all 0.2s; font-weight: 600;" onmouseover="this.style.background='#fff5f5'" onmouseout="this.style.background='#fff'">
+                        <i class="fas fa-sliders-h" style="width: 16px; font-size: 13px;"></i>
+                        🔧 Admin Dashboard
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</header>
+
+{# Notifications Panel #}
+<div id="notificationsPanel" style="display: none; position: fixed; top: 60px; right: 20px; background: #fff; border: 1px solid #d5d9e0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); width: 380px; max-height: 500px; overflow-y: auto; z-index: 1001;">
+    <div style="padding: 12px 16px; border-bottom: 1px solid #e8e8e8; font-weight: 600; color: #000; font-size: 14px; display: flex; justify-content: space-between; align-items: center;">
+        <span>Notifications</span>
+        {% if notifications is defined and notifications|length > 0 %}
+        <button onclick="markAllAsRead()" style="background: #0a66c2; color: #fff; border: none; border-radius: 4px; padding: 4px 10px; font-size: 12px; cursor: pointer; font-weight: 500;" onmouseover="this.style.background='#004182'" onmouseout="this.style.background='#0a66c2'">Tout marquer</button>
+        {% endif %}
+    </div>
+    
+    {% if notifications is defined and notifications|length > 0 %}
+        {% for notif in notifications %}
+        <div id="notif-{{ notif.id }}" style="padding: 12px 16px; border-bottom: 1px solid #f0f0f0; transition: all 0.3s ease; {% if not notif.seen %}background: #f0f7ff; border-left: 3px solid #0a66c2;{% else %}background: #fff;{% endif %}" onmouseover="this.style.background='{% if not notif.seen %}#e8f4fd{% else %}#f9fafb{% endif %}'" onmouseout="this.style.background='{% if not notif.seen %}#f0f7ff{% else %}#fff{% endif %}'">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                <div style="flex: 1; min-width: 0;">
+                    {% set userName = notif.relatedUserId ? notif.relatedUserId.firstName ~ ' ' ~ notif.relatedUserId.lastName : 'Quelqu\'un' %}
+                    {% set titre = notif.titre | replace({'Quelqu\'un': userName}) %}
+                    {% set message = notif.message | replace({'Quelqu\'un': userName}) %}
+                    <div style="font-weight: {% if not notif.seen %}600{% else %}500{% endif %}; color: #000; font-size: 13px; margin-bottom: 4px;">{{ titre }}</div>
+                    <div style="color: #65676b; font-size: 12px; margin-bottom: 6px; line-height: 1.4; word-break: break-word;">{{ message }}</div>
+                    <div style="color: #999; font-size: 11px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>{{ notif.dateCreation|date('H:i') }}</span>
+                        {% if not notif.seen %}
+                        <button onclick="markAsRead({{ notif.id }})" style="background: #0a66c2; color: #fff; border: none; border-radius: 3px; padding: 2px 8px; font-size: 11px; cursor: pointer; font-weight: 500;" onmouseover="this.style.background='#004182'" onmouseout="this.style.background='#0a66c2'">Marquer comme lue</button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div style="padding: 16px; text-align: center; color: #65676b; font-size: 13px;">Aucune notification</div>
+    {% endif %}
+</div>
+
+<style>
+    /* Navigation active state */
+    .nav-item.nav-active {
+        color: #0a66c2 !important;
+        border-bottom-color: #0a66c2 !important;
+    }
+
+    /* Body padding for sticky header */
+    body {
+        padding-top: 60px !important;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+        nav {
+            gap: 0 !important;
+        }
+        
+        .nav-item {
+            min-width: 70px !important;
+            padding: 8px 12px !important;
+        }
+    }
+</style>
+
+<script>
+function goBackFromSocial() {
+    var ref = document.referrer || '';
+    var isRefSocial = ref.indexOf('/social') !== -1;
+    if (window.history.length > 1 && ref && !isRefSocial) {
+        window.history.back();
+        return;
+    }
+
+    try {
+        var lastSidebarPage = localStorage.getItem('lastSidebarPage');
+        if (lastSidebarPage) {
+            window.location.href = lastSidebarPage;
+            return;
+        }
+    } catch (e) {}
+
+    window.location.href = "{{ path('app_home') }}";
+}
+
+function toggleProfileMenu(event) {
+    event.stopPropagation();
+    const menu = document.getElementById('profileMenu');
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+function markAsRead(notifId) {
+    fetch('/social/notifications/mark-read/' + notifId, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Remove the notification from the panel with animation
+            const notifEl = document.getElementById('notif-' + notifId);
+            if (notifEl) {
+                notifEl.style.transition = 'opacity 0.3s ease';
+                notifEl.style.opacity = '0';
+                setTimeout(() => {
+                    notifEl.remove();
+                }, 300);
+            }
+            // Update notification badge
+            loadNotificationBadge();
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function markAllAsRead() {
+    fetch('/social/notifications/mark-all-read', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update all unread notifications to read style - keep them visible
+            const notifs = document.querySelectorAll('[id^="notif-"]');
+            notifs.forEach(notif => {
+                if (notif.style.background.includes('f0f7ff') || !notif.style.background) {
+                    notif.style.background = '#fff';
+                    notif.style.borderLeft = 'none';
+                    // Remove all "Marquer comme lue" buttons
+                    const buttons = notif.querySelectorAll('button');
+                    buttons.forEach(btn => btn.remove());
+                }
+            });
+            // Update notification badge
+            loadNotificationBadge();
+            // Close notifications panel
+            document.getElementById('notificationsPanel').style.display = 'none';
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function toggleNotificationsPanel(event) {
+    event.stopPropagation();
+    const panel = document.getElementById('notificationsPanel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+// Close menu when clicking outside
+document.addEventListener('click', function(event) {
+    const profileMenu = document.getElementById('profileMenu');
+    const notificationsPanel = document.getElementById('notificationsPanel');
+    const profileBtn = event.target.closest('button[onclick*="toggleProfileMenu"]');
+    const notifLink = event.target.closest('a[onclick*="toggleNotificationsPanel"]');
+    
+    if (profileMenu && !profileBtn && !profileMenu.contains(event.target)) {
+        profileMenu.style.display = 'none';
+    }
+    
+    if (notificationsPanel && !notifLink && !notificationsPanel.contains(event.target)) {
+        notificationsPanel.style.display = 'none';
+    }
+});
+
+// Load and update notification badge
+function loadNotificationBadge() {
+    fetch('/social/notifications/list', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(notifs => {
+        const unreadCount = notifs.filter(n => !n.seen).length;
+        const badge = document.getElementById('notification-badge');
+        
+        if (unreadCount > 0) {
+            badge.textContent = unreadCount;
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    })
+    .catch(error => console.error('Error loading badge:', error));
+}
+
+// Initialize badge on page load
+window.addEventListener('DOMContentLoaded', function() {
+    loadNotificationBadge();
+    // Refresh badge every 30 seconds
+    setInterval(loadNotificationBadge, 30000);
+});
+</script>

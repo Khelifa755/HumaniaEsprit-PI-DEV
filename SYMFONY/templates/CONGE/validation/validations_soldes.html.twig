@@ -1,0 +1,851 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Validations & Soldes — HUMANIA{% endblock %}
+
+{% block stylesheets %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css">
+<style>
+/* ═══════════════════════════════════════════════════════════
+   VARIABLES & RESET
+═══════════════════════════════════════════════════════════ */
+:root {
+    --orange:    #f59e0b;
+    --orange-lt: #fef3c7;
+    --green:     #10b981;
+    --green-lt:  #d1fae5;
+    --blue:      #667eea;
+    --blue-lt:   #eef2ff;
+    --red:       #ef4444;
+    --red-lt:    #fff1f2;
+    --slate-900: #0f172a;
+    --slate-700: #334155;
+    --slate-400: #94a3b8;
+    --slate-200: #e2e8f0;
+    --slate-100: #f1f5f9;
+    --white:     #ffffff;
+    --radius:    14px;
+    --shadow:    0 4px 20px rgba(0,0,0,.07);
+}
+
+.vs-page { display:flex; flex-direction:column; gap:28px; padding:0 0 40px; }
+
+/* ── Header ─────────────────────────────────────────────── */
+.vs-header {
+    background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+    border-radius: var(--radius);
+    padding: 28px 32px;
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+.vs-header h1 { font-size:24px; font-weight:700; margin:0; }
+.vs-header p  { margin:4px 0 0; opacity:.85; font-size:14px; }
+
+/* ── Flash messages ── */
+.flash { padding:12px 18px; border-radius:10px; font-weight:600; font-size:14px; margin-bottom:8px; }
+.flash-success { background:var(--green-lt); color:#065f46; border:1px solid #a7f3d0; }
+.flash-error   { background:var(--red-lt);   color:#991b1b; border:1px solid #fecaca; }
+
+/* ── Stats cards ── */
+.vs-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+.vs-stat-card {
+    background: var(--white); border-radius: var(--radius); padding: 22px 24px;
+    box-shadow: var(--shadow); border-top: 4px solid var(--orange);
+    display: flex; flex-direction: column; gap: 6px;
+}
+.vs-stat-card.blue  { border-color: var(--blue); }
+.vs-stat-card.green { border-color: var(--green); }
+.vs-stat-card .icon-wrap { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; margin-bottom:4px; }
+.vs-stat-card.orange .icon-wrap { background:var(--orange-lt); }
+.vs-stat-card.blue   .icon-wrap { background:var(--blue-lt); }
+.vs-stat-card.green  .icon-wrap { background:var(--green-lt); }
+.vs-stat-number { font-size:36px; font-weight:800; color:var(--slate-900); line-height:1; }
+.vs-stat-label  { font-size:13px; color:var(--slate-400); }
+.vs-stat-badge  { display:inline-block; margin-top:4px; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:700; }
+.vs-stat-badge.orange { background:var(--orange-lt); color:#92400e; }
+.vs-stat-badge.blue   { background:var(--blue-lt);   color:#3730a3; }
+.vs-stat-badge.green  { background:var(--green-lt);  color:#065f46; }
+
+/* ── Section titles ── */
+.section-title { font-size:18px; font-weight:700; color:var(--slate-900); margin:0 0 4px; }
+.section-sub   { font-size:13px; color:var(--slate-400); margin:0 0 16px; }
+
+/* ── Validation cards ── */
+.val-card {
+    background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow);
+    display: flex; align-items: center; overflow: hidden; margin-bottom: 12px; transition: transform .15s;
+}
+.val-card:hover { transform: translateY(-2px); }
+.val-accent { width:4px; min-height:80px; align-self:stretch; flex-shrink:0; }
+.val-accent.attente { background: var(--orange); }
+.val-avatar { width:46px; height:46px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px; color:var(--white); flex-shrink:0; margin:0 14px 0 18px; }
+.val-info-user { min-width:150px; }
+.val-info-user strong { display:block; font-size:13px; color:var(--slate-900); }
+.val-info-user span   { font-size:11px; color:var(--slate-400); }
+.val-sep { width:1px; background:var(--slate-100); align-self:stretch; margin:10px 14px; }
+.val-col { min-width:110px; }
+.val-col-label { font-size:9px; font-weight:700; color:var(--slate-400); letter-spacing:.5px; text-transform:uppercase; margin-bottom:4px; }
+.val-type-badge { background:var(--blue-lt); color:var(--blue); padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; display:inline-block; }
+.val-col-val { font-size:12px; font-weight:700; color:var(--slate-900); }
+.val-spacer { flex:1; }
+.val-actions { display:flex; gap:10px; padding:0 20px; align-items:center; }
+.btn-refuser { padding:9px 18px; border-radius:9px; border:1px solid #fecaca; background:var(--red-lt); color:var(--red); font-weight:700; font-size:12px; cursor:pointer; transition:all .15s; }
+.btn-refuser:hover { background:#fee2e2; }
+.btn-approuver { padding:9px 18px; border-radius:9px; border:none; background:linear-gradient(to right,#10b981,#059669); color:var(--white); font-weight:700; font-size:12px; cursor:pointer; transition:all .15s; box-shadow:0 4px 12px rgba(16,185,129,.3); }
+.btn-approuver:hover { filter:brightness(1.07); }
+
+/* ── Planning cards ── */
+.plan-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.plan-card { background:var(--white); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
+.plan-header { display:flex; align-items:center; justify-content:space-between; padding:14px 18px 10px; }
+.plan-user { display:flex; align-items:center; gap:12px; }
+.plan-avatar { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--white); font-size:13px; }
+.plan-name { font-weight:700; font-size:13px; color:var(--slate-900); }
+.plan-post { font-size:11px; color:var(--slate-400); }
+.plan-statut { padding:4px 14px; border-radius:20px; font-size:11px; font-weight:700; }
+.plan-statut.approuve { background:var(--green-lt); color:#065f46; }
+.plan-statut.attente  { background:var(--orange-lt); color:#92400e; }
+.plan-statut.refuse   { background:var(--red-lt); color:#991b1b; }
+.plan-body { padding:0 18px 14px; }
+.plan-tag { display:inline-block; background:var(--slate-100); color:var(--slate-700); padding:3px 12px; border-radius:20px; font-size:11px; font-weight:600; margin-bottom:10px; }
+.plan-dates { display:flex; align-items:center; justify-content:space-between; font-size:13px; color:var(--slate-700); font-weight:600; }
+.plan-nbj { background:var(--green); color:var(--white); padding:4px 14px; border-radius:20px; font-size:12px; font-weight:700; }
+.plan-nbj.orange { background:var(--orange); }
+.plan-progress { margin-top:10px; }
+.plan-prog-label { display:flex; justify-content:space-between; font-size:11px; color:var(--green); font-weight:600; margin-bottom:4px; }
+.plan-prog-track { height:6px; background:var(--slate-100); border-radius:3px; overflow:hidden; }
+.plan-prog-fill  { height:100%; background:linear-gradient(to right,#10b981,#059669); border-radius:3px; }
+
+/* ═══════════════════════════════════════════════════════════
+   CALENDRIER — DESIGN HUMANIA
+═══════════════════════════════════════════════════════════ */
+.calendar-wrap {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 24px;
+    border: 1px solid var(--slate-200);
+}
+
+/* Chips membres */
+.membres-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--slate-100);
+}
+.membres-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--slate-400);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    width: 100%;
+    margin-bottom: 4px;
+}
+.membre-chip {
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--white);
+    cursor: pointer;
+    transition: opacity .2s, transform .15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    user-select: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,.12);
+}
+.membre-chip::before {
+    content: '';
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.6);
+    flex-shrink: 0;
+}
+.membre-chip:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,.18); }
+.membre-chip.inactive { opacity: .35; transform: none; box-shadow: none; }
+
+/* FullCalendar overrides */
+#fc-calendar {
+    font-family: 'DM Sans', 'Segoe UI', sans-serif !important;
+}
+
+/* Header toolbar */
+#fc-calendar .fc-toolbar {
+    padding: 0 0 16px;
+    align-items: center;
+}
+#fc-calendar .fc-toolbar-title {
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    color: var(--slate-900) !important;
+}
+
+/* Nav buttons */
+#fc-calendar .fc-button {
+    background: var(--white) !important;
+    border: 1.5px solid var(--slate-200) !important;
+    color: var(--slate-700) !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    padding: 6px 14px !important;
+    border-radius: 8px !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06) !important;
+    transition: all .15s !important;
+}
+#fc-calendar .fc-button:hover {
+    background: var(--slate-100) !important;
+    border-color: var(--blue) !important;
+    color: var(--blue) !important;
+}
+#fc-calendar .fc-button-active,
+#fc-calendar .fc-button-primary:not(:disabled):active {
+    background: var(--blue) !important;
+    border-color: var(--blue) !important;
+    color: var(--white) !important;
+    box-shadow: 0 4px 12px rgba(102,126,234,.35) !important;
+}
+#fc-calendar .fc-today-button {
+    background: var(--blue) !important;
+    border-color: var(--blue) !important;
+    color: var(--white) !important;
+    font-weight: 700 !important;
+}
+#fc-calendar .fc-today-button:hover {
+    background: #5a67d8 !important;
+}
+
+/* Column headers (LUN. MAR. etc.) */
+#fc-calendar .fc-col-header-cell {
+    background: #f8faff !important;
+    border-bottom: 2px solid #e0e7ff !important;
+}
+#fc-calendar .fc-col-header-cell-cushion {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: var(--slate-400) !important;
+    letter-spacing: 1px !important;
+    text-transform: uppercase !important;
+    padding: 10px 0 !important;
+    text-decoration: none !important;
+}
+
+/* Day cells */
+#fc-calendar .fc-daygrid-day {
+    background: var(--white) !important;
+    transition: background .15s;
+}
+#fc-calendar .fc-daygrid-day:hover {
+    background: #fafbff !important;
+}
+#fc-calendar .fc-daygrid-day-number {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: var(--slate-700) !important;
+    text-decoration: none !important;
+    padding: 8px 10px !important;
+}
+#fc-calendar .fc-day-today {
+    background: #fefbff !important;
+}
+#fc-calendar .fc-day-today .fc-daygrid-day-number {
+    background: var(--blue) !important;
+    color: var(--white) !important;
+    border-radius: 50% !important;
+    width: 28px !important;
+    height: 28px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 4px !important;
+}
+
+/* Events */
+#fc-calendar .fc-event {
+    border: none !important;
+    border-radius: 6px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    padding: 3px 8px !important;
+    cursor: pointer !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,.12) !important;
+    transition: transform .15s, box-shadow .15s !important;
+    margin: 1px 2px !important;
+}
+#fc-calendar .fc-event:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 10px rgba(0,0,0,.20) !important;
+    filter: brightness(1.06) !important;
+}
+#fc-calendar .fc-event-title {
+    font-weight: 600 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+#fc-calendar .fc-daygrid-more-link {
+    color: var(--blue) !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    background: var(--blue-lt) !important;
+    border-radius: 10px !important;
+    padding: 2px 8px !important;
+    text-decoration: none !important;
+}
+#fc-calendar .fc-daygrid-more-link:hover { background: #d4dcff !important; }
+
+/* Grid borders */
+#fc-calendar .fc-scrollgrid { border: 1px solid var(--slate-200) !important; border-radius: 10px !important; overflow: hidden !important; }
+#fc-calendar .fc-scrollgrid-section > td { border: none !important; }
+#fc-calendar .fc-daygrid-day-frame { border-right: 1px solid #f1f5f9 !important; border-bottom: 1px solid #f1f5f9 !important; }
+
+/* Popover ("+X autres") */
+#fc-calendar .fc-popover {
+    border: 1.5px solid var(--slate-200) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 12px 32px rgba(0,0,0,.14) !important;
+    overflow: hidden !important;
+}
+#fc-calendar .fc-popover-header {
+    background: var(--slate-100) !important;
+    font-weight: 700 !important;
+    font-size: 13px !important;
+    padding: 10px 14px !important;
+    color: var(--slate-900) !important;
+}
+#fc-calendar .fc-popover-body { padding: 8px !important; }
+
+/* Custom event popup (tooltip) */
+.fc-event-popup {
+    position: fixed;
+    z-index: 9999;
+    background: var(--white);
+    border: 1.5px solid var(--slate-200);
+    border-radius: 14px;
+    padding: 18px 20px;
+    box-shadow: 0 12px 36px rgba(0,0,0,.16);
+    min-width: 220px;
+    max-width: 300px;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity .2s, transform .2s;
+}
+.fc-event-popup.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.fc-event-popup-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--slate-900);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.fc-event-popup-badge {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--white);
+    flex-shrink: 0;
+}
+.fc-event-popup-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--slate-700);
+    margin-bottom: 6px;
+}
+.fc-event-popup-row .ico { font-size: 14px; flex-shrink: 0; }
+.fc-event-popup-statut {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    margin-top: 4px;
+}
+.statut-attente  { background: var(--orange-lt); color: #92400e; }
+.statut-approuve { background: var(--green-lt);  color: #065f46; }
+.statut-refuse   { background: var(--red-lt);    color: #991b1b; }
+
+/* List view */
+#fc-calendar .fc-list-event:hover td { background: #f8faff !important; }
+#fc-calendar .fc-list-event-dot { border-radius: 50% !important; border-width: 6px !important; }
+#fc-calendar .fc-list-event-title a { font-weight: 600 !important; color: var(--slate-900) !important; text-decoration: none !important; }
+#fc-calendar .fc-list-day-cushion { background: var(--slate-100) !important; font-weight: 700 !important; font-size: 12px !important; color: var(--slate-400) !important; letter-spacing: .5px !important; }
+
+/* ═══════════════════════════════════════════════════════════
+   VUE MES SOLDES
+═══════════════════════════════════════════════════════════ */
+.soldes-top-cards { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+.solde-card { background:var(--white); border-radius:var(--radius); padding:18px 20px; box-shadow:var(--shadow); border-top:4px solid var(--blue); }
+.solde-card.green  { border-color:var(--green); }
+.solde-card.orange { border-color:var(--orange); }
+.solde-card.red    { border-color:var(--red); }
+.solde-card-icon { font-size:20px; margin-bottom:8px; }
+.solde-card-val  { font-size:28px; font-weight:800; color:var(--slate-900); line-height:1; }
+.solde-card-sub  { font-size:11px; color:var(--slate-400); margin-top:2px; }
+.solde-card-lbl  { font-size:12px; font-weight:600; color:var(--slate-700); margin-top:6px; }
+.cp-section { background:var(--white); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow); }
+.cp-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.cp-title { font-size:16px; font-weight:700; color:var(--slate-900); }
+.cp-main-val { font-size:28px; font-weight:800; color:var(--slate-900); }
+.cp-sub-txt { font-size:13px; color:var(--slate-400); }
+.cp-pct { font-size:13px; font-weight:700; color:var(--blue); }
+.cp-track { height:10px; background:var(--slate-100); border-radius:5px; overflow:hidden; margin:8px 0; }
+.cp-fill { height:100%; background:linear-gradient(to right,var(--blue),#a78bfa); border-radius:5px; }
+.cp-legend { display:flex; gap:20px; font-size:12px; color:var(--slate-400); font-weight:600; margin-top:6px; }
+.donut-section { display:flex; gap:24px; align-items:flex-start; }
+.donut-wrap { flex-shrink:0; position:relative; width:180px; height:180px; }
+.donut-legend { flex:1; display:flex; flex-direction:column; gap:10px; padding-top:10px; }
+.donut-item { display:flex; align-items:center; gap:10px; font-size:13px; }
+.donut-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+.donut-item-lbl { color:var(--slate-700); flex:1; }
+.donut-item-val { font-weight:700; color:var(--slate-900); }
+.type-card { background:var(--white); border-radius:var(--radius); box-shadow:var(--shadow); display:flex; align-items:center; overflow:hidden; margin-bottom:10px; }
+.type-accent { width:4px; align-self:stretch; flex-shrink:0; }
+.type-icon-wrap { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; margin:12px 14px 12px 16px; }
+.type-name { flex:1; font-weight:700; font-size:13px; color:var(--slate-900); }
+.type-sub  { font-size:11px; color:var(--slate-400); }
+.type-val  { font-weight:700; font-size:14px; color:var(--slate-900); padding-right:16px; text-align:right; }
+.type-badge { font-size:10px; font-weight:600; padding:2px 8px; border-radius:10px; display:inline-block; }
+.ferie-card { background:var(--white); border-radius:var(--radius); box-shadow:var(--shadow); display:flex; align-items:center; overflow:hidden; margin-bottom:8px; }
+.ferie-bar { width:4px; align-self:stretch; flex-shrink:0; }
+.ferie-icon { width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; margin:10px 12px 10px 14px; }
+.ferie-info { flex:1; }
+.ferie-nom  { font-size:13px; font-weight:700; color:var(--slate-900); }
+.ferie-date { font-size:11px; color:var(--slate-400); }
+.ferie-type { padding:4px 12px; border-radius:20px; font-size:10px; font-weight:700; color:var(--white); margin-right:14px; }
+.empty-state { text-align:center; padding:48px 24px; color:var(--slate-400); }
+.empty-state .icon { font-size:48px; margin-bottom:12px; }
+.empty-state p { font-size:14px; }
+
+@media(max-width:900px) {
+    .vs-stats { grid-template-columns:1fr 1fr; }
+    .plan-grid { grid-template-columns:1fr; }
+    .soldes-top-cards { grid-template-columns:1fr 1fr; }
+}
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="vs-page">
+
+    {% for msg in app.flashes('success') %}
+        <div class="flash flash-success">✓ {{ msg }}</div>
+    {% endfor %}
+    {% for msg in app.flashes('error') %}
+        <div class="flash flash-error">✕ {{ msg }}</div>
+    {% endfor %}
+
+    {# ════════════════════════════════════════════════════════
+       VUE VALIDATIONS
+    ════════════════════════════════════════════════════════ #}
+    {% if vue == 'validations' %}
+    <div class="vs-header">
+        <div>
+            <h1>✅ Validations</h1>
+            <p>Gérez les demandes d'absence de votre équipe</p>
+        </div>
+    </div>
+
+    <div class="vs-stats">
+        <div class="vs-stat-card orange">
+            <div class="icon-wrap">⏳</div>
+            <div class="vs-stat-number">{{ stats.en_attente }}</div>
+            <div class="vs-stat-label">En attente</div>
+            <span class="vs-stat-badge orange">Demandes à valider</span>
+        </div>
+        <div class="vs-stat-card blue">
+            <div class="icon-wrap">📊</div>
+            <div class="vs-stat-number">{{ stats.taux_absence }}%</div>
+            <div class="vs-stat-label">Taux d'absence</div>
+            <span class="vs-stat-badge blue">Moyenne entreprise</span>
+        </div>
+        <div class="vs-stat-card green">
+            <div class="icon-wrap">✅</div>
+            <div class="vs-stat-number">{{ stats.approuvees }}</div>
+            <div class="vs-stat-label">Approuvées</div>
+            <span class="vs-stat-badge green">✓ Validées ce mois</span>
+        </div>
+    </div>
+
+    <div>
+        <p class="section-title">Demandes à traiter</p>
+        <p class="section-sub">Approuvez ou refusez les demandes en attente</p>
+        {% if en_attente is empty %}
+            <div class="empty-state"><div class="icon">🎉</div><p>Aucune demande en attente — tout est à jour !</p></div>
+        {% else %}
+            {% for abs in en_attente %}
+                {% set colors = ['#667eea','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4'] %}
+                {% set bgColor = colors[(abs.utilisateur_id) % 6] %}
+                {% set initiales = (abs.prenom|slice(0,1) ~ abs.nom|slice(0,1))|upper %}
+                <div class="val-card">
+                    <div class="val-accent attente"></div>
+                    <div class="val-avatar" style="background:{{ bgColor }}">{{ initiales }}</div>
+                    <div class="val-info-user">
+                        <strong>{{ abs.prenom }} {{ abs.nom }}</strong>
+                        <span>{{ abs.posteActuel }} · {{ abs.departement }}</span>
+                    </div>
+                    <div class="val-sep"></div>
+                    <div class="val-col">
+                        <div class="val-col-label">TYPE</div>
+                        <span class="val-type-badge">{{ abs.type_label }}</span>
+                    </div>
+                    <div class="val-sep"></div>
+                    <div class="val-col">
+                        <div class="val-col-label">PÉRIODE</div>
+                        <div class="val-col-val">📅 {{ abs.date_debut|date('d/MM') }} → {{ abs.date_fin|date('d/MM') }}</div>
+                    </div>
+                    <div class="val-sep"></div>
+                    <div class="val-col">
+                        <div class="val-col-label">DURÉE</div>
+                        <div class="val-col-val">
+                            {% if abs.duree_minutes %}
+                                {% set h = (abs.duree_minutes / 60)|round(0, 'floor') %}
+                                {% set m = abs.duree_minutes % 60 %}
+                                ⌛ {% if m == 0 %}{{ h }}h{% else %}{{ h }}h{{ '%02d'|format(m) }}{% endif %}
+                            {% else %}
+                                ⌛ {{ abs.nbr_jours }} j
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if abs.motif %}
+                    <div class="val-sep"></div>
+                    <div class="val-col" style="min-width:100px; color:var(--slate-400); font-size:12px; font-style:italic;">{{ abs.motif }}</div>
+                    {% endif %}
+                    <div class="val-spacer"></div>
+                    <div class="val-actions">
+                        <form method="POST" action="{{ path('conges_refuser', {id: abs.id}) }}" style="display:inline">
+                            <button type="submit" class="btn-refuser">✕ Refuser</button>
+                        </form>
+                        <form method="POST" action="{{ path('conges_approuver', {id: abs.id}) }}" style="display:inline">
+                            <button type="submit" class="btn-approuver">✓ Approuver</button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <div>
+        <p class="section-title">Planning d'équipe</p>
+        <p class="section-sub">Congés planifiés par collaborateur</p>
+        {% if planning is empty %}
+            <div class="empty-state"><div class="icon">📅</div><p>Aucun congé planifié</p></div>
+        {% else %}
+        <div class="plan-grid">
+            {% for conge in planning %}
+                {% set colors = ['#667eea','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#14b8a6'] %}
+                {% set initiales = (conge.prenom|slice(0,1) ~ conge.nom|slice(0,1))|upper %}
+                {% set statutClass = conge.statut|lower in ['approuvé','approuve'] ? 'approuve' : (conge.statut|lower == 'en attente' ? 'attente' : 'refuse') %}
+                <div class="plan-card">
+                    <div class="plan-header">
+                        <div class="plan-user">
+                            <div class="plan-avatar" style="background:{{ colors[(conge.utilisateur_id) % 8] }}">{{ initiales }}</div>
+                            <div>
+                                <div class="plan-name">{{ conge.prenom }} {{ conge.nom }}</div>
+                                <div class="plan-post">{{ conge.posteActuel }} · {{ conge.departement }}</div>
+                            </div>
+                        </div>
+                        <span class="plan-statut {{ statutClass }}">{{ conge.statut }}</span>
+                    </div>
+                    <div class="plan-body">
+                        <span class="plan-tag">{{ conge.type_label }}</span>
+                        <div class="plan-dates">
+                            <span>📅 {{ conge.date_debut|date('d M') }} → {{ conge.date_fin|date('d M') }}</span>
+                            <span class="plan-nbj {{ statutClass == 'attente' ? 'orange' : '' }}">{{ conge.nbr_jours }} jours</span>
+                        </div>
+                        <div class="plan-progress">
+                            {% if statutClass == 'approuve' %}
+                            <div class="plan-prog-label"><span>Terminé</span><span>100%</span></div>
+                            <div class="plan-prog-track"><div class="plan-prog-fill" style="width:100%"></div></div>
+                            {% else %}
+                            <div class="plan-prog-label" style="color:var(--orange)"><span>À venir</span><span>0%</span></div>
+                            <div class="plan-prog-track"><div class="plan-prog-fill" style="width:0%"></div></div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    {# ── Calendrier équipe ── #}
+    <div>
+        <p class="section-title">Calendrier de l'équipe</p>
+        <p class="section-sub">Vue d'ensemble des congés et absences par employé</p>
+        <div class="calendar-wrap">
+            <div class="membres-label">Membres</div>
+            <div class="membres-list" id="membres-chips">
+                {% for m in membres %}
+                    {% set colors = ['#667eea','#f59e0b','#ef4444','#10b981','#8b5cf6','#06b6d4','#ec4899','#14b8a6','#f97316','#84cc16'] %}
+                    {% set ci = (m.id) % 10 %}
+                    <span class="membre-chip" style="background:{{ colors[ci] }}" data-id="{{ m.id }}">
+                        {{ m.prenom }} {{ m.nom }}
+                    </span>
+                {% endfor %}
+            </div>
+            <div id="fc-calendar"></div>
+        </div>
+    </div>
+
+    {# Popup personnalisée pour les événements #}
+    <div class="fc-event-popup" id="fc-popup">
+        <div class="fc-event-popup-title" id="fc-popup-title"></div>
+        <div class="fc-event-popup-row"><span class="ico">🏷️</span><span id="fc-popup-type"></span></div>
+        <div class="fc-event-popup-row"><span class="ico">📅</span><span id="fc-popup-dates"></span></div>
+        <div class="fc-event-popup-row"><span class="ico">⚡</span><span id="fc-popup-statut"></span></div>
+    </div>
+
+    {% endif %}{# fin vue validations #}
+
+    {# ════════════════════════════════════════════════════════
+       VUE MES SOLDES
+    ════════════════════════════════════════════════════════ #}
+    {% if vue == 'soldes' %}
+    <div class="vs-header">
+        <div><h1>⚖️ Mes Soldes</h1><p>Répartition et détail de vos congés & absences</p></div>
+    </div>
+
+    <div class="soldes-top-cards">
+        <div class="solde-card green">
+            <div class="solde-card-icon">🏖️</div>
+            <div class="solde-card-val">{{ soldes.restant_cp }} j</div>
+            <div class="solde-card-sub">sur {{ soldes.quota }} acquis</div>
+            <div class="solde-card-lbl">CP Restants</div>
+        </div>
+        <div class="solde-card blue">
+            <div class="solde-card-icon">✅</div>
+            <div class="solde-card-val">{{ soldes.total_conges_approuves }} j</div>
+            <div class="solde-card-sub">congés pris</div>
+            <div class="solde-card-lbl">CP Consommés</div>
+        </div>
+        <div class="solde-card orange">
+            <div class="solde-card-icon">⏳</div>
+            <div class="solde-card-val">{{ soldes.total_conges_attente }} j</div>
+            <div class="solde-card-sub">en cours de traitement</div>
+            <div class="solde-card-lbl">En Attente</div>
+        </div>
+        <div class="solde-card red">
+            <div class="solde-card-icon">🏥</div>
+            <div class="solde-card-val">{{ soldes.conges_maladie }} j</div>
+            <div class="solde-card-sub">congés médicaux</div>
+            <div class="solde-card-lbl">Congé Maladie</div>
+        </div>
+    </div>
+
+    <div class="cp-section">
+        <div class="cp-top">
+            <div>
+                <div class="cp-title">🏖️ Congés Payés</div>
+                <div class="cp-sub-txt">{{ soldes.total_conges_approuves }} consommés sur {{ soldes.quota }} acquis</div>
+            </div>
+            <div style="text-align:right">
+                <div class="cp-main-val">{{ soldes.restant_cp }} / {{ soldes.quota }} jours</div>
+                <div class="cp-pct">{{ soldes.pct_consomme }}%</div>
+            </div>
+        </div>
+        <div class="cp-track"><div class="cp-fill" style="width:{{ soldes.pct_consomme }}%"></div></div>
+        <div class="cp-legend">
+            <span>Acquis : {{ soldes.quota }} j</span>
+            <span>Pris : {{ soldes.total_conges_approuves }} j</span>
+            <span>Restant : {{ soldes.restant_cp }} j</span>
+        </div>
+    </div>
+
+    <div style="background:var(--white); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow);">
+        <div class="section-title" style="margin-bottom:4px">📊 Répartition des congés & absences</div>
+        <div class="section-sub">{{ soldes.total_global }} jours au total cette année</div>
+        <div class="donut-section" style="margin-top:20px">
+            <div class="donut-wrap"><canvas id="donut-chart" width="180" height="180"></canvas></div>
+            <div class="donut-legend">
+                {% for item in soldes.pie_data %}
+                <div class="donut-item">
+                    <div class="donut-dot" style="background:{{ item.color }}"></div>
+                    <span class="donut-item-lbl">{{ item.label }}</span>
+                    <span class="donut-item-val">{{ item.valeur }} j</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div style="background:var(--white); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow);">
+        <div class="section-title" style="margin-bottom:16px">Détail par type de congé</div>
+        {% for tc in types_conge %}
+            {% set icones = {'Congé modifié':'🏖️','Congé maladie':'🏥','Congé maternité':'🤱','Congé exceptionnel':'⭐','Congé paternité':'👨‍👧'} %}
+            {% set couleurs = {'Congé modifié':'#10b981','Congé maladie':'#ef4444','Congé maternité':'#ec4899','Congé exceptionnel':'#f59e0b','Congé paternité':'#06b6d4'} %}
+            {% set ico = icones[tc.libelle] ?? '📅' %}
+            {% set col = couleurs[tc.libelle] ?? '#667eea' %}
+            {% set jours = soldes.jours_par_type_conge[tc.id] ?? 0 %}
+            {% set att   = soldes.attente_par_type[tc.id] ?? 0 %}
+            <div class="type-card">
+                <div class="type-accent" style="background:{{ col }}"></div>
+                <div class="type-icon-wrap" style="background:{{ col }}22">{{ ico }}</div>
+                <div style="flex:1; padding:12px 0">
+                    <div class="type-name">{{ tc.libelle }}</div>
+                    {% if att > 0 %}<div class="type-sub">{{ att }} j en attente</div>{% endif %}
+                </div>
+                <div class="type-val">{{ jours }} j pris
+                    {% if att > 0 %}<div><span class="type-badge" style="background:var(--orange-lt);color:#92400e">{{ att }}j en attente</span></div>{% endif %}
+                </div>
+            </div>
+        {% endfor %}
+        <div class="section-title" style="margin:20px 0 16px">Détail par type d'absence</div>
+        {% for ta in types_absence %}
+            {% set icones_a = {'Absence justifiée':'✅','Absence injustifiée':'❌','Absence médicale':'💊'} %}
+            {% set couleurs_a = {'Absence justifiée':'#10b981','Absence injustifiée':'#ef4444','Absence médicale':'#8b5cf6'} %}
+            {% set ico_a = icones_a[ta.libelle] ?? '📋' %}
+            {% set col_a = couleurs_a[ta.libelle] ?? '#64748b' %}
+            <div class="type-card">
+                <div class="type-accent" style="background:{{ col_a }}"></div>
+                <div class="type-icon-wrap" style="background:{{ col_a }}22">{{ ico_a }}</div>
+                <div style="flex:1; padding:12px 0"><div class="type-name">{{ ta.libelle }}</div></div>
+                <div class="type-val">{{ soldes.jours_par_type_abs[ta.id] ?? 0 }} j</div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div style="background:var(--white); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow);">
+        <div class="section-title" style="margin-bottom:4px">🇹🇳 Jours Fériés Tunisie 2026</div>
+        <div class="section-sub" style="margin-bottom:16px">Calendrier officiel</div>
+        {% for f in feries %}
+        <div class="ferie-card">
+            <div class="ferie-bar" style="background:{{ f.color }}"></div>
+            <div class="ferie-icon" style="background:{{ f.color }}22">{{ f.icone }}</div>
+            <div class="ferie-info">
+                <div class="ferie-nom">{{ f.nom }}</div>
+                <div class="ferie-date">{{ f.date|date('l d F Y') }}</div>
+            </div>
+            <span class="ferie-type" style="background:{{ f.color }}">{{ f.type }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% endif %}{# fin vue soldes #}
+
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    /* ── FullCalendar ── */
+    var calEl = document.getElementById('fc-calendar');
+    if (calEl) {
+
+        var calendar = new FullCalendar.Calendar(calEl, {
+            initialView: 'dayGridMonth',
+            locale: 'fr',
+            headerToolbar: {
+                left:   'prev,next today',
+                center: 'title',
+                right:  'dayGridMonth,listMonth'
+            },
+            buttonText: { today: "Aujourd'hui", month: 'Mois', list: 'Liste' },
+            events: '{{ path('conges_api_calendrier') }}',
+            height: 'auto',
+            dayMaxEvents: 3,
+            moreLinkContent: function(args) { return '+' + args.num + ' autres'; },
+
+            /* Popup personnalisée au clic */
+            eventClick: function(info) {
+                var popup  = document.getElementById('fc-popup');
+                var props  = info.event.extendedProps;
+                var color  = info.event.backgroundColor;
+                var start  = info.event.startStr;
+                var end    = info.event.end ? new Date(info.event.end.getTime() - 86400000).toISOString().slice(0,10) : start;
+
+                var fmt = function(d) {
+                    if (!d) return '—';
+                    var parts = d.split('-');
+                    return parts[2] + '/' + parts[1] + '/' + parts[0];
+                };
+
+                document.getElementById('fc-popup-title').innerHTML =
+                    '<span style="width:10px;height:10px;border-radius:50%;background:' + color + ';display:inline-block;flex-shrink:0"></span>'
+                    + info.event.title;
+
+                document.getElementById('fc-popup-type').textContent   = props.type || 'Congé';
+                document.getElementById('fc-popup-dates').textContent  = fmt(start) + ' → ' + fmt(end);
+
+                var statut = (props.statut || '').toLowerCase();
+                var statClass = statut === 'approuvé' ? 'statut-approuve' : (statut === 'refusé' ? 'statut-refuse' : 'statut-attente');
+                document.getElementById('fc-popup-statut').innerHTML =
+                    '<span class="fc-event-popup-statut ' + statClass + '">' + (props.statut || 'En attente') + '</span>';
+
+                /* Positionnement */
+                var rect = info.el.getBoundingClientRect();
+                popup.style.top  = (rect.bottom + window.scrollY + 8) + 'px';
+                popup.style.left = Math.min(rect.left, window.innerWidth - 310) + 'px';
+                popup.classList.add('visible');
+                popup.style.pointerEvents = 'auto';
+
+                info.jsEvent.stopPropagation();
+            }
+        });
+
+        calendar.render();
+
+        /* Fermer popup au clic ailleurs */
+        document.addEventListener('click', function() {
+            var popup = document.getElementById('fc-popup');
+            if (popup) { popup.classList.remove('visible'); popup.style.pointerEvents = 'none'; }
+        });
+
+        /* Toggle membres chips */
+        document.querySelectorAll('.membre-chip').forEach(function(chip) {
+            chip.addEventListener('click', function(e) {
+                e.stopPropagation();
+                this.classList.toggle('inactive');
+            });
+        });
+    }
+
+    /* ── Donut chart ── */
+    {% if vue == 'soldes' %}
+    var donutEl = document.getElementById('donut-chart');
+    if (donutEl) {
+        var pieData = {{ soldes.pie_data|json_encode|raw }};
+        new Chart(donutEl, {
+            type: 'doughnut',
+            data: {
+                labels: pieData.map(function(d){ return d.label; }),
+                datasets: [{
+                    data:            pieData.map(function(d){ return d.valeur; }),
+                    backgroundColor: pieData.map(function(d){ return d.color; }),
+                    borderWidth: 2, borderColor: '#fff', hoverOffset: 6
+                }]
+            },
+            options: {
+                cutout: '70%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: function(ctx){ return ' ' + ctx.label + ' : ' + ctx.parsed + ' j'; } } }
+                },
+                animation: { duration: 800, easing: 'easeInOutQuart' }
+            }
+        });
+    }
+    {% endif %}
+});
+</script>
+{% endblock %}

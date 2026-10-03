@@ -1,0 +1,2485 @@
+{% extends 'base.html.twig' %}
+{% block title %}Évaluations de Compétences – Humania
+{% endblock %}
+
+{% block body %}
+{# ══ Calculs XP ══════════════════════════════════════════════════════════════ #}
+{% set nb_passed   = evals|filter(e => e.my_statut == 'passed')|length %}
+{% set nb_failed   = evals|filter(e => e.my_statut == 'failed')|length %}
+{% set nb_total    = evals|length %}
+{% set nb_open     = evals|filter(e => e.access_state == 'accessible' and e.my_statut == 'not_taken')|length %}
+{% set nb_pending  = evals|filter(e => e.my_statut == 'not_taken' and e.access_state == 'accessible')|length %}
+{% set nb_inprog   = evals|filter(e => e.my_statut == 'in_progress')|length %}
+{% set nb_expired  = evals|filter(e => e.access_state == 'expired')|length %}
+{% set xp_val      = nb_passed * 100 + nb_failed * 20 %}
+{% set xp_level    = (xp_val / 200)|round(0,'floor') + 1 %}
+{% set xp_in_level = xp_val % 200 %}
+{% set xp_pct      = xp_in_level > 0 ? (xp_in_level / 200 * 100)|round : 0 %}
+
+<div
+	class="ev-wrapper">
+
+	{# ══ HERO HEADER ══════════════════════════════════════════════════════════ #}
+	<div class="ev-hero">
+		<div>
+			<div class="ev-hero-tag">
+				<span></span>
+				COMPÉTENCES</div>
+			<h1 class="ev-hero-title">Évaluations de Compétences</h1>
+			<p class="ev-hero-sub">Passez vos évaluations · Suivez votre progression · Montez en niveau</p>
+		</div>
+		<div class="ev-hero-actions">
+			<button class="btn-hero-icon" onclick="openDrawer('calDrawer')" title="Calendrier des évaluations">
+				<i class="fa-solid fa-calendar-days"></i>
+			</button>
+			<button class="btn-hero-icon btn-hero-niveau" onclick="openDrawer('progDrawer')" title="Ma progression">
+				<i class="fa-solid fa-trophy"></i>
+				<span class="niveau-badge">Niv.{{ xp_level }}</span>
+			</button>
+			{% if isAdmin %}
+				<button class="btn-new-eval" onclick="openNewModal()">
+					<i class="fa-solid fa-plus"></i>
+					Nouvelle Évaluation
+				</button>
+			{% endif %}
+		</div>
+	</div>
+
+	{# ══ FLASH ════════════════════════════════════════════════════════════════ #}
+	{% for msg in app.flashes('success') %}
+		<div class="flash-ok">{{ msg }}</div>
+	{% endfor %}
+	{% for msg in app.flashes('error')   %}
+		<div class="flash-err">{{ msg }}</div>
+	{% endfor %}
+
+	{# ══ STAT CARDS ══════════════════════════════════════════════════════════ #}
+	<div class="ev-stats">
+		<div class="stat-card" style="--accent:#6366F1">
+			<div class="stat-icon-wrap" style="background:#EEF2FF">
+				<i class="fa-solid fa-lock-open" style="color:#6366F1;font-size:1rem"></i>
+			</div>
+			<div class="stat-content">
+				<div class="stat-num">{{ stats.accessible }}</div>
+				<div class="stat-lbl">Ouvertes</div>
+			</div>
+			<div class="stat-trend" style="color:#6366F1">Disponibles</div>
+		</div>
+		<div class="stat-card" style="--accent:#F59E0B">
+			<div class="stat-icon-wrap" style="background:#FEF3C7">
+				<i class="fa-solid fa-clock" style="color:#D97706;font-size:1rem"></i>
+			</div>
+			<div class="stat-content">
+				<div class="stat-num">{{ stats.pending }}</div>
+				<div class="stat-lbl">À passer</div>
+			</div>
+			<div class="stat-trend" style="color:#D97706">En attente</div>
+		</div>
+		<div class="stat-card" style="--accent:#10B981">
+			<div class="stat-icon-wrap" style="background:#D1FAE5">
+				<i class="fa-solid fa-circle-check" style="color:#059669;font-size:1rem"></i>
+			</div>
+			<div class="stat-content">
+				<div class="stat-num">{{ stats.ceMonth }}</div>
+				<div class="stat-lbl">Ce mois</div>
+			</div>
+			<div class="stat-trend" style="color:#059669">Réussies</div>
+		</div>
+		<div class="stat-card" style="--accent:#F59E0B">
+			<div class="stat-icon-wrap" style="background:#FEF9C3">
+				<i class="fa-solid fa-star" style="color:#CA8A04;font-size:1rem"></i>
+			</div>
+			<div class="stat-content">
+				<div class="stat-num" style="color:#F59E0B">{{ stats.avgScore }}</div>
+				<div class="stat-lbl">Score moyen</div>
+			</div>
+			<div class="stat-trend" style="color:#CA8A04">Moyenne</div>
+		</div>
+	</div>
+
+	{# ══ LAYOUT FULL WIDTH ════════════════════════════════════════════════════ #}
+	<div
+		class="ev-main-full">
+
+		{# ── Barre de filtres redesignée ── #}
+		<div
+			class="ev-filterbar-wrap">
+			{# Ligne 1 : search + boutons droite #}
+			<div class="ev-filterbar-top">
+				<div class="search-wrap">
+					<i class="fa-solid fa-magnifying-glass si-fa"></i>
+					<input type="text" id="searchInput" value="{{ search }}" placeholder="Rechercher une évaluation, une compétence…" class="search-input" oninput="filterCards()">
+					{% if search %}
+						<button class="search-clear" onclick="document.getElementById('searchInput').value='';filterCards()" title="Effacer">
+							<i class="fa-solid fa-xmark"></i>
+						</button>
+					{% endif %}
+				</div>
+
+				{# Panneau de filtres masqué (toggle) #}
+				<div id="filterPanel" class="filter-panel" style="display:none">
+					<select id="statutSel" class="filter-sel" onchange="filterCards()">
+						<option value="">Tous les statuts</option>
+						<option value="accessible" {{ filterStat == 'accessible' ? 'selected' : '' }}>Accessible</option>
+						<option value="locked" {{ filterStat == 'locked' ? 'selected' : '' }}>Verrouillée</option>
+						<option value="not_yet" {{ filterStat == 'not_yet' ? 'selected' : '' }}>Pas encore ouverte</option>
+						<option value="expired" {{ filterStat == 'expired' ? 'selected' : '' }}>Expirée</option>
+						<option value="passed" {{ filterStat == 'passed' ? 'selected' : '' }}>Réussie</option>
+						<option value="failed" {{ filterStat == 'failed' ? 'selected' : '' }}>Échouée</option>
+					</select>
+					<select id="typeSel" class="filter-sel" onchange="filterCards()">
+						<option value="">Tous les types</option>
+						{% for t in ['QCM','Pratique','Oral','Projet','Auto-évaluation'] %}
+							<option value="{{ t }}" {{ filterType == t ? 'selected' : '' }}>{{ t }}</option>
+						{% endfor %}
+					</select>
+					<button type="button" class="btn-filter-apply" onclick="submitFilter()">Appliquer</button>
+					{% if search or filterStat or filterType %}
+						<a href="{{ path('evaluations_index') }}" class="btn-reset">
+							<i class="fa-solid fa-xmark"></i>
+							Réinitialiser
+						</a>
+					{% endif %}
+				</div>
+
+				<div class="ev-filterbar-actions">
+					<button type="button" class="btn-filtres" onclick="toggleFilterPanel()" id="btnFiltres">
+						<i class="fa-solid fa-sliders"></i>
+						Filtres
+						{% if filterStat or filterType %}
+							<span class="filter-active-dot"></span>
+						{% endif %}
+					</button>
+					<div class="ev-view-toggle">
+						<button class="view-btn active" id="btnGrid" onclick="setView('grid')" title="Vue grille">
+							<i class="fa-solid fa-grip"></i>
+						</button>
+						<button class="view-btn" id="btnList" onclick="setView('list')" title="Vue liste">
+							<i class="fa-solid fa-list"></i>
+						</button>
+					</div>
+				</div>
+			</div>
+
+			{# Ligne 2 : tabs #}
+			<div class="ev-tabs-row">
+				<div class="ev-tabs">
+					<button class="ev-tab active" data-tab="all" onclick="switchTab(this,'all')">
+						Toutes
+						<span class="tab-count">{{ evals|length }}</span>
+					</button>
+					<button class="ev-tab" data-tab="pending" onclick="switchTab(this,'pending')">
+						À passer
+						<span class="tab-count">{{ nb_pending }}</span>
+					</button>
+					<button class="ev-tab" data-tab="inprog" onclick="switchTab(this,'inprog')">
+						En cours
+						<span class="tab-count">{{ nb_inprog }}</span>
+					</button>
+					<button class="ev-tab" data-tab="passed" onclick="switchTab(this,'passed')">
+						Réussies
+						<span class="tab-count tab-count-green">{{ nb_passed }}</span>
+					</button>
+					<button class="ev-tab" data-tab="expired" onclick="switchTab(this,'expired')">
+						Expirées
+						<span class="tab-count tab-count-gray">{{ nb_expired }}</span>
+					</button>
+				</div>
+			</div>
+		</div>
+
+		{# ── Section title ── #}
+		<div class="ev-section-title">
+			<i class="fa-solid fa-clipboard-list" style="color:#6366F1"></i>
+			Campagnes d'Évaluation
+		</div>
+
+		{% if evals|length == 0 %}
+			<div class="ev-empty">
+				<i class="fa-solid fa-clipboard-list" style="font-size:2.5rem;color:#D1D5DB;margin-bottom:.75rem;display:block"></i>
+				<p>Aucune évaluation ne correspond à vos critères.</p>
+			</div>
+		{% else %}
+
+			<div class="ev-cards-grid" id="evCardsGrid">
+
+				{% for ev in evals %}
+					{% set accent    = ev.my_statut == 'passed' ? '#10B981' : (ev.my_statut == 'failed' ? '#EF4444' : (ev.access_state == 'accessible' ? '#6366F1' : (ev.access_state == 'locked_level' ? '#F59E0B' : '#9CA3AF'))) %}
+					{% set accentBg  = ev.my_statut == 'passed' ? '#ECFDF5' : (ev.my_statut == 'failed' ? '#FEF2F2' : (ev.access_state == 'accessible' ? '#EEF2FF' : (ev.access_state == 'locked_level' ? '#FEF3C7' : '#F3F4F6'))) %}
+					{% set typeFA    = ev.type == 'QCM' ? 'fa-file-pen' : (ev.type == 'Pratique' ? 'fa-screwdriver-wrench' : (ev.type == 'Oral' ? 'fa-microphone' : (ev.type == 'Projet' ? 'fa-diagram-project' : 'fa-mirror'))) %}
+					{% set diffColor = ev.difficulte == 'FACILE' ? '#10B981' : (ev.difficulte == 'DIFFICILE' ? '#EF4444' : '#6366F1') %}
+					{% set tabVal    = ev.my_statut == 'passed' ? 'passed' : (ev.access_state == 'expired' ? 'expired' : (ev.my_statut == 'in_progress' ? 'inprog' : (ev.access_state == 'accessible' and ev.my_statut == 'not_taken' ? 'pending' : 'all'))) %}
+
+					<div class="eval-card" style="--acc:{{ accent }};--acc-bg:{{ accentBg }}" data-tab="{{ tabVal }}" data-title="{{ ev.titre|lower ?: ev.formation_titre|lower }}" data-statut="{{ ev.access_state }}" data-mystat="{{ ev.my_statut }}" data-type="{{ ev.type }}">
+						<div class="card-strip" style="background:linear-gradient(90deg,{{ accent }},color-mix(in srgb,{{ accent }} 55%,white))"></div>
+						{# ── Card header : icon + title + status badge ── #}
+						<div class="card-main">
+							<div class="card-icon-wrap" style="background:{{ accentBg }}">
+								<i class="fa-solid {{ typeFA }}" style="color:{{ accent }};font-size:1rem"></i>
+							</div>
+							<div class="card-info" style="flex:1;min-width:0">
+								<div class="card-title-row">
+									<span class="card-title">{{ ev.titre ?: ev.formation_titre }}</span>
+								</div>
+								<div class="card-sub-row">
+									<span class="type-chip">{{ ev.type }}</span>
+									<span class="diff-dot" style="background:{{ diffColor }}"></span>
+									<span class="diff-lbl" style="color:{{ diffColor }}">{{ ev.difficulte }}</span>
+								</div>
+							</div>
+							{# Donut + meta à droite #}
+							<div class="card-right">
+								<div class="donut-wrap">
+									<svg viewbox="0 0 36 36" class="donut-svg">
+										<circle cx="18" cy="18" r="15.9" fill="none" stroke="#F1F5F9" stroke-width="3.8"/>
+										<circle cx="18" cy="18" r="15.9" fill="none" stroke="{{ accent }}" stroke-width="3.8" stroke-dasharray="{{ ev.pct_done }},100" stroke-dashoffset="25" stroke-linecap="round"/>
+									</svg>
+									<span class="donut-pct">{{ ev.pct_done }}%</span>
+								</div>
+							</div>
+						</div>
+
+						{# ── Card body : infos uniformes ── #}
+						<div class="card-body-uniform">
+							{# Formation #}
+							<div class="cbu-row">
+								<i class="fa-solid fa-book-open cbu-icon"></i>
+								<span class="cbu-val text-truncate">{{ ev.formation_titre }}</span>
+							</div>
+							{# Durée + Score requis #}
+							<div class="cbu-row">
+								<i class="fa-solid fa-stopwatch cbu-icon"></i>
+								<span class="cbu-val">{{ ev.duree }} min</span>
+								<span class="cbu-sep">·</span>
+								<i class="fa-solid fa-bullseye cbu-icon"></i>
+								<span class="cbu-val">{{ ev.score_requis }}%</span>
+							</div>
+							{# Période (toujours affiché, placeholder si absent) #}
+							<div class="cbu-row">
+								<i class="fa-regular fa-calendar cbu-icon"></i>
+								{% if ev.eval_debut %}
+									<span class="cbu-val">{{ ev.eval_debut|date('d M') }} → {{ ev.eval_fin|date('d M') }}</span>
+									{% if ev.date_status == 'expired' %}
+										<span class="date-chip chip-exp" style="margin-left:auto">Fermée depuis {{ ((date()|date('U') - date(ev.eval_fin)|date('U')) / 86400)|abs|round }}j</span>
+									{% elseif ev.date_status == 'not_yet' %}
+										<span class="date-chip chip-soon" style="margin-left:auto">Dans {{ ((date(ev.eval_debut)|date('U') - date()|date('U')) / 86400)|round }}j</span>
+									{% endif %}
+								{% else %}
+									<span class="cbu-val cbu-empty">—</span>
+								{% endif %}
+							</div>
+							{# Statut badge + participants #}
+							<div class="cbu-row">
+								{% if ev.my_statut == 'passed' %}
+									<span class="badge badge-passed"><i class="fa-solid fa-check"></i> Réussi</span>
+								{% elseif ev.my_statut == 'failed' %}
+									<span class="badge badge-failed"><i class="fa-solid fa-xmark"></i> Échoué</span>
+								{% elseif ev.access_state == 'accessible' %}
+									<span class="badge badge-accessible"><i class="fa-solid fa-lock-open"></i> Accessible</span>
+								{% elseif ev.access_state == 'locked_level' %}
+									<span class="badge badge-locked"><i class="fa-solid fa-lock"></i> Verrouillée</span>
+								{% elseif ev.access_state == 'not_yet' %}
+									<span class="badge badge-notyet"><i class="fa-solid fa-hourglass-half"></i> Bientôt</span>
+								{% else %}
+									<span class="badge badge-expired"><i class="fa-solid fa-ban"></i> Expirée</span>
+								{% endif %}
+								<span class="cbu-sep"></span>
+								<span class="part-info" style="margin-left:auto">
+									<i class="fa-solid fa-users fa-xs"></i> {{ ev.nb_done }}/{{ ev.nb_part }}
+								</span>
+							</div>
+							{# Score bar (si déjà passé) #}
+							{% if ev.my_statut != 'not_taken' and ev.my_score > 0 %}
+								<div class="score-row">
+									<span class="score-bar-wrap">
+										<span class="score-bar-fill" style="width:{{ ev.my_score }}%;background:{{ ev.my_statut == 'passed' ? '#10B981' : '#EF4444' }}"></span>
+									</span>
+									<span class="score-txt" style="color:{{ ev.my_statut == 'passed' ? '#059669' : '#DC2626' }}">{{ ev.my_score }}%</span>
+								</div>
+							{% else %}
+								<div class="score-row score-row-empty"></div>
+							{% endif %}
+						</div>
+
+						<div class="prog-strip-wrap">
+							<div class="prog-strip-fill" style="width:{{ ev.pct_done }}%;background:{{ accent }}"></div>
+						</div>
+
+						<div class="card-footer">
+							{# ── Une seule ligne : action principale + détails + admin icônes ── #}
+							<div class="footer-row footer-row-unified">
+								{# Bouton principal #}
+								{% if ev.access_state == 'locked_level' %}
+									<button class="btn-main btn-locked" disabled>
+										<i class="fa-solid fa-lock"></i> Niv.{{ ev.niveau_requis }} requis
+									</button>
+								{% elseif ev.access_state == 'not_yet' %}
+									<button class="btn-main btn-notyet" disabled>
+										<i class="fa-solid fa-hourglass-half"></i> Dispo. {{ ev.eval_debut|date('d/m') }}
+									</button>
+								{% elseif ev.access_state == 'expired' %}
+									<button class="btn-main btn-expired" disabled>
+										<i class="fa-solid fa-ban"></i> Expirée
+									</button>
+								{% elseif ev.my_statut == 'failed' %}
+									<button class="btn-main btn-retry" onclick="openQuiz({{ ev.id }}, '{{ ev.titre|e('html_attr') }}')">
+										<i class="fa-solid fa-rotate-right"></i> Repasser
+									</button>
+								{% elseif ev.my_statut == 'passed' %}
+									<button class="btn-main btn-results" onclick="openDetails({{ ev.id }})">
+										<i class="fa-solid fa-chart-simple"></i> Résultats
+									</button>
+								{% else %}
+									<button class="btn-main btn-pass" style="background:linear-gradient(135deg,{{ accent }},color-mix(in srgb,{{ accent }} 70%,#7C3AED))" onclick="openQuiz({{ ev.id }}, '{{ ev.titre|e('html_attr') }}')">
+										<i class="fa-solid fa-play"></i> Commencer
+									</button>
+								{% endif %}
+
+								{# Détails #}
+								<button class="btn-details" onclick="openDetails({{ ev.id }})" title="Détails">
+									<i class="fa-solid fa-eye"></i> Détails
+								</button>
+
+								{# Admin : icônes uniquement #}
+								{% if is_granted('ROLE_ADMIN') or is_granted('ROLE_RH') %}
+									<div class="footer-admin-icons">
+										<button type="button" class="btn-icon-adm btn-icon-edit" onclick="openEditModal({{ ev.id }}, {{ ev|json_encode }})" title="Modifier">
+											<i class="fa-solid fa-pen"></i>
+										</button>
+										<form method="post" action="{{ path('evaluations_toggle', {id: ev.id}) }}" style="display:contents">
+											{% if ev.statut_eval == 'INACTIVE' %}
+												<button type="submit" class="btn-icon-adm btn-icon-activate" title="Réactiver">
+													<i class="fa-solid fa-circle-check"></i>
+												</button>
+											{% else %}
+												<button type="submit" class="btn-icon-adm btn-icon-deactivate" title="Désactiver">
+													<i class="fa-solid fa-circle-minus"></i>
+												</button>
+											{% endif %}
+										</form>
+										<button type="button" class="btn-icon-adm btn-icon-danger" title="Supprimer" onclick="openConfirmDelete('{{ path('evaluations_delete', {id: ev.id}) }}', '{{ (ev.titre ?: ev.formation_titre)|e('html_attr') }}')">
+											<i class="fa-solid fa-trash"></i>
+										</button>
+									</div>
+								{% endif %}
+							</div>
+						</div>
+					</div>
+				{% endfor %}
+
+			</div>
+		{% endif %}
+	</div>
+</div>
+
+
+{# ══ DRAWER — Calendrier ═════════════════════════════════════════════════════#}
+<div class="drawer-overlay" id="calDrawer" onclick="if(event.target===this)closeDrawer('calDrawer')">
+	<div class="drawer-panel">
+		<div class="drawer-head">
+			<div class="drawer-head-icon" style="background:#EEF2FF;color:#6366F1">
+				<i class="fa-solid fa-calendar-days"></i>
+			</div>
+			<div>
+				<div class="drawer-head-title">Calendrier</div>
+				<div class="drawer-head-sub">Planning de vos évaluations</div>
+			</div>
+			<button class="drawer-close" onclick="closeDrawer('calDrawer')">
+				<i class="fa-solid fa-xmark"></i>
+			</button>
+		</div>
+		<div class="drawer-body">
+			<div class="side-card" id="calCard">
+				<div class="side-card-head">
+					<svg width="14" height="14" viewbox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+					<span class="side-card-title" id="calMonthLabel"></span>
+					<div style="flex:1"></div>
+					<button class="cal-nav" onclick="calPrev()">‹</button>
+					<button class="cal-nav cal-today" onclick="calToday()">Aujourd'hui</button>
+					<button class="cal-nav" onclick="calNext()">›</button>
+				</div>
+				<div id="calBody"></div>
+				<div class="cal-legend">
+					<span class="leg-item">
+						<span class="leg-dot" style="background:#6366F1"></span>Accessible</span>
+					<span class="leg-item">
+						<span class="leg-dot" style="background:#F59E0B"></span>Bientôt</span>
+					<span class="leg-item">
+						<span class="leg-dot" style="background:#10B981"></span>Réussie</span>
+					<span class="leg-item">
+						<span class="leg-dot" style="background:#EF4444"></span>Échouée</span>
+					<span class="leg-item">
+						<span class="leg-dot" style="background:#9CA3AF"></span>Expirée</span>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+{# ══ DRAWER — Ma Progression ══════════════════════════════════════════════════#}
+<div class="drawer-overlay" id="progDrawer" onclick="if(event.target===this)closeDrawer('progDrawer')">
+	<div class="drawer-panel">
+		<div class="drawer-head">
+			<div class="drawer-head-icon" style="background:#FEF3C7;color:#D97706">
+				<i class="fa-solid fa-trophy"></i>
+			</div>
+			<div>
+				<div class="drawer-head-title">Ma Progression</div>
+				<div class="drawer-head-sub">Niveau, badges et derniers résultats</div>
+			</div>
+			<button class="drawer-close" onclick="closeDrawer('progDrawer')">
+				<i class="fa-solid fa-xmark"></i>
+			</button>
+		</div>
+		<div class="drawer-body">
+			{% set xp_in_level = xp_val % 200 %}
+			{% set xp_pct      = xp_in_level > 0 ? (xp_in_level / 200 * 100)|round : 0 %}
+			<div
+				class="xp-card-new" style="margin-top:1rem">
+
+				{# Header avec avatar animé #}
+				<div class="xpc-header">
+					<div class="xpc-stars"></div>
+					<div class="xpc-orbit">
+						<div class="xpc-planet">
+							<span class="xpc-level-num">{{ xp_level }}</span>
+						</div>
+						<div class="xpc-ring xpc-ring1"></div>
+						<div class="xpc-ring xpc-ring2"></div>
+					</div>
+					<div class="xpc-header-text">
+						<div class="xpc-title">Ma Progression</div>
+						<div class="xpc-subtitle">{{ xp_val }}
+							XP · Niveau
+							{{ xp_level }}</div>
+					</div>
+					<div class="xpc-flame-badge">
+						{% if nb_passed >= 5 %}🔥 Expert{% elseif nb_passed >= 3 %}⚡ Confirmé{% elseif nb_passed >= 1 %}✨ Débutant{% else %}🌱 Novice
+						{% endif %}
+					</div>
+				</div>
+
+				{# XP Bar segmentée stylée #}
+				<div class="xpc-bar-zone">
+					<div class="xpc-bar-labels">
+						<span class="xpc-bar-lbl-left">{{ xp_in_level }}
+							XP</span>
+						<span class="xpc-bar-lbl-right">→ Niv.{{ xp_level + 1 }}
+							dans
+							{{ 200 - xp_in_level }}
+							XP</span>
+					</div>
+					<div class="xpc-bar-track">
+						<div class="xpc-bar-fill" data-pct="{{ xp_pct }}" style="width:{{ xp_pct }}%">
+							<div class="xpc-bar-shine"></div>
+						</div>
+						{% for seg in range(1, 9) %}
+							<div class="xpc-seg-mark" style="left:{{ seg * 10 }}%"></div>
+						{% endfor %}
+					</div>
+					<div class="xpc-bar-total">{{ xp_val }}
+						/
+						{{ xp_level * 200 }}
+						XP total</div>
+				</div>
+
+				{# Stats trio #}
+				<div class="xpc-stats">
+					<div class="xpc-stat xpc-stat-win">
+						<div class="xpc-stat-icon">🏆</div>
+						<div class="xpc-stat-num">{{ nb_passed }}</div>
+						<div class="xpc-stat-lbl">Réussies</div>
+						<div class="xpc-stat-xp">+{{ nb_passed * 100 }}
+							XP</div>
+					</div>
+					<div class="xpc-divider"></div>
+					<div class="xpc-stat xpc-stat-fail">
+						<div class="xpc-stat-icon">💪</div>
+						<div class="xpc-stat-num">{{ nb_failed }}</div>
+						<div class="xpc-stat-lbl">Tentées</div>
+						<div class="xpc-stat-xp">+{{ nb_failed * 20 }}
+							XP</div>
+					</div>
+					<div class="xpc-divider"></div>
+					<div class="xpc-stat xpc-stat-open">
+						<div class="xpc-stat-icon">🎯</div>
+						<div class="xpc-stat-num">{{ nb_open }}</div>
+						<div class="xpc-stat-lbl">Disponibles</div>
+						<div class="xpc-stat-xp">À saisir</div>
+					</div>
+				</div>
+
+				{# Badges hexagonaux #}
+				<div class="xpc-badges-zone">
+					<div class="xpc-badges-title">BADGES</div>
+					<div class="xpc-badges-row">
+						<div class="xpc-badge-hex {{ nb_passed >= 1 ? 'badge-unlocked badge-bronze' : 'badge-locked' }}" title="1ère réussite">
+							<div class="hex-inner">
+								<span class="hex-icon">🏅</span>
+								<span class="hex-name">Débutant</span>
+								{% if nb_passed < 1 %}
+									<span class="hex-lock">🔒</span>
+								{% endif %}
+							</div>
+						</div>
+						<div class="xpc-badge-hex {{ nb_passed >= 3 ? 'badge-unlocked badge-silver' : 'badge-locked' }}" title="3 réussites">
+							<div class="hex-inner">
+								<span class="hex-icon">🥈</span>
+								<span class="hex-name">Confirmé</span>
+								{% if nb_passed < 3 %}
+									<span class="hex-lock">🔒</span>
+								{% endif %}
+							</div>
+						</div>
+						<div class="xpc-badge-hex {{ nb_passed >= 5 ? 'badge-unlocked badge-gold' : 'badge-locked' }}" title="5 réussites">
+							<div class="hex-inner">
+								<span class="hex-icon">🥇</span>
+								<span class="hex-name">Expert</span>
+								{% if nb_passed < 5 %}
+									<span class="hex-lock">🔒</span>
+								{% endif %}
+							</div>
+						</div>
+						<div class="xpc-badge-hex {{ xp_level >= 5 ? 'badge-unlocked badge-diamond' : 'badge-locked' }}" title="Niv.5 atteint">
+							<div class="hex-inner">
+								<span class="hex-icon">💎</span>
+								<span class="hex-name">Élite</span>
+								{% if xp_level < 5 %}
+									<span class="hex-lock">🔒</span>
+								{% endif %}
+							</div>
+						</div>
+					</div>
+				</div>
+
+			</div>
+
+			{# ════ À VENIR ════ #}
+			{% if upcoming|length > 0 %}
+				<div class="side-card" style="margin-top:1rem">
+					<div class="side-card-head">
+						<svg width="14" height="14" viewbox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2.2"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10"/></svg>
+						<span class="side-card-title">Prochaines ouvertures</span>
+						<span class="side-badge-count">{{ upcoming|slice(0,4)|length }}</span>
+					</div>
+					<div class="upcoming-list">
+						{% for ev in upcoming|slice(0,4) %}
+							{% set dc = ev.difficulte == 'DIFFICILE' ? '#EF4444' : (ev.difficulte == 'FACILE' ? '#10B981' : '#6366F1') %}
+							<div class="upcoming-row">
+								<div class="upcoming-icon" style="background:{{ dc }}18;color:{{ dc }}">
+									{{ ev.type == 'QCM' ? '📝' : (ev.type == 'Pratique' ? '🔧' : (ev.type == 'Oral' ? '🎤' : '📋')) }}
+								</div>
+								<div class="upcoming-info">
+									<span class="upcoming-title">{{ ev.titre ?: ev.formation_titre }}</span>
+									<span class="upcoming-meta">⏱
+										{{ ev.duree }}min · 🎯
+										{{ ev.score_requis }}%</span>
+								</div>
+								<span class="upcoming-diff" style="color:{{ dc }}">{{ ev.difficulte }}</span>
+							</div>
+						{% endfor %}
+					</div>
+				</div>
+			{% endif %}
+
+			{# ════ HISTORIQUE ════ #}
+			{% if history|length > 0 %}
+				<div class="side-card" style="margin-top:1rem">
+					<div class="side-card-head">
+						<svg width="14" height="14" viewbox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg>
+						<span class="side-card-title">Mes derniers résultats</span>
+					</div>
+					<div class="hist-list">
+						{% for h in history %}
+							{% set hc = h.statut == 'passed' ? '#059669' : '#DC2626' %}
+							{% set hb = h.statut == 'passed' ? '#D1FAE5' : '#FEE2E2' %}
+							<div class="hist-row">
+								<div class="hist-badge" style="background:{{ hb }};color:{{ hc }}">{{ h.statut == 'passed' ? '✓' : '✗' }}</div>
+								<div class="hist-info">
+									<span class="hist-title">{{ h.titre ?: h.formation_titre }}</span>
+									<span class="hist-date">{{ h.datePassage ? h.datePassage|date('d/m/Y') : '' }}</span>
+								</div>
+								<span class="hist-score" style="background:{{ hb }};color:{{ hc }}">{{ h.score_pct }}%</span>
+							</div>
+						{% endfor %}
+					</div>
+				</div>
+			{% endif %}
+		</div>
+	</div>
+</div>
+
+{# ══ MODAL — Nouvelle évaluation ════════════════════════════════════════════ #}
+<div id="modalNew" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeNewModal()">
+	<div class="modal-box modal-lg">
+		<div class="modal-head">
+			<h3 class="modal-title">➕ Nouvelle Évaluation</h3>
+			<button class="modal-close" onclick="closeNewModal()">✕</button>
+		</div>
+		<form method="post" action="{{ path('evaluations_new') }}" class="modal-form" onsubmit="return validateForm(this)" novalidate>
+			<div class="mf-row">
+				<div class="mf-group" style="grid-column:1/-1">
+					<label class="mf-lbl">Titre
+						<span class="req">*</span>
+					</label>
+					<input type="text" name="titre" class="mf-input" required placeholder="Ex: Évaluation Angular Avancé" oninput="validateField(this)">
+					<span class="error-msg" style="display:none"></span>
+				</div>
+				<div class="mf-group">
+					<label class="mf-lbl">Type</label>
+					<select name="type" class="mf-input" id="new_type">
+						{% for t in ['QCM','Pratique','Oral','Projet','Auto-évaluation'] %}
+							<option>{{ t }}</option>
+						{% endfor %}
+					</select>
+				</div>
+				<div class="mf-group">
+					<label class="mf-lbl">Difficulté</label>
+					<select name="difficulte" class="mf-input" id="new_diff" onchange="autoDiff(this.value)">
+						<option value="FACILE">🟢 FACILE</option>
+						<option value="MOYEN" selected>🔵 MOYEN</option>
+						<option value="DIFFICILE">🔴 DIFFICILE</option>
+					</select>
+				</div>
+				<div class="mf-group">
+					<label class="mf-lbl">Session (Formation)
+						<span class="req">*</span>
+					</label>
+					<select name="session_id" class="mf-input" required oninput="validateField(this)">
+						{% for s in sessions %}
+							<option value="{{ s.id }}">{{ s.titre }}</option>
+						{% endfor %}
+					</select>
+					<span class="error-msg" style="display:none"></span>
+				</div>
+				<div class="mf-group">
+					<label class="mf-lbl">Compétence principale</label>
+					<select name="competence_id" class="mf-input" id="new_comp_primary">
+						<option value="">— Aucune —</option>
+						{% for c in competences %}
+							<option value="{{ c.id }}">{{ c.libelle }}
+								(max
+								{{ c.niveauMax }})</option>
+						{% endfor %}
+					</select>
+				</div>
+				<div class="mf-group" style="grid-column:1/-1">
+					<label class="mf-lbl">Compétences supplémentaires
+						<span style="font-weight:400;color:#9CA3AF;text-transform:none;letter-spacing:0">(optionnel — impactées par le résultat)</span>
+					</label>
+					<div class="multi-comp-wrap" id="new_extra_comps">
+						<div class="multi-comp-search">
+							<input type="text" id="compSearchInput" placeholder="🔍 Rechercher une compétence…" oninput="filterCompList()" class="mf-input" style="margin-bottom:.5rem">
+						</div>
+						<div class="multi-comp-list" id="compCheckList">
+							{% for c in competences %}
+								<label class="comp-check-item">
+									<input type="checkbox" name="extra_competence_ids[]" value="{{ c.id }}" class="comp-checkbox">
+									<span class="comp-check-dot" style="background:#6366F1"></span>
+									<span class="comp-check-name">{{ c.libelle }}</span>
+									<span class="comp-check-max">max
+										{{ c.niveauMax }}</span>
+								</label>
+							{% endfor %}
+						</div>
+						<div class="multi-comp-selected" id="selectedCompsPreview">Aucune compétence supplémentaire sélectionnée</div>
+					</div>
+				</div>
+				<div class="mf-group">
+					<label class="mf-lbl">Durée (min)</label>
+					<input type="number" name="duree" class="mf-input" value="30" min="5" max="180">
+				</div>
+				<div class="mf-group">
+					<label class="mf-lbl">Score requis (%)</label>
+					<input type="number" name="score_requis" id="new_score" class="mf-input" value="70" min="50" max="100">
+				</div>
+				<div class="mf-group">
+					<label class="mf-lbl">Niveau requis
+						<span style="font-weight:400;color:#9CA3AF;text-transform:none;letter-spacing:0">(pour débloquer)</span>
+					</label>
+					<input type="number" name="niveau_requis" id="new_niveau_requis" class="mf-input" value="0" min="0" max="5">
+				</div>
+				<div class="mf-group">
+					<label class="mf-lbl">Niveaux si réussi</label>
+					<input type="number" name="niveau_succes" id="new_ok" class="mf-input" value="1" min="0" max="5">
+				</div>
+				<div class="mf-group">
+					<label class="mf-lbl">Niveaux si échoué</label>
+					<input type="number" name="niveau_echec" id="new_ko" class="mf-input" value="-1" min="-5" max="0">
+				</div>
+				<div class="mf-group">
+					<label class="mf-lbl">📅 Ouverture</label>
+					<input type="date" name="dateDebut" class="mf-input" value="{{ 'now'|date('Y-m-d') }}">
+				</div>
+				<div class="mf-group">
+					<label class="mf-lbl">📅 Clôture</label>
+					<input type="date" name="dateFin" class="mf-input" value="{{ '+7 days'|date('Y-m-d') }}">
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn-cancel" onclick="closeNewModal()">Annuler</button>
+				<button type="submit" class="btn-save">✅ Créer</button>
+			</div>
+		</form>
+	</div>
+</div>
+
+{# ══ MODAL — Confirmation suppression ════════════════════════════════════════ #}
+<div id="modalConfirmDelete" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeConfirmDelete()">
+	<div class="modal-box modal-confirm-box">
+		<div class="confirm-icon-wrap">
+			<div class="confirm-icon">
+				<i class="fa-solid fa-triangle-exclamation"></i>
+			</div>
+		</div>
+		<div class="confirm-content">
+			<h3 class="confirm-title">Supprimer cette évaluation ?</h3>
+			<p class="confirm-sub" id="confirmDeleteName"></p>
+			<p class="confirm-warn">Cette action est irréversible. Toutes les données associées seront perdues.</p>
+		</div>
+		<div class="confirm-actions">
+			<button class="confirm-btn-cancel" onclick="closeConfirmDelete()">
+				<i class="fa-solid fa-xmark"></i> Annuler
+			</button>
+			<form id="confirmDeleteForm" method="post" action="" style="display:contents">
+				<button type="submit" class="confirm-btn-delete">
+					<i class="fa-solid fa-trash"></i> Supprimer
+				</button>
+			</form>
+		</div>
+	</div>
+</div>
+
+{# ══ MODAL — Quiz ══════════════════════════════════════════════════════════ #}
+<div id="modalQuiz" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeQuiz()">
+	<div class="modal-box modal-lg">
+		<div class="modal-head">
+			<h3 class="modal-title" id="quiz_title">📝 Évaluation</h3>
+			<button class="modal-close" onclick="closeQuiz()">✕</button>
+		</div>
+		<div id="quizBody" style="padding:1.5rem;min-height:300px"></div>
+	</div>
+</div>
+
+{# ══ MODAL — Détails (redesigned) ═══════════════════════════════════════════ #}
+<div id="modalDetails" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeDetails()">
+	<div class="modal-box modal-details-box">
+		<div id="detailsBody"></div>
+	</div>
+</div>
+
+{# ══ MODAL — Modifier évaluation ════════════════════════════════════════════ #}
+<div id="modalEdit" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeEditModal()">
+	<div class="modal-box modal-lg">
+		<div class="modal-head">
+			<h3 class="modal-title">✏ Modifier l'Évaluation</h3>
+			<button class="modal-close" onclick="closeEditModal()">✕</button>
+		</div>
+		<form method="post" id="formEdit" action="" class="modal-form" onsubmit="return validateForm(this)" novalidate>
+			<div class="mf-row">
+				<div class="mf-group" style="grid-column:1/-1">
+					<label class="mf-lbl">Titre
+						<span class="req">*</span>
+					</label>
+					<input type="text" name="titre" id="edit_titre" class="mf-input" required oninput="validateField(this)">
+					<span class="error-msg" style="display:none"></span>
+				</div>
+				<div class="mf-group">
+					<label class="mf-lbl">Type</label>
+					<select name="type" id="edit_type" class="mf-input">
+						{% for t in ['QCM','Pratique','Oral','Projet','Auto-évaluation'] %}
+							<option value="{{ t }}">{{ t }}</option>
+						{% endfor %}
+					</select>
+				</div>
+				<div class="mf-group">
+					<label class="mf-lbl">Difficulté</label>
+					<select name="difficulte" id="edit_difficulte" class="mf-input">
+						<option value="FACILE">🟢 FACILE</option>
+						<option value="MOYEN">🔵 MOYEN</option>
+						<option value="DIFFICILE">🔴 DIFFICILE</option>
+					</select>
+				</div>
+				<div class="mf-group">
+					<label class="mf-lbl">Compétence liée</label>
+					<select name="competence_id" id="edit_competence_id" class="mf-input">
+						<option value="">— Aucune —</option>
+						{% for c in competences %}
+							<option value="{{ c.id }}">{{ c.libelle }}
+								(max
+								{{ c.niveauMax }})</option>
+						{% endfor %}
+					</select>
+				</div>
+				<div class="mf-group">
+					<label class="mf-lbl">Durée (min)</label>
+					<input type="number" name="duree" id="edit_duree" class="mf-input" min="5" max="180">
+				</div>
+				<div class="mf-group">
+					<label class="mf-lbl">Score requis (%)</label>
+					<input type="number" name="score_requis" id="edit_score_requis" class="mf-input" min="50" max="100">
+				</div>
+				<div class="mf-group">
+					<label class="mf-lbl">Niveau requis
+						<span style="font-weight:400;color:#9CA3AF;text-transform:none;letter-spacing:0">(pour débloquer)</span>
+					</label>
+					<input type="number" name="niveau_requis" id="edit_niveau_requis" class="mf-input" min="0" max="5">
+				</div>
+				<div class="mf-group">
+					<label class="mf-lbl">Niveaux si réussi</label>
+					<input type="number" name="niveau_succes" id="edit_niveau_succes" class="mf-input" min="0" max="5">
+				</div>
+				<div class="mf-group">
+					<label class="mf-lbl">Niveaux si échoué</label>
+					<input type="number" name="niveau_echec" id="edit_niveau_echec" class="mf-input" min="-5" max="0">
+				</div>
+				<div class="mf-group">
+					<label class="mf-lbl">📅 Ouverture</label>
+					<input type="date" name="dateDebut" id="edit_dateDebut" class="mf-input">
+				</div>
+				<div class="mf-group">
+					<label class="mf-lbl">📅 Clôture</label>
+					<input type="date" name="dateFin" id="edit_dateFin" class="mf-input">
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn-cancel" onclick="closeEditModal()">Annuler</button>
+				<button type="submit" class="btn-save">💾 Enregistrer</button>
+			</div>
+		</form>
+	</div>
+</div>
+
+<script>
+	// ── Calendrier ────────────────────────────────────────────────────────────
+	const calEvals = {{ calendarEvals|raw }};
+	let calDate = new Date();
+	calDate.setDate(1);
+	
+	function renderOneMonth(y, m, todayTs) {
+	  const monthNames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+	  const days = new Date(y, m+1, 0).getDate();
+	  let dow = new Date(y, m, 1).getDay(); if (dow === 0) dow = 7;
+	  const evalMap = {};
+	  calEvals.forEach(ev => {
+	    if (!ev.eval_debut || !ev.eval_fin) return;
+	    const ds = new Date(ev.eval_debut), de = new Date(ev.eval_fin);
+	    for (let d = 1; d <= days; d++) {
+	      const t = new Date(y, m, d).getTime();
+	      if (t >= ds.getTime() && t <= de.getTime()) {
+	        if (!evalMap[d]) evalMap[d] = [];
+	        evalMap[d].push(ev);
+	      }
+	    }
+	  });
+	  const dayLabels = ['L','M','M','J','V','S','D'];
+	  let html = `<div class="cal-month-block">
+	    <div class="cal-month-title">${monthNames[m]} ${y}</div>
+	    <div class="cal-grid">`;
+	  dayLabels.forEach(l => html += `<div class="cal-day-lbl">${l}</div>`);
+	  for (let i = 1; i < dow; i++) html += '<div></div>';
+	  for (let d = 1; d <= days; d++) {
+	    const isToday = new Date(y,m,d).getTime() === todayTs;
+	    const hasEval = evalMap[d] && evalMap[d].length > 0;
+	    const color = hasEval ? getCalColor(evalMap[d][0]) : 'transparent';
+	    const title = hasEval ? (evalMap[d][0].titre || evalMap[d][0].formation_titre) : '';
+	    html += `<div class="cal-day ${isToday?'cal-today-cell':''} ${hasEval?'cal-has-eval':''}"
+	      title="${title}" style="${hasEval?'outline:2px solid '+color+';outline-offset:-1px':''}">
+	      <span>${d}</span>
+	      ${hasEval ? `<span class="cal-dot" style="background:${color}"></span>` : ''}
+	    </div>`;
+	  }
+	  html += '</div>';
+	  const monthEvs = calEvals.filter(ev => {
+	    if (!ev.eval_debut || !ev.eval_fin) return false;
+	    const ds = new Date(ev.eval_debut), de = new Date(ev.eval_fin);
+	    return new Date(y,m,1) <= de && new Date(y,m+1,0) >= ds;
+	  });
+	  if (monthEvs.length > 0) {
+	    html += '<div class="cal-events">';
+	    monthEvs.slice(0,3).forEach(ev => {
+	      const c = getCalColor(ev);
+	      const dates = `${ev.eval_debut?.slice(5,10).replace('-','/')} → ${ev.eval_fin?.slice(5,10).replace('-','/')}`;
+	      html += `<div class="cal-event-row">
+	        <span class="cal-event-dot" style="background:${c};color:${c}"></span>
+	        <span class="cal-event-title">${ev.titre || ev.formation_titre}</span>
+	        <span class="cal-event-meta">${dates}</span>
+	      </div>`;
+	    });
+	    if (monthEvs.length > 3) {
+	      html += `<div style="font-size:.6rem;color:#9CA3AF;text-align:center;padding:.15rem 0">+${monthEvs.length-3} autres</div>`;
+	    }
+	    html += '</div>';
+	  }
+	  html += '</div>';
+	  return html;
+	}
+	
+	function calRender() {
+	  const monthNames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+	  const y = calDate.getFullYear(), m = calDate.getMonth();
+	  const today = new Date(); today.setHours(0,0,0,0);
+	  const y2 = m === 11 ? y+1 : y, m2 = m === 11 ? 0 : m+1;
+	  document.getElementById('calMonthLabel').textContent = monthNames[m] + ' – ' + monthNames[m2];
+	  document.getElementById('calBody').innerHTML =
+	    '<div class="cal-two-months">' +
+	    renderOneMonth(y, m, today.getTime()) +
+	    renderOneMonth(y2, m2, today.getTime()) +
+	    '</div>';
+	}
+	
+	// ── XP bar animation (new widget) ────────────────────────────────────────────
+	document.addEventListener('DOMContentLoaded', () => {
+	  const fill = document.querySelector('.xpc-bar-fill');
+	  if (fill) {
+	    const pct = fill.dataset.pct || 0;
+	    fill.style.width = '0%';
+	    setTimeout(() => { fill.style.transition = 'width 1.4s cubic-bezier(.4,0,.2,1)'; fill.style.width = pct + '%'; }, 300);
+	  }
+	});
+	
+	// ── Multi-competence checkbox filter ────────────────────────────────────────
+	function filterCompList() {
+	  const q = document.getElementById('compSearchInput')?.value.toLowerCase() || '';
+	  document.querySelectorAll('#compCheckList .comp-check-item').forEach(item => {
+	    const name = item.querySelector('.comp-check-name')?.textContent.toLowerCase() || '';
+	    item.style.display = name.includes(q) ? '' : 'none';
+	  });
+	}
+	
+	// ── Update selected comps preview ──────────────────────────────────────────
+	document.addEventListener('change', e => {
+	  if (e.target.classList.contains('comp-checkbox')) {
+	    const preview = document.getElementById('selectedCompsPreview');
+	    if (!preview) return;
+	    const checked = Array.from(document.querySelectorAll('.comp-checkbox:checked'));
+	    if (checked.length === 0) {
+	      preview.textContent = 'Aucune compétence supplémentaire sélectionnée';
+	      preview.classList.remove('has-selected');
+	    } else {
+	      preview.innerHTML = checked.map(cb => {
+	        const name = cb.closest('.comp-check-item')?.querySelector('.comp-check-name')?.textContent || '';
+	        return `<span class="sel-comp-tag">${name}</span>`;
+	      }).join('');
+	      preview.classList.add('has-selected');
+	    }
+	  }
+	});
+	
+	
+	function getCalColor(ev) {
+	  if (ev.my_statut === 'passed')     return '#10B981';
+	  if (ev.my_statut === 'failed')     return '#EF4444';
+	  if (ev.access_state === 'expired') return '#9CA3AF';
+	  if (ev.access_state === 'not_yet') return '#F59E0B';
+	  return '#6366F1';
+	}
+	function calPrev()  { calDate.setMonth(calDate.getMonth()-1); calRender(); }
+	function calNext()  { calDate.setMonth(calDate.getMonth()+1); calRender(); }
+	function calToday() { calDate = new Date(); calDate.setDate(1); calRender(); }
+	calRender();
+	
+	// ── Drawers ─────────────────────────────────────────────────────────────────
+	function openDrawer(id) {
+	  document.getElementById(id).classList.add('open');
+	  document.body.style.overflow = 'hidden';
+	  if (id === 'calDrawer') calRender();
+	}
+	function closeDrawer(id) {
+	  document.getElementById(id).classList.remove('open');
+	  document.body.style.overflow = '';
+	}
+	document.addEventListener('keydown', e => {
+	  if (e.key === 'Escape') {
+	    closeDrawer('calDrawer');
+	    closeDrawer('progDrawer');
+	  }
+	});
+	
+	// ── Tab switching ────────────────────────────────────────────────────────────
+	let currentTab = 'all';
+	function switchTab(btn, tab) {
+	  currentTab = tab;
+	  document.querySelectorAll('.ev-tab').forEach(b => b.classList.remove('active'));
+	  btn.classList.add('active');
+	  filterCards();
+	}
+	
+	// ── View toggle ─────────────────────────────────────────────────────────────
+	function setView(v) {
+	  const grid = document.getElementById('evCardsGrid');
+	  if (!grid) return;
+	  if (v === 'list') {
+	    grid.classList.add('list-view');
+	    document.getElementById('btnList').classList.add('active');
+	    document.getElementById('btnGrid').classList.remove('active');
+	  } else {
+	    grid.classList.remove('list-view');
+	    document.getElementById('btnGrid').classList.add('active');
+	    document.getElementById('btnList').classList.remove('active');
+	  }
+	}
+	
+	// ── Filter cards (client-side) ───────────────────────────────────────────────
+	function filterCards() {
+	  const q      = (document.getElementById('searchInput')?.value || '').toLowerCase();
+	  const statut = document.getElementById('statutSel')?.value || '';
+	  const type   = document.getElementById('typeSel')?.value || '';
+	  let visible  = 0;
+	  document.querySelectorAll('#evCardsGrid .eval-card').forEach(card => {
+	    const matchTab    = currentTab === 'all' || card.dataset.tab === currentTab;
+	    const matchSearch = !q || (card.dataset.title || '').includes(q);
+	    const matchStatut = !statut || card.dataset.statut === statut || card.dataset.mystat === statut;
+	    const matchType   = !type || card.dataset.type === type;
+	    const show = matchTab && matchSearch && matchStatut && matchType;
+	    card.style.display = show ? '' : 'none';
+	    if (show) visible++;
+	  });
+	}
+	
+	function submitFilter() {
+	  const q      = document.getElementById('searchInput')?.value || '';
+	  const statut = document.getElementById('statutSel')?.value || '';
+	  const type   = document.getElementById('typeSel')?.value || '';
+	  const url    = new URL(window.location.href);
+	  if (q)      url.searchParams.set('search', q);      else url.searchParams.delete('search');
+	  if (statut) url.searchParams.set('statut', statut); else url.searchParams.delete('statut');
+	  if (type)   url.searchParams.set('type', type);     else url.searchParams.delete('type');
+	  window.location = url.toString();
+	}
+	
+	// ── Difficulté auto-remplissage ───────────────────────────────────────────
+	function autoDiff(v) {
+	  const m = {FACILE:{s:60,ok:1,ko:-1},MOYEN:{s:70,ok:2,ko:-1},DIFFICILE:{s:80,ok:3,ko:-2}};
+	  const d = m[v]; if (!d) return;
+	  document.getElementById('new_score').value = d.s;
+	  document.getElementById('new_ok').value    = d.ok;
+	  document.getElementById('new_ko').value    = d.ko;
+	}
+	
+	// ── Modals ────────────────────────────────────────────────────────────────
+	function openConfirmDelete(action, name) {
+	  document.getElementById('confirmDeleteForm').action = action;
+	  document.getElementById('confirmDeleteName').textContent = name;
+	  document.getElementById('modalConfirmDelete').style.display = 'flex';
+	}
+	function closeConfirmDelete() {
+	  document.getElementById('modalConfirmDelete').style.display = 'none';
+	}
+
+	function openNewModal()  { document.getElementById('modalNew').style.display = 'flex'; }
+	function closeNewModal() { document.getElementById('modalNew').style.display = 'none'; }
+	function closeDetails()  { document.getElementById('modalDetails').style.display = 'none'; }
+	function closeQuiz()     { document.getElementById('modalQuiz').style.display = 'none'; }
+	
+	// ── Validation de champs ────────────────────────────────────────────────────
+	function validateField(input) {
+	  const errorMsgEl = input.parentElement.querySelector('.error-msg');
+	  let isValid = true;
+	  let errorMsg = '';
+	
+	  if (input.type === 'text') {
+	    if (input.required && input.value.trim() === '') {
+	      isValid = false;
+	      errorMsg = 'Ce champ est requis';
+	    } else if (input.value.trim().length < 2) {
+	      isValid = false;
+	      errorMsg = 'Minimum 2 caractères requis';
+	    }
+	  } else if (input.type === 'select-one') {
+	    if (input.required && input.value === '') {
+	      isValid = false;
+	      errorMsg = 'Veuillez sélectionner une option';
+	    }
+	  }
+	
+	  // Appliquer le style d'erreur
+	  if (isValid) {
+	    input.classList.remove('mf-input-error');
+	    if (errorMsgEl) errorMsgEl.style.display = 'none';
+	  } else {
+	    input.classList.add('mf-input-error');
+	    if (errorMsgEl) {
+	      errorMsgEl.textContent = errorMsg;
+	      errorMsgEl.style.display = 'block';
+	    }
+	  }
+	
+	  return isValid;
+	}
+	
+	// ── Validation du formulaire (à la soumission) ──────────────────────────────
+	function validateForm(form) {
+	  const requiredInputs = form.querySelectorAll('input[required], select[required]');
+	  let allValid = true;
+	
+	  requiredInputs.forEach(input => {
+	    if (!validateField(input)) {
+	      allValid = false;
+	    }
+	  });
+	
+	  return allValid;
+	}
+	
+	function openDetails(id) {
+	  const ev = {{ evals|json_encode|raw }}.find(e => e.id == id);
+	  if (!ev) return;
+
+	  const typeIcon  = {QCM:'📝',Pratique:'🔧',Oral:'🎤',Projet:'🏗'}[ev.type] || '🪞';
+	  const diffColor = ev.difficulte === 'DIFFICILE' ? '#EF4444' : (ev.difficulte === 'FACILE' ? '#10B981' : '#6366F1');
+	  const diffBg    = ev.difficulte === 'DIFFICILE' ? '#FEF2F2' : (ev.difficulte === 'FACILE' ? '#ECFDF5' : '#EEF2FF');
+	  const accColor  = ev.my_statut === 'passed' ? '#10B981' : (ev.my_statut === 'failed' ? '#EF4444' : (ev.access_state === 'accessible' ? '#6366F1' : (ev.access_state === 'locked_level' ? '#F59E0B' : '#9CA3AF')));
+	  const accBg     = ev.my_statut === 'passed' ? '#ECFDF5' : (ev.my_statut === 'failed' ? '#FEF2F2' : (ev.access_state === 'accessible' ? '#EEF2FF' : (ev.access_state === 'locked_level' ? '#FEF3C7' : '#F3F4F6')));
+	  const statusLabel = ev.my_statut === 'passed' ? 'Réussi' : (ev.my_statut === 'failed' ? 'Échoué' : (ev.access_state === 'accessible' ? 'Accessible' : (ev.access_state === 'locked_level' ? 'Verrouillée' : (ev.access_state === 'not_yet' ? 'Bientôt' : 'Expirée'))));
+	  const statusIcon = ev.my_statut === 'passed' ? 'fa-check' : (ev.my_statut === 'failed' ? 'fa-xmark' : (ev.access_state === 'accessible' ? 'fa-lock-open' : (ev.access_state === 'locked_level' ? 'fa-lock' : (ev.access_state === 'not_yet' ? 'fa-hourglass-half' : 'fa-ban'))));
+
+	  const periodHtml = ev.eval_debut
+	    ? `${ev.eval_debut.slice(0,10).split('-').reverse().join('/')} → ${ev.eval_fin.slice(0,10).split('-').reverse().join('/')}`
+	    : '—';
+
+	  const scoreHtml = ev.my_score > 0
+	    ? `<div class="det-score-block">
+	        <div class="det-score-bar-wrap">
+	          <div class="det-score-bar-fill" style="width:${ev.my_score}%;background:${ev.my_statut==='passed'?'#10B981':'#EF4444'}"></div>
+	        </div>
+	        <span class="det-score-num" style="color:${ev.my_statut==='passed'?'#059669':'#DC2626'}">${ev.my_score}%</span>
+	      </div>`
+	    : '';
+
+	  const compHtml = ev.competence_libelle
+	    ? `<div class="det-comp-block">
+	        <div class="det-comp-name">${ev.competence_libelle}</div>
+	        <div class="det-comp-dots">
+	          ${Array.from({length: ev.niveau_max}, (_,i) => {
+	            const n = i+1;
+	            const cls = n <= ev.niveau_actuel ? 'det-dot-filled' : (n <= ev.niveau_requis ? 'det-dot-req' : 'det-dot-empty');
+	            return `<span class="det-dot ${cls}"></span>`;
+	          }).join('')}
+	          <span class="det-comp-lvl">${ev.niveau_actuel}/${ev.niveau_max}</span>
+	        </div>
+	      </div>`
+	    : '';
+
+	  document.getElementById('detailsBody').innerHTML = `
+	    <div class="det-new">
+	      <!-- Hero banner -->
+	      <div class="det-hero" style="background:linear-gradient(135deg,${accColor}18,${accColor}08);border-bottom:2px solid ${accColor}22">
+	        <div class="det-hero-left">
+	          <div class="det-hero-icon" style="background:${accBg};color:${accColor}">${typeIcon}</div>
+	          <div>
+	            <div class="det-hero-title">${ev.titre || ev.formation_titre}</div>
+	            <div class="det-hero-sub">${ev.formation_titre}</div>
+	          </div>
+	        </div>
+	        <div class="det-status-pill" style="background:${accBg};color:${accColor};border:1.5px solid ${accColor}44">
+	          <i class="fa-solid ${statusIcon}"></i> ${statusLabel}
+	        </div>
+	        <button class="det-close-btn" onclick="closeDetails()"><i class="fa-solid fa-xmark"></i></button>
+	      </div>
+
+	      <!-- Stats rapides -->
+	      <div class="det-quick-stats">
+	        <div class="det-qs-item">
+	          <span class="det-qs-icon">⏱</span>
+	          <span class="det-qs-val">${ev.duree} min</span>
+	          <span class="det-qs-lbl">Durée</span>
+	        </div>
+	        <div class="det-qs-div"></div>
+	        <div class="det-qs-item">
+	          <span class="det-qs-icon">🎯</span>
+	          <span class="det-qs-val">${ev.score_requis}%</span>
+	          <span class="det-qs-lbl">Score requis</span>
+	        </div>
+	        <div class="det-qs-div"></div>
+	        <div class="det-qs-item">
+	          <span class="det-qs-icon">${typeIcon}</span>
+	          <span class="det-qs-val">${ev.type}</span>
+	          <span class="det-qs-lbl">Type</span>
+	        </div>
+	        <div class="det-qs-div"></div>
+	        <div class="det-qs-item">
+	          <span class="det-qs-icon" style="font-size:.85rem;font-weight:800;color:${diffColor}">${ev.difficulte.charAt(0)}</span>
+	          <span class="det-qs-val" style="color:${diffColor}">${ev.difficulte}</span>
+	          <span class="det-qs-lbl">Difficulté</span>
+	        </div>
+	      </div>
+
+	      <!-- Détails -->
+	      <div class="det-body">
+	        <div class="det-section">
+	          <div class="det-section-title"><i class="fa-regular fa-calendar"></i> Période</div>
+	          <div class="det-section-val">${periodHtml}</div>
+	        </div>
+	        ${compHtml ? `<div class="det-section">
+	          <div class="det-section-title"><i class="fa-solid fa-chart-bar"></i> Compétence</div>
+	          ${compHtml}
+	        </div>` : ''}
+	        <div class="det-impact-row">
+	          <div class="det-impact det-impact-ok">
+	            <span class="det-impact-label">Si réussi</span>
+	            <span class="det-impact-val">+${ev.niveau_succes} niveau(x)</span>
+	          </div>
+	          <div class="det-impact det-impact-ko">
+	            <span class="det-impact-label">Si échoué</span>
+	            <span class="det-impact-val">${ev.niveau_echec} niveau(x)</span>
+	          </div>
+	        </div>
+	        ${scoreHtml ? `<div class="det-section"><div class="det-section-title"><i class="fa-solid fa-trophy"></i> Mon score</div>${scoreHtml}</div>` : ''}
+	        <div class="det-part-row">
+	          <i class="fa-solid fa-users" style="color:#9CA3AF;font-size:.8rem"></i>
+	          <span>${ev.nb_done} / ${ev.nb_part} participants</span>
+	        </div>
+	      </div>
+	    </div>`;
+	  document.getElementById('modalDetails').style.display = 'flex';
+	}
+	
+	// ── Quiz ──────────────────────────────────────────────────────────────────
+	let currentEvalId = null;
+	async function openQuiz(id, title) {
+	  currentEvalId = id;
+	  document.getElementById('quiz_title').textContent = '📝 ' + title;
+	  document.getElementById('quizBody').innerHTML = '<p style="color:#9CA3AF;text-align:center;padding:2rem">Chargement…</p>';
+	  document.getElementById('modalQuiz').style.display = 'flex';
+	
+	  const res  = await fetch(`/evaluations/${id}/questions`);
+	  const data = await res.json();
+	
+	  if (!data.questions || data.questions.length === 0) {
+	    document.getElementById('quizBody').innerHTML = `
+	      <div style="text-align:center;padding:2rem;color:#9CA3AF">
+	        <div style="font-size:2rem;margin-bottom:.5rem">📋</div>
+	        <p>Aucune question disponible pour cette évaluation.</p>
+	      </div>`;
+	    return;
+	  }
+	
+	  let html = `<div class="quiz-info">⏱ ${data.eval.duree} min · 🎯 Score requis : ${data.eval.score_requis}%</div>
+	    <form id="quizForm" class="quiz-form">`;
+	  data.questions.forEach((q, i) => {
+	    html += `<div class="quiz-q">
+	      <div class="q-num">Q${i+1} / ${data.questions.length}</div>
+	      <div class="q-text">${q.question}</div>
+	      <div class="q-opts">`;
+	    ['a','b','c','d'].forEach(opt => {
+	      if (q['option_'+opt]) html += `<label class="q-opt">
+	        <input type="radio" name="answers[${q.id}]" value="${opt.toUpperCase()}">
+	        <span class="opt-letter">${opt.toUpperCase()}</span> ${q['option_'+opt]}
+	      </label>`;
+	    });
+	    html += `</div></div>`;
+	  });
+	  html += `<div style="text-align:center;margin-top:1.5rem">
+	    <button type="button" class="btn-submit-quiz" onclick="submitQuiz()">✅ Soumettre l'évaluation</button>
+	  </div></form>`;
+	  document.getElementById('quizBody').innerHTML = html;
+	}
+	
+	async function submitQuiz() {
+	  const form = document.getElementById('quizForm');
+	  const fd   = new FormData(form);
+	  const res  = await fetch(`/evaluations/${currentEvalId}/submit`, {method:'POST', body:fd});
+	  const data = await res.json();
+	  if (!data.ok) { alert('Erreur'); return; }
+	
+	  const gc = data.passed ? '#059669' : '#DC2626';
+	  const gb = data.passed ? '#D1FAE5' : '#FEE2E2';
+	
+	  // Build level changes section
+	  let levelsHtml = '';
+	  if (data.updatedLevels && data.updatedLevels.length > 0) {
+	    levelsHtml = `<div class="quiz-levels-changed">`;
+	    data.updatedLevels.forEach(lv => {
+	      const dir = lv.delta > 0 ? 'up' : 'down';
+	      const lc = lv.delta > 0 ? '#059669' : '#DC2626';
+	      const lb = lv.delta > 0 ? '#ECFDF5' : '#FEF2F2';
+	      const arrow = lv.delta > 0 ? '▲' : '▼';
+	      const pctOld = Math.round(lv.old_level / lv.max_level * 100);
+	      const pctNew = Math.round(lv.new_level / lv.max_level * 100);
+	      levelsHtml += `
+	        <div class="level-change-row">
+	          <div class="lc-name">${lv.libelle}</div>
+	          <div class="lc-bars">
+	            <div class="lc-bar-wrap">
+	              <div class="lc-bar" style="width:${pctOld}%;background:#D1D5DB"></div>
+	            </div>
+	            <span class="lc-arrow ${dir === 'up' ? 'lc-up' : 'lc-down'}">${arrow}</span>
+	            <div class="lc-bar-wrap">
+	              <div class="lc-bar lc-bar-new" style="width:${pctNew}%;background:${lc}"></div>
+	            </div>
+	          </div>
+	          <div class="lc-delta" style="background:${lb};color:${lc}">${lv.delta > 0 ? '+' : ''}${lv.delta} niv.</div>
+	        </div>`;
+	    });
+	    levelsHtml += `</div>`;
+	  }
+	
+	  let html = `
+	  <div class="quiz-result-new">
+	    <div class="qrn-badge ${data.passed ? 'qrn-pass' : 'qrn-fail'}">
+	      <div class="qrn-emoji">${data.passed ? '🎉' : '😤'}</div>
+	      <div class="qrn-score">${data.score}<span class="qrn-pct">%</span></div>
+	      <div class="qrn-label">${data.passed ? 'Réussi !' : 'Échoué'}</div>
+	    </div>
+	    <div class="qrn-stats">
+	      <div class="qrn-stat">
+	        <span class="qrn-stat-num" style="color:#059669">${data.correct}</span>
+	        <span class="qrn-stat-lbl">Correctes</span>
+	      </div>
+	      <div class="qrn-divider"></div>
+	      <div class="qrn-stat">
+	        <span class="qrn-stat-num" style="color:#DC2626">${data.total - data.correct}</span>
+	        <span class="qrn-stat-lbl">Incorrectes</span>
+	      </div>
+	      <div class="qrn-divider"></div>
+	      <div class="qrn-stat">
+	        <span class="qrn-stat-num" style="color:#F59E0B">${data.total}</span>
+	        <span class="qrn-stat-lbl">Total</span>
+	      </div>
+	    </div>
+	    ${levelsHtml ? `<div class="qrn-levels-title">📊 Impact sur vos compétences</div>${levelsHtml}` : ''}
+	    <div class="qrn-msg ${data.passed ? 'qrn-msg-pass' : 'qrn-msg-fail'}">
+	      ${data.passed ? '✅ Excellent travail ! Vos niveaux ont été mis à jour.' : '💪 Continuez à vous entraîner. Repassez quand vous êtes prêt(e) !'}
+	    </div>
+	  </div>
+	  <div style="text-align:center;margin-top:1rem">
+	    <button class="btn-cancel" onclick="closeQuiz();location.reload()">Fermer &amp; actualiser</button>
+	  </div>`;
+	  document.getElementById('quizBody').innerHTML = html;
+	}
+	
+	// ── Modal Edit ────────────────────────────────────────────────────────────
+	function openEditModal(id, ev) {
+	  document.getElementById('edit_titre').value         = ev.titre        || '';
+	  document.getElementById('edit_type').value          = ev.type         || 'QCM';
+	  document.getElementById('edit_difficulte').value    = ev.difficulte   || 'MOYEN';
+	  document.getElementById('edit_competence_id').value = ev.competence_id > 0 ? ev.competence_id : '';
+	  document.getElementById('edit_duree').value         = ev.duree        || 30;
+	  document.getElementById('edit_score_requis').value  = ev.score_requis || 70;
+	  document.getElementById('edit_niveau_requis').value = ev.niveau_requis !== undefined ? ev.niveau_requis : 0;
+	  document.getElementById('edit_niveau_succes').value = ev.niveau_succes !== undefined ? ev.niveau_succes : 1;
+	  document.getElementById('edit_niveau_echec').value  = ev.niveau_echec  !== undefined ? ev.niveau_echec  : -1;
+	  document.getElementById('edit_dateDebut').value     = ev.eval_debut   ? ev.eval_debut.slice(0,10) : '';
+	  document.getElementById('edit_dateFin').value       = ev.eval_fin     ? ev.eval_fin.slice(0,10)   : '';
+	  document.getElementById('formEdit').action          = `/evaluations/${id}/edit`;
+	  document.getElementById('modalEdit').style.display  = 'flex';
+	}
+	function closeEditModal() {
+	  document.getElementById('modalEdit').style.display = 'none';
+	}
+
+	// ── 3-dots dropdown ──────────────────────────────────────────────────────
+	function toggleMore(btn) {
+	  const wrap = btn.closest('.card-more-wrap');
+	  const isOpen = wrap.classList.contains('open');
+	  closeAllMore();
+	  if (!isOpen) wrap.classList.add('open');
+	}
+	function closeAllMore() {
+	  document.querySelectorAll('.card-more-wrap.open').forEach(w => w.classList.remove('open'));
+	}
+	document.addEventListener('click', e => {
+	  if (!e.target.closest('.card-more-wrap')) closeAllMore();
+	});
+	</script>
+	
+	<style>
+	:root{--p:#4F46E5;--g50:#F8FAFC;--g100:#F1F5F9;--g200:#E2E8F0;--g500:#64748B;--g900:#0F172A}
+	*{box-sizing:border-box}
+	.ev-wrapper{padding:2rem;max-width:1300px;margin:0 auto}
+	
+	/* ── Hero ── */
+	.ev-hero{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem}
+	.ev-hero-tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--p);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+	.ev-hero-tag::before{content:'';width:18px;height:2px;background:var(--p);border-radius:2px}
+	.ev-hero-title{font-size:2rem;font-weight:800;color:var(--g900);margin:0;letter-spacing:-.02em}
+	.ev-hero-sub{color:var(--g500);font-size:.88rem;margin:4px 0 0}
+	.btn-new-eval{background:linear-gradient(135deg,#4F46E5,#7C3AED);color:white;border:none;padding:11px 22px;border-radius:12px;font-weight:700;font-size:.88rem;cursor:pointer;box-shadow:0 4px 14px rgba(79,70,229,.3);display:flex;align-items:center;gap:7px;transition:all .2s}
+	.btn-new-eval:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(79,70,229,.4)}
+	.flash-ok{background:#D1FAE5;color:#065F46;padding:11px 16px;border-radius:10px;font-weight:600;margin-bottom:1rem;font-size:.88rem}
+	.flash-err{background:#FEE2E2;color:#991B1B;padding:11px 16px;border-radius:10px;font-weight:600;margin-bottom:1rem;font-size:.88rem}
+	
+	/* ── Stats Cards ── */
+	.ev-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.9rem;margin-bottom:1.5rem}
+	.stat-card{
+	  background:white;border-radius:18px;
+	  border:1px solid rgba(0,0,0,.06);
+	  padding:1.1rem 1.2rem;display:flex;align-items:center;gap:.9rem;
+	  box-shadow:0 2px 12px rgba(0,0,0,.05),0 0 0 0 var(--accent);
+	  border-top:4px solid var(--accent);
+	  transition:transform .22s cubic-bezier(.34,1.56,.64,1),box-shadow .22s ease;
+	  position:relative;overflow:hidden;
+	}
+	.stat-card::after{
+	  content:'';position:absolute;right:-15px;bottom:-15px;
+	  width:70px;height:70px;border-radius:50%;
+	  background:radial-gradient(circle,color-mix(in srgb,var(--accent) 10%,transparent),transparent 70%);
+	}
+	.stat-card:hover{transform:translateY(-3px) scale(1.02);box-shadow:0 8px 24px rgba(0,0,0,.1),0 0 0 2px var(--accent)22}
+	.stat-icon-wrap{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+	.stat-content{flex:1;min-width:0}
+	.stat-num{font-size:1.75rem;font-weight:800;color:var(--g900);line-height:1}
+	.stat-lbl{font-size:.72rem;color:var(--g500);margin-top:2px;font-weight:500}
+	.stat-trend{font-size:.68rem;font-weight:700;white-space:nowrap;opacity:.85}
+	
+	/* ── Layout ── */
+	.ev-main-full{width:100%}
+  
+/* ══ FILTER BAR REDESIGNÉE ══ */
+.ev-filterbar-wrap{
+  background:white;border-radius:16px;
+  border:1px solid var(--g200);
+  box-shadow:0 1px 8px rgba(0,0,0,.05);
+  margin-bottom:1rem;
+  overflow:hidden;
+}
+.ev-filterbar-top{
+  display:flex;align-items:center;gap:.75rem;
+  padding:.75rem 1rem;
+}
+.search-wrap{position:relative;flex:1;min-width:0}
+.si-fa{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#9CA3AF;font-size:.82rem;pointer-events:none}
+.search-input{
+  width:100%;padding:9px 12px 9px 36px;
+  border:1.5px solid var(--g200);border-radius:10px;
+  font-size:.88rem;outline:none;transition:all .2s;
+  background:#FAFBFC;color:var(--g900);
+}
+.search-input:focus{
+  border-color:#6366F1;
+  box-shadow:0 0 0 3px rgba(99,102,241,.1);
+  background:white;
+}
+.search-clear{
+  position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  background:none;border:none;color:#9CA3AF;cursor:pointer;
+  font-size:.8rem;padding:2px 4px;border-radius:4px;
+}
+.search-clear:hover{color:var(--g900);background:var(--g100)}
+
+/* Panneau filtres dépliable */
+.filter-panel{
+  display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;
+  padding:.6rem 1rem .75rem;
+  border-top:1px dashed var(--g200);
+  background:var(--g50);
+  animation:filterSlide .18s ease;
+}
+@keyframes filterSlide{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.filter-sel{
+  padding:7px 10px;border:1.5px solid var(--g200);border-radius:9px;
+  font-size:.84rem;min-width:140px;outline:none;
+  transition:border-color .15s;background:white;color:var(--g900);
+}
+.filter-sel:focus{border-color:#6366F1}
+.btn-filter-apply{
+  padding:7px 16px;border-radius:9px;border:none;
+  background:#6366F1;color:white;font-weight:700;font-size:.84rem;
+  cursor:pointer;transition:background .15s;
+}
+.btn-filter-apply:hover{background:#4F46E5}
+.btn-reset{
+  padding:7px 12px;border-radius:9px;text-decoration:none;
+  color:#EF4444;background:#FEF2F2;font-size:.82rem;font-weight:600;
+  border:1px solid #FCA5A5;transition:all .15s;
+}
+.btn-reset:hover{background:#FEE2E2}
+
+/* Actions droite */
+.ev-filterbar-actions{display:flex;align-items:center;gap:.5rem;flex-shrink:0}
+
+/* Bouton Filtres */
+.btn-filtres{
+  position:relative;
+  display:flex;align-items:center;gap:.45rem;
+  padding:8px 16px;border-radius:10px;
+  border:1.5px solid var(--g200);background:white;
+  color:var(--g900);font-size:.84rem;font-weight:700;
+  cursor:pointer;transition:all .2s;white-space:nowrap;
+}
+.btn-filtres:hover,.btn-filtres.active{
+  border-color:#6366F1;color:#6366F1;
+  background:#EEF2FF;
+}
+.btn-filtres i{font-size:.82rem}
+.filter-active-dot{
+  position:absolute;top:-4px;right:-4px;
+  width:8px;height:8px;border-radius:50%;
+  background:#6366F1;border:2px solid white;
+}
+
+/* View toggle */
+.ev-view-toggle{display:flex;gap:2px;border:1.5px solid var(--g200);border-radius:10px;overflow:hidden;background:white}
+.view-btn{width:36px;height:36px;border:none;background:transparent;color:var(--g500);cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.view-btn.active{background:#6366F1;color:white}
+.view-btn:hover:not(.active){background:var(--g100)}
+
+/* ── Tabs row ── */
+.ev-tabs-row{
+  display:flex;align-items:center;
+  padding:.5rem 1rem .6rem;
+  border-top:1px solid var(--g100);
+  background:white;
+}
+.ev-tabs{display:flex;gap:2px;flex-wrap:wrap}
+.ev-tab{
+  padding:7px 16px;border-radius:20px;border:none;
+  background:transparent;font-size:.84rem;font-weight:600;
+  color:var(--g500);cursor:pointer;
+  display:flex;align-items:center;gap:6px;
+  transition:all .18s;white-space:nowrap;
+}
+.ev-tab.active{background:#6366F1;color:white;box-shadow:0 2px 10px rgba(99,102,241,.3)}
+.ev-tab:hover:not(.active){background:var(--g100);color:var(--g900)}
+.tab-count{
+  font-size:.68rem;font-weight:800;padding:2px 7px;
+  border-radius:20px;background:rgba(255,255,255,.25);
+  min-width:20px;text-align:center;
+}
+.ev-tab:not(.active) .tab-count{background:var(--g100);color:var(--g500)}
+.tab-count-green{background:#ECFDF5!important;color:#059669!important}
+.ev-tab.active .tab-count-green,.ev-tab.active .tab-count-gray{background:rgba(255,255,255,.25)!important;color:rgba(255,255,255,.9)!important}
+.tab-count-gray{background:#F3F4F6!important;color:#6B7280!important}
+	
+	/* ── Cards grid (3 cols) ── */
+	.ev-cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.1rem;overflow:visible}
+	.ev-cards-grid.list-view{grid-template-columns:1fr}
+	.ev-cards-grid.list-view .card-right{display:flex}
+	
+	/* ── Hero actions ── */
+	.ev-hero-actions{display:flex;align-items:center;gap:.6rem}
+	.btn-hero-icon{position:relative;display:flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:12px;border:1.5px solid #E5E7EB;background:white;color:#6366F1;font-size:1.05rem;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.06);transition:all .2s;flex-shrink:0}
+	.btn-hero-icon:hover{background:#EEF2FF;border-color:#6366F1;transform:translateY(-2px);box-shadow:0 6px 16px rgba(99,102,241,.2)}
+	.btn-hero-niveau{color:#F59E0B;border-color:#FDE68A;background:#FFFBEB}
+	.btn-hero-niveau:hover{background:#FEF3C7;border-color:#F59E0B;box-shadow:0 6px 16px rgba(245,158,11,.2)}
+	.niveau-badge{position:absolute;top:-7px;right:-8px;background:linear-gradient(135deg,#F59E0B,#D97706);color:white;font-size:.55rem;font-weight:800;padding:2px 5px;border-radius:20px;border:1.5px solid white;white-space:nowrap;letter-spacing:.01em;line-height:1.2}
+	
+	/* ── btn-results ── */
+	.btn-results{background:#ECFDF5;color:#059669;border:1.5px solid #6EE7B7}
+	
+	/* ── Drawers ── */
+	.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:900;opacity:0;pointer-events:none;transition:opacity .25s;backdrop-filter:blur(2px)}
+	.drawer-overlay.open{opacity:1;pointer-events:all}
+	.drawer-panel{position:absolute;right:0;top:0;bottom:0;width:380px;background:white;box-shadow:-8px 0 40px rgba(0,0,0,.15);transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;display:flex;flex-direction:column}
+	.drawer-overlay.open .drawer-panel{transform:translateX(0)}
+	.drawer-head{display:flex;align-items:center;gap:.75rem;padding:1.1rem 1.2rem;border-bottom:1px solid var(--g100);position:sticky;top:0;background:white;z-index:1;flex-shrink:0}
+	.drawer-head-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+	.drawer-head-title{font-size:.95rem;font-weight:800;color:var(--g900)}
+	.drawer-head-sub{font-size:.72rem;color:var(--g500);margin-top:1px}
+	.drawer-close{margin-left:auto;width:32px;height:32px;border:none;border-radius:8px;background:var(--g100);color:var(--g500);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.85rem;transition:all .15s;flex-shrink:0}
+	.drawer-close:hover{background:var(--g200);color:var(--g900)}
+	.drawer-body{padding:1rem;flex:1;overflow-y:auto}
+	.drawer-body .side-card{margin-top:0}
+	.drawer-body .xp-card-new{margin-top:0}
+	
+	/* ── Hero tag ── */
+	.ev-hero-tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--p);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+	.ev-hero-tag span{display:inline-block;width:18px;height:2px;background:var(--p);border-radius:2px}
+	
+	/* ── Filtres ── */
+	/* ev-filters replaced by ev-filters-bar */
+	.search-wrap{position:relative;flex:1;min-width:200px}
+	.si{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:.85rem}
+	.search-input{width:100%;padding:8px 12px 8px 32px;border:1.5px solid var(--g200);border-radius:8px;font-size:.86rem;outline:none;transition:border-color .15s}
+	.search-input:focus{border-color:var(--p);box-shadow:0 0 0 3px #4F46E518}
+	.filter-sel{padding:8px 10px;border:1.5px solid var(--g200);border-radius:8px;font-size:.85rem;min-width:145px;outline:none;transition:border-color .15s}
+	.filter-sel:focus{border-color:var(--p)}
+	.btn-filter{padding:8px 14px;border-radius:8px;border:none;background:var(--p);color:white;font-weight:700;font-size:.84rem;cursor:pointer;transition:background .15s}
+	.btn-filter:hover{background:#4338CA}
+	.btn-reset{padding:8px 10px;border-radius:8px;text-decoration:none;color:var(--g500);background:var(--g100);font-size:.82rem;font-weight:600}
+	
+	/* ── Section title ── */
+	.ev-section-title{font-size:.92rem;font-weight:800;color:var(--g900);display:flex;align-items:center;gap:.5rem;margin-bottom:.9rem;padding-bottom:.5rem;border-bottom:2px solid var(--g100)}
+	
+	/* ══ EVAL CARDS ══ */
+	.eval-card{
+	  background:white;
+	  border-radius:20px;
+	  border:1px solid rgba(0,0,0,.07);
+	  overflow:hidden;
+	  box-shadow:0 1px 4px rgba(0,0,0,.04),0 4px 16px rgba(0,0,0,.06);
+	  transition:transform .22s cubic-bezier(.34,1.56,.64,1),box-shadow .25s ease,border-color .2s ease;
+	  position:relative;
+	}
+	.eval-card:hover{
+	  transform:translateY(-5px);
+	  box-shadow:0 8px 28px rgba(0,0,0,.11),0 0 0 2px var(--acc,#6366F1)44;
+	  border-color:var(--acc,#6366F1)55;
+	}
+
+	/* Strip top */
+	.card-strip{height:3px;box-shadow:0 1px 6px var(--acc,#6366F1)44}
+
+	/* Body */
+	.card-main{display:flex;align-items:flex-start;gap:.85rem;padding:.95rem 1.1rem .65rem}
+
+	/* Icône */
+	.card-icon-wrap{
+	  width:44px;height:44px;border-radius:13px;
+	  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+	  border:1.5px solid color-mix(in srgb,var(--acc,#6366F1) 18%,transparent);
+	  box-shadow:0 2px 8px var(--acc,#6366F1)18;
+	  transition:transform .22s cubic-bezier(.34,1.56,.64,1);
+	}
+	.eval-card:hover .card-icon-wrap{transform:rotate(-5deg) scale(1.08)}
+	.card-info{flex:1;min-width:0}
+
+	/* Titre + badges */
+	.card-title-row{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;margin-bottom:.22rem}
+	.card-title{font-size:.9rem;font-weight:800;color:var(--g900);letter-spacing:-.015em;line-height:1.25}
+
+	/* Status badges */
+	.badge{
+	  font-size:.6rem;font-weight:800;padding:3px 8px;
+	  border-radius:20px;letter-spacing:.02em;
+	  display:inline-flex;align-items:center;gap:3px;
+	}
+	.badge-passed{background:#ECFDF5;color:#059669;border:1px solid #6EE7B7}
+	.badge-failed{background:#FEF2F2;color:#DC2626;border:1px solid #FCA5A5}
+	.badge-accessible{background:#EEF2FF;color:#4F46E5;border:1px solid #C7D2FE}
+	.badge-locked{background:#FEF3C7;color:#92400E;border:1px solid #FCD34D}
+	.badge-notyet{background:#FFF7ED;color:#D97706;border:1px solid #FDE68A}
+	.badge-expired{background:#F3F4F6;color:#6B7280;border:1px solid #E5E7EB}
+
+	/* Difficulté */
+	.diff-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;box-shadow:0 0 5px currentColor66}
+	.diff-lbl{font-size:.62rem;font-weight:800;letter-spacing:.04em}
+
+	/* Type + formation */
+	.card-sub-row{display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;margin-bottom:.22rem}
+	.type-chip{
+	  font-size:.64rem;font-weight:700;
+	  background:#F1F5F9;color:#475569;
+	  padding:2px 8px;border-radius:20px;
+	  border:1px solid #E2E8F0;
+	}
+	.form-lbl{font-size:.7rem;color:#94A3B8;display:flex;align-items:center;gap:3px}
+
+	/* Niveaux */
+	.level-row{display:flex;align-items:center;gap:.3rem;flex-wrap:wrap;margin-bottom:.22rem;font-size:.73rem}
+	.comp-name{font-weight:700;color:#64748B;font-size:.72rem}
+	.level-dots{display:flex;gap:3px}
+	.ldot{
+	  width:14px;height:14px;border-radius:50%;
+	  display:inline-flex;align-items:center;justify-content:center;
+	  font-size:.48rem;font-weight:800;
+	}
+	.ldot-filled{background:linear-gradient(135deg,#6366F1,#8B5CF6);color:white;box-shadow:0 1px 5px rgba(99,102,241,.45)}
+	.ldot-req{background:#FEF2F2;border:2px solid #EF4444;color:#EF4444}
+	.ldot-empty{background:#F1F5F9;border:1px solid #D1D5DB}
+	.level-txt{color:#94A3B8;font-size:.72rem;font-weight:600}
+	.req-badge{background:#FEF3C7;color:#D97706;font-size:.6rem;font-weight:700;padding:2px 7px;border-radius:20px;border:1px solid #FDE68A}
+	.delta-ok{background:#ECFDF5;color:#059669;font-size:.6rem;font-weight:700;padding:2px 7px;border-radius:20px;border:1px solid #A7F3D0;display:inline-flex;align-items:center;gap:2px}
+	.delta-ko{background:#FEF2F2;color:#DC2626;font-size:.6rem;font-weight:700;padding:2px 7px;border-radius:20px;border:1px solid #FECACA;display:inline-flex;align-items:center;gap:2px}
+
+	/* Dates */
+	.date-row{display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;font-size:.7rem;color:#94A3B8;margin-bottom:.18rem}
+	.date-chip{font-size:.6rem;font-weight:700;padding:2px 8px;border-radius:20px}
+	.chip-exp{background:#F3F4F6;color:#6B7280;border:1px solid #E5E7EB}
+	.chip-soon{background:#FFF7ED;color:#D97706;border:1px solid #FDE68A}
+	.part-info{font-size:.66rem;color:#94A3B8;display:inline-flex;align-items:center;gap:3px}
+
+	/* Score bar */
+	.score-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem}
+	.score-bar-wrap{flex:1;height:5px;background:#F1F5F9;border-radius:99px;overflow:hidden;display:block}
+	.score-bar-fill{display:block;height:100%;border-radius:99px}
+	.score-txt{font-size:.73rem;font-weight:800;white-space:nowrap}
+
+	/* Donut */
+	.card-right{display:flex;flex-direction:column;align-items:center;gap:.2rem;min-width:66px}
+	.donut-wrap{position:relative;width:52px;height:52px}
+	.donut-svg{width:52px;height:52px;transform:rotate(-90deg);filter:drop-shadow(0 2px 8px var(--acc,#6366F1)33)}
+	.donut-pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:900;color:var(--g900)}
+	.part-sm{font-size:.6rem;color:#94A3B8;text-align:center;line-height:1.5}
+
+	/* Progress strip */
+	.prog-strip-wrap{height:3px;background:#F1F5F9}
+	.prog-strip-fill{height:100%;transition:width .6s cubic-bezier(.4,0,.2,1)}
+
+	/* ── FOOTER 2 lignes ── */
+	.card-footer{
+	  display:flex;flex-direction:column;gap:0;
+	  border-top:1px solid rgba(0,0,0,.05);
+	  background:#FAFBFE;
+	  overflow:hidden;
+	}
+
+	/* Ligne 1 — action principale + détails */
+	.footer-row{display:flex;align-items:center;gap:.4rem;padding:.55rem .9rem}
+	.footer-row-main{border-bottom:1px solid rgba(0,0,0,.04)}
+
+	/* Ligne 2 — admin */
+	.footer-row-admin{
+	  background:linear-gradient(to bottom,#F8F9FC,#F1F5F9);
+	  padding:.42rem .9rem;gap:.35rem;
+	}
+
+	/* Bouton action principal */
+	.btn-main{
+	  display:inline-flex;align-items:center;gap:.35rem;
+	  padding:7px 15px;border-radius:10px;border:none;
+	  font-weight:700;font-size:.76rem;cursor:pointer;
+	  transition:all .18s;white-space:nowrap;flex-shrink:0;
+	}
+	.btn-main:hover{transform:translateY(-1px);filter:brightness(1.07);box-shadow:0 3px 12px rgba(0,0,0,.14)}
+	.btn-locked{background:#FEF3C7;color:#92400E;border:1px solid #FDE68A}
+	.btn-notyet{background:#F3F4F6;color:#6B7280;border:1px solid #E5E7EB}
+	.btn-expired{background:#F9FAFB;color:#9CA3AF;border:1px solid #E5E7EB}
+	.btn-retry{background:linear-gradient(135deg,#F59E0B,#D97706);color:white;box-shadow:0 2px 8px rgba(245,158,11,.3)}
+	.btn-pass{color:white;box-shadow:0 2px 10px var(--acc,#6366F1)44}
+	.btn-results{background:linear-gradient(135deg,#ECFDF5,#D1FAE5);color:#059669;border:1px solid #6EE7B7}
+
+	/* Bouton Détails */
+	.btn-details{
+	  display:inline-flex;align-items:center;gap:.35rem;
+	  background:white;border:1.5px solid #E2E8F0;color:#64748B;
+	  padding:6px 13px;border-radius:10px;
+	  font-size:.75rem;font-weight:700;cursor:pointer;
+	  transition:all .18s;white-space:nowrap;flex-shrink:0;
+	}
+	.btn-details:hover{background:#F1F5F9;border-color:#94A3B8;color:var(--g900);transform:translateY(-1px)}
+
+	/* Boutons admin ligne 2 */
+	.btn-adm{
+	  display:inline-flex;align-items:center;gap:.3rem;
+	  padding:5px 11px;border-radius:8px;border:1.5px solid transparent;
+	  font-size:.72rem;font-weight:700;cursor:pointer;
+	  transition:all .16s;white-space:nowrap;flex-shrink:0;
+	}
+	.btn-adm:hover{transform:translateY(-1px)}
+	.btn-adm-edit{
+	  background:white;border-color:#C7D2FE;color:#4F46E5;
+	}
+	.btn-adm-edit:hover{background:#EEF2FF}
+	.btn-adm-activate{
+	  background:white;border-color:#6EE7B7;color:#059669;
+	}
+	.btn-adm-activate:hover{background:#ECFDF5}
+	.btn-adm-deactivate{
+	  background:white;border-color:#E2E8F0;color:#64748B;
+	}
+	.btn-adm-deactivate:hover{background:#F1F5F9}
+	.btn-adm-danger{
+	  background:white;border-color:#FECACA;color:#EF4444;
+	  margin-left:auto;width:30px;height:30px;padding:0;
+	  justify-content:center;border-radius:8px;
+	}
+	.btn-adm-danger:hover{background:#FEF2F2;border-color:#EF4444}
+
+	.ev-empty{text-align:center;padding:4rem;background:white;border-radius:20px;border:2px dashed #E2E8F0;color:#94A3B8}
+	
+	/* ── Side panel ── */
+	.side-card{
+	  background:white;border-radius:18px;
+	  border:1px solid rgba(0,0,0,.07);overflow:hidden;
+	  box-shadow:0 2px 14px rgba(0,0,0,.06);
+	}
+	.side-card-head{
+	  display:flex;align-items:center;gap:.5rem;
+	  padding:.85rem 1rem;
+	  border-bottom:1px solid var(--g100);
+	  background:linear-gradient(to bottom,#FAFBFF,white);
+	}
+	.side-card-title{font-size:.84rem;font-weight:800;color:var(--g900)}
+	
+	/* ── Calendrier redesigné ── */
+	.cal-nav{
+	  background:var(--g100);border:none;border-radius:9px;
+	  padding:4px 11px;font-size:.86rem;font-weight:700;
+	  cursor:pointer;color:#374151;transition:all .15s;
+	}
+	.cal-nav:hover{background:var(--g200);transform:scale(1.05)}
+	.cal-today{
+	  font-size:.68rem;background:linear-gradient(135deg,#EEF2FF,#E0E7FF);
+	  color:#4F46E5;font-weight:700;border:1px solid #C7D2FE;
+	  padding:4px 10px;border-radius:9px;
+	}
+	.cal-two-months{display:flex;flex-direction:column}
+	.cal-month-block{padding:.75rem .9rem}
+	.cal-month-block:first-child{
+	  border-bottom:1px dashed #E2E8F0;
+	  background:linear-gradient(to bottom,#FAFBFF,white);
+	}
+	.cal-month-title{
+	  font-size:.72rem;font-weight:800;color:var(--g900);
+	  text-align:center;margin-bottom:.55rem;letter-spacing:.05em;
+	  text-transform:uppercase;
+	}
+	.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+	.cal-day-lbl{
+	  text-align:center;font-size:.6rem;font-weight:700;
+	  color:#A0AEC0;padding:2px 0;letter-spacing:.04em;
+	}
+	.cal-day{
+	  display:flex;flex-direction:column;align-items:center;
+	  justify-content:center;height:26px;border-radius:8px;
+	  font-size:.68rem;color:#374151;cursor:default;position:relative;gap:1px;
+	  transition:background .12s;
+	}
+	.cal-day:hover{background:var(--g100)}
+	.cal-today-cell{
+	  background:linear-gradient(135deg,#4F46E5,#6366F1) !important;
+	  color:white;font-weight:900;border-radius:10px;
+	  box-shadow:0 2px 10px rgba(79,70,229,.4);
+	}
+	.cal-has-eval{cursor:pointer;font-weight:700}
+	.cal-dot{width:5px;height:5px;border-radius:50%;box-shadow:0 0 3px currentColor}
+	
+	/* Events liste redesignée — 3 événements */
+	.cal-events{
+	  border-top:1px solid var(--g100);
+	  padding:.4rem .6rem .5rem;
+	  display:flex;flex-direction:column;gap:4px;
+	}
+	.cal-event-row{
+	  display:flex;align-items:center;gap:.5rem;
+	  padding:.28rem .4rem;border-radius:8px;
+	  background:var(--g50);border:1px solid var(--g100);
+	  transition:background .12s;
+	}
+	.cal-event-row:hover{background:var(--g100)}
+	.cal-event-dot{
+	  width:8px;height:8px;border-radius:50%;flex-shrink:0;
+	  box-shadow:0 0 4px currentColor;
+	}
+	.cal-event-title{
+	  display:block;font-size:.67rem;font-weight:700;
+	  color:var(--g900);white-space:nowrap;overflow:hidden;
+	  text-overflow:ellipsis;flex:1;
+	}
+	.cal-event-meta{
+	  display:block;font-size:.58rem;color:var(--g500);
+	  white-space:nowrap;flex-shrink:0;
+	}
+	
+	.cal-legend{
+	  display:flex;gap:.5rem;flex-wrap:wrap;
+	  padding:.5rem .9rem .7rem;border-top:1px solid var(--g100);
+	  background:linear-gradient(to bottom,white,#F8F9FC);
+	}
+	.leg-item{display:flex;align-items:center;gap:4px;font-size:.63rem;color:var(--g500)}
+	.leg-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;box-shadow:0 0 3px currentColor}
+	
+	/* ── Tip card ── */
+	.tip-card{position:relative;overflow:hidden;background:linear-gradient(135deg,#4F46E5 0%,#7C3AED 100%) !important;border-color:transparent !important}
+	.tip-bg-decor{position:absolute;right:-20px;top:-20px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.06);pointer-events:none}
+	.tip-bg-decor::after{content:'';position:absolute;right:-40px;bottom:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.04)}
+	.tip-inner{position:relative;z-index:1;padding:1rem 1rem .9rem}
+	.tip-icon-wrap{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;margin-bottom:.6rem}
+	.tip-label{font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.7);margin-bottom:.4rem}
+	.tip-text{font-size:.8rem;font-weight:500;color:white;line-height:1.55;margin-bottom:.85rem}
+	.tip-progress-wrap{display:flex;flex-direction:column;gap:.35rem}
+	.tip-progress-track{height:5px;background:rgba(255,255,255,.2);border-radius:99px;overflow:hidden}
+	.tip-progress-fill{height:100%;background:rgba(255,255,255,.85);border-radius:99px;width:0;transition:width .8s cubic-bezier(.4,0,.2,1)}
+	.tip-progress-label{font-size:.62rem;color:rgba(255,255,255,.65);font-weight:500}
+	
+	/* ── XP Progression widget ── */
+	.xp-card{background:white;border-radius:14px;border:1px solid var(--g200);overflow:hidden}
+	.xp-header{display:flex;align-items:center;gap:.7rem;padding:.9rem 1rem .7rem;background:linear-gradient(135deg,#0f0e17 0%,#1e1b4b 100%);position:relative;overflow:hidden}
+	.xp-header::before{content:'';position:absolute;right:-18px;top:-18px;width:90px;height:90px;border-radius:50%;background:rgba(99,102,241,.15)}
+	.xp-header::after{content:'';position:absolute;left:40%;bottom:-22px;width:70px;height:70px;border-radius:50%;background:rgba(139,92,246,.1)}
+	.xp-avatar{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#6366F1,#8B5CF6);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(99,102,241,.4)}
+	.xp-title-block{flex:1;min-width:0;position:relative;z-index:1}
+	.xp-title{font-size:.82rem;font-weight:800;color:white;letter-spacing:.01em}
+	.xp-subtitle{font-size:.66rem;color:rgba(255,255,255,.55);margin-top:1px}
+	.xp-level-badge{background:linear-gradient(135deg,#F59E0B,#F97316);color:white;font-size:.68rem;font-weight:800;padding:4px 10px;border-radius:20px;box-shadow:0 2px 8px rgba(245,158,11,.4);flex-shrink:0;position:relative;z-index:1}
+	
+	.xp-bar-section{padding:.75rem 1rem .6rem;border-bottom:1px solid var(--g100)}
+	.xp-bar-labels{display:flex;justify-content:space-between;font-size:.66rem;color:var(--g500);margin-bottom:.4rem;font-weight:600}
+	.xp-bar-val{color:var(--p);font-weight:800}
+	.xp-bar-track{height:10px;background:#EEF2FF;border-radius:99px;overflow:hidden;position:relative}
+	.xp-bar-fill{height:100%;border-radius:99px;background:linear-gradient(to right,#6366F1,#8B5CF6,#A78BFA);transition:width 1.2s cubic-bezier(.4,0,.2,1);position:relative}
+	.xp-bar-fill::after{content:'';position:absolute;top:0;right:0;bottom:0;width:30px;background:linear-gradient(to right,transparent,rgba(255,255,255,.4));border-radius:99px;animation:xp-shimmer 2s infinite}
+	@keyframes xp-shimmer{0%,100%{opacity:0}50%{opacity:1}}
+	.xp-bar-next{font-size:.62rem;color:var(--g500);margin-top:.35rem;font-style:italic}
+	
+	.xp-stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-bottom:1px solid var(--g100)}
+	.xp-stat{padding:.6rem .5rem;text-align:center;border-right:1px solid var(--g100)}
+	.xp-stat:last-child{border-right:none}
+	.xp-stat-num{font-size:1.3rem;font-weight:800;color:var(--g900);line-height:1}
+	.xp-stat-lbl{font-size:.62rem;color:var(--g500);margin:.1rem 0;font-weight:500}
+	.xp-stat-xp{font-size:.6rem;font-weight:700;padding:2px 6px;border-radius:20px;display:inline-block}
+	.xp-stat-green .xp-stat-num{color:#059669}
+	.xp-stat-green .xp-stat-xp{background:#D1FAE5;color:#059669}
+	.xp-stat-red .xp-stat-num{color:#DC2626}
+	.xp-stat-red .xp-stat-xp{background:#FEE2E2;color:#DC2626}
+	.xp-stat-blue .xp-stat-num{color:#4F46E5}
+	.xp-stat-blue .xp-stat-xp{background:#EEF2FF;color:#4F46E5}
+	
+	.xp-trophies{padding:.7rem 1rem .85rem}
+	.xp-trophies-label{font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--g500);margin-bottom:.55rem}
+	.xp-trophies-row{display:flex;gap:.5rem;justify-content:space-between}
+	.xp-trophy{display:flex;flex-direction:column;align-items:center;gap:.25rem;flex:1;padding:.45rem .2rem;border-radius:10px;border:1.5px solid var(--g200);transition:all .2s;cursor:default}
+	.xp-trophy.unlocked{background:linear-gradient(135deg,#FFFBEB,#FEF3C7);border-color:#FCD34D;box-shadow:0 2px 8px rgba(245,158,11,.15)}
+	.xp-trophy.locked{opacity:.35;filter:grayscale(1)}
+	.xp-trophy span:first-child{font-size:1.1rem}
+	.trophy-name{font-size:.56rem;font-weight:700;color:var(--g500);text-align:center;line-height:1.2}
+	.xp-trophy.unlocked .trophy-name{color:#92400E}
+	
+	/* ── Upcoming & History ── */
+	.side-badge-count{background:#6366F1;color:white;font-size:.62rem;font-weight:800;padding:2px 7px;border-radius:10px;margin-left:auto}
+	.upcoming-list{padding:.35rem .5rem .5rem}
+	.upcoming-row{display:flex;align-items:center;gap:.55rem;padding:.45rem .5rem;border-bottom:1px solid var(--g50)}
+	.upcoming-row:last-child{border-bottom:none}
+	.upcoming-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0}
+	.upcoming-info{flex:1;min-width:0}
+	.upcoming-title{display:block;font-size:.72rem;font-weight:700;color:var(--g900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+	.upcoming-meta{display:block;font-size:.62rem;color:var(--g500)}
+	.upcoming-diff{font-size:.6rem;font-weight:800;flex-shrink:0}
+	.hist-list{padding:.4rem .25rem}
+	.hist-row{display:flex;align-items:center;gap:.65rem;padding:.45rem .65rem;border-bottom:1px solid var(--g50)}
+	.hist-badge{width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:800;flex-shrink:0}
+	.hist-info{flex:1;min-width:0}
+	.hist-title{display:block;font-size:.74rem;font-weight:600;color:var(--g900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+	.hist-date{font-size:.62rem;color:var(--g500)}
+	.hist-score{font-size:.74rem;font-weight:800;padding:3px 9px;border-radius:7px;flex-shrink:0}
+	
+	/* ── Modals ── */
+	.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem}
+	.modal-box{background:white;border-radius:18px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);animation:modalIn .2s ease}
+	.modal-lg{max-width:680px}
+	@keyframes modalIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+	.modal-head{display:flex;justify-content:space-between;align-items:center;padding:1.1rem 1.4rem;border-bottom:1px solid var(--g100);position:sticky;top:0;background:white;z-index:1}
+	.modal-title{font-size:1rem;font-weight:800;color:var(--g900);margin:0}
+	.modal-close{background:none;border:none;font-size:1rem;cursor:pointer;color:var(--g500);padding:4px 8px;border-radius:6px}
+	.modal-close:hover{background:var(--g100)}
+	.modal-form{padding:1.1rem 1.4rem}
+	.mf-row{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+	.mf-group{display:flex;flex-direction:column;gap:4px}
+	.mf-lbl{font-size:.68rem;font-weight:800;color:var(--g500);text-transform:uppercase;letter-spacing:.05em}
+	.mf-input{padding:8px 11px;border:1.5px solid var(--g200);border-radius:8px;font-size:.86rem;outline:none;transition:border-color .15s}
+	.mf-input:focus{border-color:var(--p);box-shadow:0 0 0 3px #4F46E518}
+	.mf-input-error{border-color:#DC2626!important;background:#FEF2F2}
+	.error-msg{display:none;font-size:.72rem;color:#DC2626;font-weight:600;margin-top:3px}
+	.req{color:#DC2626}
+	.modal-footer{display:flex;justify-content:flex-end;gap:.65rem;padding-top:1rem;border-top:1px solid var(--g100);margin-top:.5rem}
+	.btn-cancel{padding:8px 16px;border-radius:8px;background:var(--g100);color:var(--g500);font-weight:700;border:none;cursor:pointer;font-size:.86rem}
+	.btn-save{padding:8px 20px;border-radius:8px;background:var(--p);color:white;font-weight:700;border:none;cursor:pointer;font-size:.86rem}
+	
+	/* ── Details ── */
+	.det-grid{display:flex;flex-direction:column;gap:.4rem}
+	.det-row{display:flex;justify-content:space-between;align-items:center;padding:.35rem 0;border-bottom:1px solid var(--g50);font-size:.86rem}
+	.det-lbl{color:var(--g500);font-size:.75rem;font-weight:600}
+	
+	/* ── Quiz ── */
+	.quiz-info{background:#EEF2FF;color:#4F46E5;font-size:.8rem;font-weight:700;padding:.55rem .9rem;border-radius:8px;margin-bottom:1.1rem}
+	.quiz-form{display:flex;flex-direction:column;gap:1.1rem}
+	.q-num{font-size:.65rem;font-weight:800;color:var(--g500);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem}
+	.q-text{font-size:.88rem;font-weight:700;color:var(--g900);margin-bottom:.5rem;line-height:1.4}
+	.q-opts{display:flex;flex-direction:column;gap:.3rem}
+	.q-opt{display:flex;align-items:center;gap:.5rem;font-size:.82rem;color:#374151;cursor:pointer;padding:.3rem .5rem;border-radius:7px;border:1px solid transparent;transition:background .15s}
+	.q-opt:hover{background:#F5F3FF;border-color:#C4B5FD}
+	.q-opt input{accent-color:#6366F1}
+	.opt-letter{font-weight:800;color:#6366F1;min-width:16px}
+	.btn-submit-quiz{padding:10px 28px;border-radius:11px;border:none;background:#6366F1;color:white;font-weight:700;font-size:.88rem;cursor:pointer}
+	.btn-submit-quiz:hover{background:#4F46E5}
+	.quiz-result{padding:1.75rem;border-radius:12px;border:2px solid;text-align:center;display:flex;flex-direction:column;align-items:center;gap:.35rem}
+	.qr-score{font-size:2.5rem;font-weight:800;line-height:1}
+	.qr-detail{font-size:.88rem;font-weight:600}
+	.qr-delta{font-size:.82rem;font-weight:700;background:white;padding:4px 12px;border-radius:20px}
+	.qr-msg{font-size:.8rem;color:#6B7280}
+	
+	/* ══ XP PROGRESSION — Redesign ultra créatif ══ */
+	.xp-card-new{
+	  background:white;border-radius:22px;
+	  border:1px solid rgba(99,102,241,.15);
+	  overflow:hidden;
+	  box-shadow:0 8px 32px rgba(99,102,241,.12),0 2px 8px rgba(0,0,0,.06);
+	}
+	
+	/* ── Header amélioré ── */
+	.xpc-header{
+	  padding:1.4rem 1.2rem 1.1rem;
+	  background:linear-gradient(135deg,#0D0829 0%,#1E1060 40%,#0F2D5A 80%,#0A1628 100%);
+	  display:flex;align-items:center;gap:.9rem;position:relative;overflow:hidden;
+	}
+	/* Particules lumineuses */
+	.xpc-header::before{
+	  content:'';position:absolute;right:-20px;top:-20px;
+	  width:160px;height:160px;border-radius:50%;
+	  background:radial-gradient(circle,rgba(139,92,246,.35) 0%,rgba(99,102,241,.15) 50%,transparent 70%);
+	}
+	.xpc-header::after{
+	  content:'';position:absolute;left:25%;bottom:-30px;
+	  width:100px;height:100px;border-radius:50%;
+	  background:radial-gradient(circle,rgba(59,130,246,.25),transparent 70%);
+	}
+	/* Étoiles décoratives */
+	.xpc-stars{
+	  position:absolute;inset:0;pointer-events:none;
+	  background-image:
+	    radial-gradient(1.5px 1.5px at 15% 20%, rgba(255,255,255,.6) 0%, transparent 100%),
+	    radial-gradient(1px 1px at 70% 35%, rgba(255,255,255,.5) 0%, transparent 100%),
+	    radial-gradient(1.5px 1.5px at 40% 70%, rgba(255,255,255,.4) 0%, transparent 100%),
+	    radial-gradient(1px 1px at 85% 60%, rgba(255,255,255,.6) 0%, transparent 100%),
+	    radial-gradient(1px 1px at 55% 15%, rgba(255,255,255,.5) 0%, transparent 100%),
+	    radial-gradient(1px 1px at 25% 80%, rgba(255,255,255,.35) 0%, transparent 100%);
+	}
+	
+	/* Orbite planétaire */
+	.xpc-orbit{
+	  position:relative;width:64px;height:64px;flex-shrink:0;
+	  animation:xpc-orbit-float 5s ease-in-out infinite;z-index:2;
+	}
+	@keyframes xpc-orbit-float{
+	  0%,100%{transform:translateY(0) rotate(0deg)}
+	  50%{transform:translateY(-5px) rotate(3deg)}
+	}
+	.xpc-planet{
+	  width:64px;height:64px;border-radius:50%;
+	  background:linear-gradient(135deg,#7C3AED 0%,#4F46E5 50%,#3B82F6 100%);
+	  display:flex;align-items:center;justify-content:center;
+	  box-shadow:
+	    0 0 0 3px rgba(139,92,246,.4),
+	    0 0 0 7px rgba(139,92,246,.12),
+	    0 0 30px rgba(79,70,229,.55);
+	  z-index:2;position:relative;
+	}
+	.xpc-level-num{
+	  font-size:1.5rem;font-weight:900;color:white;
+	  letter-spacing:-.06em;
+	  text-shadow:0 2px 8px rgba(0,0,0,.3);
+	}
+	.xpc-ring{
+	  position:absolute;border-radius:50%;
+	  top:50%;left:50%;transform:translate(-50%,-50%);
+	}
+	.xpc-ring1{
+	  width:80px;height:80px;
+	  border:1.5px dashed rgba(139,92,246,.35);
+	  animation:xpc-spin1 8s linear infinite;
+	}
+	.xpc-ring2{
+	  width:96px;height:96px;
+	  border:1px solid rgba(99,102,241,.2);
+	  animation:xpc-spin2 14s linear infinite reverse;
+	}
+	@keyframes xpc-spin1{to{transform:translate(-50%,-50%) rotate(360deg)}}
+	@keyframes xpc-spin2{to{transform:translate(-50%,-50%) rotate(360deg)}}
+	
+	.xpc-header-text{flex:1;min-width:0;position:relative;z-index:2}
+	.xpc-title{
+	  font-size:.92rem;font-weight:900;color:white;
+	  letter-spacing:.02em;margin-bottom:2px;
+	}
+	.xpc-subtitle{
+	  font-size:.72rem;
+	  color:rgba(255,255,255,.55);
+	  font-weight:500;
+	}
+	.xpc-flame-badge{
+	  font-size:.7rem;font-weight:800;
+	  padding:5px 12px;border-radius:20px;
+	  background:linear-gradient(135deg,rgba(255,255,255,.18),rgba(255,255,255,.08));
+	  color:white;
+	  border:1px solid rgba(255,255,255,.2);
+	  flex-shrink:0;position:relative;z-index:2;
+	  white-space:nowrap;backdrop-filter:blur(6px);
+	  box-shadow:0 2px 12px rgba(0,0,0,.2);
+	}
+	
+	/* ── XP Bar redesignée ── */
+	.xpc-bar-zone{
+	  padding:.9rem 1.1rem .75rem;
+	  border-bottom:1px solid var(--g100);
+	  background:linear-gradient(to bottom,#FAFBFF,white);
+	}
+	.xpc-bar-labels{
+	  display:flex;justify-content:space-between;
+	  font-size:.69rem;margin-bottom:.5rem;font-weight:600;
+	}
+	.xpc-bar-lbl-left{color:#4F46E5;font-weight:800}
+	.xpc-bar-lbl-right{color:var(--g500)}
+	.xpc-bar-track{
+	  height:14px;
+	  background:linear-gradient(to right,#F0F0FF,#EEF2FF);
+	  border-radius:99px;overflow:hidden;position:relative;
+	  box-shadow:inset 0 2px 6px rgba(99,102,241,.12),inset 0 1px 3px rgba(0,0,0,.06);
+	  border:1px solid rgba(99,102,241,.1);
+	}
+	.xpc-bar-fill{
+	  height:100%;border-radius:99px;
+	  background:linear-gradient(90deg,#A78BFA,#818CF8,#6366F1,#4F46E5);
+	  position:relative;transition:width 1.4s cubic-bezier(.4,0,.2,1);
+	  box-shadow:0 0 14px rgba(99,102,241,.6),inset 0 1px 2px rgba(255,255,255,.25);
+	}
+	.xpc-bar-shine{
+	  position:absolute;top:0;left:0;right:0;height:55%;
+	  background:linear-gradient(to bottom,rgba(255,255,255,.4),transparent);
+	  border-radius:99px;
+	}
+	/* Animation pulse sur la barre */
+	.xpc-bar-fill::after{
+	  content:'';position:absolute;top:0;right:-2px;bottom:0;width:6px;
+	  background:rgba(255,255,255,.7);border-radius:50%;
+	  box-shadow:0 0 8px 3px rgba(255,255,255,.4);
+	  animation:xpc-pulse 2s ease-in-out infinite;
+	}
+	@keyframes xpc-pulse{0%,100%{opacity:.6;transform:scaleX(1)}50%{opacity:1;transform:scaleX(1.5)}}
+	.xpc-seg-mark{position:absolute;top:50%;transform:translateY(-50%);width:1px;height:7px;background:rgba(255,255,255,.35)}
+	.xpc-bar-total{font-size:.63rem;color:var(--g500);margin-top:.35rem;text-align:right;font-weight:500}
+	
+	/* ── Stats trio ── */
+	.xpc-stats{
+	  display:flex;align-items:stretch;
+	  background:linear-gradient(to bottom,white,#FAFBFF);
+	  border-bottom:1px solid var(--g100);
+	}
+	.xpc-stat{
+	  flex:1;display:flex;flex-direction:column;
+	  align-items:center;padding:.7rem .4rem;gap:.22rem;
+	  transition:background .15s;cursor:default;
+	  border-radius:0;
+	}
+	.xpc-stat:hover{background:rgba(99,102,241,.03)}
+	.xpc-stat-icon{font-size:1.25rem;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.15))}
+	.xpc-stat-num{font-size:1.5rem;font-weight:900;line-height:1;letter-spacing:-.04em}
+	.xpc-stat-lbl{
+	  font-size:.6rem;color:var(--g500);font-weight:700;
+	  text-transform:uppercase;letter-spacing:.06em;
+	}
+	.xpc-stat-xp{
+	  font-size:.61rem;font-weight:800;padding:3px 8px;
+	  border-radius:20px;margin-top:1px;letter-spacing:.02em;
+	}
+	.xpc-stat-win .xpc-stat-num{color:#059669}
+	.xpc-stat-win .xpc-stat-xp{background:linear-gradient(135deg,#ECFDF5,#D1FAE5);color:#059669;border:1px solid #86EFAC}
+	.xpc-stat-fail .xpc-stat-num{color:#D97706}
+	.xpc-stat-fail .xpc-stat-xp{background:linear-gradient(135deg,#FFF7ED,#FEF3C7);color:#D97706;border:1px solid #FDE68A}
+	.xpc-stat-open .xpc-stat-num{color:#4F46E5}
+	.xpc-stat-open .xpc-stat-xp{background:linear-gradient(135deg,#EEF2FF,#E0E7FF);color:#4F46E5;border:1px solid #A5B4FC}
+	.xpc-divider{width:1px;background:linear-gradient(to bottom,transparent,var(--g200),transparent);flex-shrink:0;align-self:stretch;margin:.3rem 0}
+	
+	/* ── Badges ── */
+	.xpc-badges-zone{padding:.9rem 1.1rem 1.1rem;background:linear-gradient(to bottom,#FAFBFF,white)}
+	.xpc-badges-title{
+	  font-size:.62rem;font-weight:900;text-transform:uppercase;
+	  letter-spacing:.14em;color:var(--g500);margin-bottom:.7rem;
+	  display:flex;align-items:center;gap:.4rem;
+	}
+	.xpc-badges-title::after{content:'';flex:1;height:1px;background:var(--g100)}
+	.xpc-badges-row{display:flex;gap:.55rem;justify-content:space-between}
+	.xpc-badge-hex{
+	  flex:1;padding:.6rem .3rem;border-radius:14px;
+	  border:1.5px solid var(--g200);
+	  display:flex;flex-direction:column;align-items:center;
+	  cursor:default;transition:all .22s cubic-bezier(.34,1.56,.64,1);
+	  position:relative;overflow:hidden;
+	}
+	.xpc-badge-hex:hover:not(.badge-locked){
+	  transform:translateY(-3px) scale(1.06);
+	  box-shadow:0 6px 20px rgba(0,0,0,.12);
+	}
+	.hex-inner{display:flex;flex-direction:column;align-items:center;gap:.22rem}
+	.hex-icon{font-size:1.4rem;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.15))}
+	.hex-name{font-size:.59rem;font-weight:800;text-align:center;color:var(--g500);letter-spacing:.02em}
+	.hex-lock{position:absolute;top:3px;right:5px;font-size:.56rem;opacity:.5}
+	
+	/* Badge states */
+	.badge-locked{
+	  background:linear-gradient(135deg,#F8FAFC,#F1F5F9);
+	  opacity:.5;filter:grayscale(.85);
+	}
+	.badge-unlocked{animation:badge-pop .5s cubic-bezier(.34,1.56,.64,1)}
+	@keyframes badge-pop{from{transform:scale(.75);opacity:.3}to{transform:scale(1);opacity:1}}
+	.badge-bronze{
+	  background:linear-gradient(135deg,#FEF9EE,#FEF3C7,#FDE68A);
+	  border-color:#F59E0B;
+	  box-shadow:0 2px 12px rgba(245,158,11,.25);
+	}
+	.badge-bronze .hex-name{color:#92400E}
+	.badge-silver{
+	  background:linear-gradient(135deg,#F8FAFC,#F1F5F9,#E2E8F0);
+	  border-color:#94A3B8;
+	  box-shadow:0 2px 12px rgba(148,163,184,.3);
+	}
+	.badge-silver .hex-name{color:#475569}
+	.badge-gold{
+	  background:linear-gradient(135deg,#FFFEF0,#FFFBEB,#FDE68A);
+	  border-color:#EAB308;
+	  box-shadow:0 2px 14px rgba(234,179,8,.35);
+	}
+	.badge-gold::before{
+	  content:'✦';position:absolute;top:3px;left:5px;
+	  font-size:.55rem;color:#EAB30888;
+	}
+	.badge-gold .hex-name{color:#713F12}
+	.badge-diamond{
+	  background:linear-gradient(135deg,#F0F9FF,#EFF6FF,#DBEAFE);
+	  border-color:#60A5FA;
+	  box-shadow:0 2px 14px rgba(96,165,250,.35);
+	}
+	.badge-diamond .hex-name{color:#1E40AF}
+	
+	/* ── Multi-competence selector ── */
+	.multi-comp-wrap{background:var(--g50);border:1.5px solid var(--g200);border-radius:10px;overflow:hidden}
+	.multi-comp-search{padding:.5rem .5rem 0}
+	.multi-comp-list{
+	  max-height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:1px;
+	  padding:.3rem .5rem;
+	}
+	.multi-comp-list::-webkit-scrollbar{width:4px}
+	.multi-comp-list::-webkit-scrollbar-thumb{background:var(--g200);border-radius:99px}
+	.comp-check-item{
+	  display:flex;align-items:center;gap:.5rem;padding:.3rem .4rem;
+	  border-radius:7px;cursor:pointer;font-size:.82rem;color:#374151;
+	  transition:background .12s;
+	}
+	.comp-check-item:hover{background:white}
+	.comp-check-item input{accent-color:#6366F1;flex-shrink:0}
+	.comp-check-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+	.comp-check-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+	.comp-check-max{font-size:.68rem;color:var(--g500);white-space:nowrap;flex-shrink:0}
+	.multi-comp-selected{
+	  padding:.45rem .65rem;background:white;border-top:1px solid var(--g100);
+	  font-size:.72rem;color:var(--g500);min-height:32px;
+	  display:flex;flex-wrap:wrap;align-items:center;gap:.3rem;
+	}
+	.multi-comp-selected.has-selected{color:var(--g900)}
+	.sel-comp-tag{
+	  background:#EEF2FF;color:#4F46E5;font-size:.68rem;font-weight:700;
+	  padding:2px 8px;border-radius:20px;white-space:nowrap;
+	}
+	
+	/* ── Quiz result redesigned ── */
+	.quiz-result-new{display:flex;flex-direction:column;gap:1rem;padding:.5rem}
+	.qrn-badge{
+	  text-align:center;padding:1.5rem 1rem;border-radius:16px;
+	  position:relative;overflow:hidden;
+	}
+	.qrn-badge::before{
+	  content:'';position:absolute;inset:0;
+	  background:repeating-linear-gradient(45deg,transparent,transparent 10px,rgba(255,255,255,.04) 10px,rgba(255,255,255,.04) 11px);
+	}
+	.qrn-pass{background:linear-gradient(135deg,#064E3B,#059669);box-shadow:0 8px 24px rgba(5,150,105,.3)}
+	.qrn-fail{background:linear-gradient(135deg,#7F1D1D,#DC2626);box-shadow:0 8px 24px rgba(220,38,38,.25)}
+	.qrn-emoji{font-size:2.5rem;margin-bottom:.4rem}
+	.qrn-score{font-size:3rem;font-weight:900;color:white;line-height:1;letter-spacing:-.04em}
+	.qrn-pct{font-size:1.2rem;font-weight:600;opacity:.8}
+	.qrn-label{font-size:.9rem;font-weight:800;color:rgba(255,255,255,.85);margin-top:.25rem;text-transform:uppercase;letter-spacing:.08em}
+	.qrn-stats{
+	  display:flex;align-items:center;background:var(--g50);border-radius:12px;
+	  border:1px solid var(--g200);overflow:hidden;
+	}
+	.qrn-stat{flex:1;text-align:center;padding:.6rem .4rem}
+	.qrn-stat-num{display:block;font-size:1.4rem;font-weight:800}
+	.qrn-stat-lbl{display:block;font-size:.62rem;color:var(--g500);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-top:1px}
+	.qrn-divider{width:1px;background:var(--g200);align-self:stretch;margin:.3rem 0}
+	
+	/* Level changes */
+	.qrn-levels-title{font-size:.72rem;font-weight:800;color:var(--g500);text-transform:uppercase;letter-spacing:.07em}
+	.quiz-levels-changed{display:flex;flex-direction:column;gap:.5rem}
+	.level-change-row{
+	  display:flex;align-items:center;gap:.6rem;
+	  background:var(--g50);border-radius:10px;padding:.55rem .75rem;
+	  border:1px solid var(--g200);
+	}
+	.lc-name{font-size:.75rem;font-weight:700;color:var(--g900);min-width:80px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+	.lc-bars{display:flex;align-items:center;gap:.4rem;flex:1}
+	.lc-bar-wrap{flex:1;height:7px;background:var(--g200);border-radius:99px;overflow:hidden}
+	.lc-bar{height:100%;border-radius:99px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+	.lc-bar-new{animation:lc-bar-in .8s ease forwards}
+	@keyframes lc-bar-in{from{width:0!important}to{}}
+	.lc-arrow{font-size:.75rem;font-weight:800;flex-shrink:0}
+	.lc-up{color:#059669}
+	.lc-down{color:#DC2626}
+	.lc-delta{font-size:.68rem;font-weight:800;padding:3px 9px;border-radius:20px;flex-shrink:0;white-space:nowrap}
+	
+	.qrn-msg{padding:.65rem .9rem;border-radius:10px;font-size:.82rem;font-weight:600;text-align:center}
+	.qrn-msg-pass{background:#ECFDF5;color:#065F46;border:1px solid #6EE7B7}
+	.qrn-msg-fail{background:#FEF3C7;color:#92400E;border:1px solid #FCD34D}
+	
+	/* ══ Unified footer row ══════════════════════════════════════════════════ */
+	.footer-row-unified{
+	  display:flex;align-items:center;gap:.4rem;flex-wrap:nowrap;
+	}
+	.footer-row-unified .btn-main{flex:1;min-width:0}
+	.footer-admin-icons{
+	  display:flex;align-items:center;gap:.25rem;margin-left:auto;flex-shrink:0;
+	}
+	/* Icon-only admin buttons */
+	.btn-icon-adm{
+	  width:30px;height:30px;border-radius:8px;border:1.5px solid;
+	  display:flex;align-items:center;justify-content:center;
+	  font-size:.78rem;cursor:pointer;transition:all .15s;flex-shrink:0;
+	  background:transparent;
+	}
+	.btn-icon-edit{border-color:#C7D2FE;color:#6366F1}
+	.btn-icon-edit:hover{background:#EEF2FF;border-color:#6366F1}
+	.btn-icon-activate{border-color:#6EE7B7;color:#059669}
+	.btn-icon-activate:hover{background:#ECFDF5;border-color:#059669}
+	.btn-icon-deactivate{border-color:#D1D5DB;color:#6B7280}
+	.btn-icon-deactivate:hover{background:#F3F4F6;border-color:#9CA3AF}
+	.btn-icon-danger{border-color:#FECACA;color:#EF4444}
+	.btn-icon-danger:hover{background:#FEF2F2;border-color:#EF4444}
+
+	/* ══ Confirm delete modal ════════════════════════════════════════════════ */
+	.modal-confirm-box{
+	  width:380px;max-width:92vw;border-radius:20px;padding:0;overflow:hidden;
+	  box-shadow:0 24px 60px rgba(0,0,0,.18);
+	}
+	.confirm-icon-wrap{
+	  background:linear-gradient(135deg,#FEF2F2,#FFF7ED);
+	  display:flex;justify-content:center;padding:1.75rem 0 1.25rem;
+	}
+	.confirm-icon{
+	  width:60px;height:60px;border-radius:50%;
+	  background:linear-gradient(135deg,#FEE2E2,#FECACA);
+	  border:3px solid #FCA5A5;
+	  display:flex;align-items:center;justify-content:center;
+	  font-size:1.6rem;color:#DC2626;
+	  box-shadow:0 4px 16px rgba(239,68,68,.25);
+	}
+	.confirm-content{
+	  padding:0 1.5rem 1rem;text-align:center;
+	}
+	.confirm-title{
+	  font-size:1.05rem;font-weight:800;color:#111827;margin:0 0 .4rem;
+	}
+	.confirm-sub{
+	  font-size:.85rem;font-weight:600;color:#6366F1;
+	  background:#EEF2FF;border-radius:8px;padding:.3rem .75rem;
+	  display:inline-block;margin:.2rem 0 .6rem;
+	  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+	}
+	.confirm-warn{
+	  font-size:.78rem;color:#9CA3AF;margin:0;line-height:1.5;
+	}
+	.confirm-actions{
+	  display:flex;gap:.75rem;padding:1rem 1.5rem 1.5rem;
+	}
+	.confirm-btn-cancel{
+	  flex:1;padding:.7rem;border-radius:10px;border:1.5px solid #E5E7EB;
+	  background:white;color:#374151;font-size:.85rem;font-weight:700;
+	  cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:.4rem;
+	}
+	.confirm-btn-cancel:hover{background:#F9FAFB;border-color:#D1D5DB}
+	.confirm-btn-delete{
+	  flex:1;padding:.7rem;border-radius:10px;border:none;
+	  background:linear-gradient(135deg,#DC2626,#B91C1C);
+	  color:white;font-size:.85rem;font-weight:700;
+	  cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:.4rem;
+	  box-shadow:0 4px 12px rgba(220,38,38,.35);
+	}
+	.confirm-btn-delete:hover{background:linear-gradient(135deg,#B91C1C,#991B1B);box-shadow:0 6px 16px rgba(220,38,38,.45)}
+
+	/* ══ Uniform card body ═══════════════════════════════════════════════════ */
+	.card-body-uniform{
+	  display:flex;flex-direction:column;gap:.45rem;
+	  padding:.5rem 1rem .65rem;
+	}
+	.cbu-row{
+	  display:flex;align-items:center;gap:.45rem;
+	  font-size:.78rem;color:#4B5563;min-height:1.4rem;
+	}
+	.cbu-icon{font-size:.7rem;color:#9CA3AF;flex-shrink:0;width:12px;text-align:center}
+	.cbu-val{font-size:.78rem;color:#374151;font-weight:500}
+	.cbu-val.text-truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}
+	.cbu-empty{color:#D1D5DB}
+	.cbu-sep{color:#D1D5DB;font-size:.7rem}
+	.score-row-empty{height:14px}
+	/* card-main simplified */
+	.card-main{display:flex;align-items:flex-start;gap:.75rem;padding:.9rem 1rem .5rem}
+	.card-info{flex:1;min-width:0}
+	.card-title-row{display:flex;align-items:flex-start;gap:.4rem;flex-wrap:wrap;margin-bottom:.25rem}
+	.card-title{font-size:.92rem;font-weight:700;color:#111827;line-height:1.3;flex:1;min-width:0}
+	.card-sub-row{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+
+	/* ══ Redesigned Details Modal ═══════════════════════════════════════════ */
+	.modal-details-box{
+	  border-radius:20px;overflow:hidden;
+	  width:420px;max-width:95vw;padding:0!important;
+	  box-shadow:0 24px 60px rgba(0,0,0,.18);
+	}
+	.det-new{display:flex;flex-direction:column}
+	.det-hero{
+	  display:flex;align-items:center;gap:.85rem;
+	  padding:1.25rem 1.25rem 1rem;position:relative;
+	  flex-wrap:wrap;
+	}
+	.det-hero-left{display:flex;align-items:center;gap:.75rem;flex:1;min-width:0}
+	.det-hero-icon{
+	  width:44px;height:44px;border-radius:12px;display:flex;
+	  align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;
+	}
+	.det-hero-title{font-size:.98rem;font-weight:800;color:#111827;line-height:1.2}
+	.det-hero-sub{font-size:.75rem;color:#6B7280;margin-top:2px;
+	  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+	.det-status-pill{
+	  display:flex;align-items:center;gap:.35rem;
+	  font-size:.76rem;font-weight:700;padding:.35rem .85rem;
+	  border-radius:99px;white-space:nowrap;flex-shrink:0;
+	}
+	.det-close-btn{
+	  position:absolute;top:.75rem;right:.75rem;
+	  width:28px;height:28px;border-radius:50%;border:none;cursor:pointer;
+	  background:#F3F4F6;color:#6B7280;display:flex;align-items:center;justify-content:center;
+	  font-size:.85rem;transition:background .15s;
+	}
+	.det-close-btn:hover{background:#E5E7EB;color:#374151}
+	/* Quick stats bar */
+	.det-quick-stats{
+	  display:flex;align-items:center;
+	  border-top:1px solid #F3F4F6;border-bottom:1px solid #F3F4F6;
+	  background:#FAFBFF;
+	}
+	.det-qs-item{
+	  flex:1;display:flex;flex-direction:column;align-items:center;
+	  padding:.75rem .4rem;gap:.18rem;
+	}
+	.det-qs-div{width:1px;background:#E5E7EB;align-self:stretch;margin:.4rem 0}
+	.det-qs-icon{font-size:1.1rem;line-height:1}
+	.det-qs-val{font-size:.88rem;font-weight:800;color:#111827;line-height:1}
+	.det-qs-lbl{font-size:.62rem;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+	/* Body sections */
+	.det-body{padding:1rem 1.25rem 1.25rem;display:flex;flex-direction:column;gap:.85rem}
+	.det-section{}
+	.det-section-title{
+	  font-size:.68rem;font-weight:800;color:#9CA3AF;text-transform:uppercase;
+	  letter-spacing:.08em;display:flex;align-items:center;gap:.4rem;margin-bottom:.45rem;
+	}
+	.det-section-val{font-size:.88rem;font-weight:600;color:#374151}
+	/* Competence dots */
+	.det-comp-block{display:flex;flex-direction:column;gap:.3rem}
+	.det-comp-name{font-size:.85rem;font-weight:700;color:#374151}
+	.det-comp-dots{display:flex;align-items:center;gap:.35rem}
+	.det-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+	.det-dot-filled{background:#6366F1}
+	.det-dot-req{background:#FDE68A;border:2px solid #F59E0B}
+	.det-dot-empty{background:#E5E7EB}
+	.det-comp-lvl{font-size:.78rem;font-weight:700;color:#6B7280;margin-left:.2rem}
+	/* Impact row */
+	.det-impact-row{display:flex;gap:.75rem}
+	.det-impact{
+	  flex:1;border-radius:12px;padding:.6rem .75rem;
+	  display:flex;flex-direction:column;gap:.15rem;
+	}
+	.det-impact-ok{background:#ECFDF5;border:1px solid #6EE7B7}
+	.det-impact-ko{background:#FEF2F2;border:1px solid #FCA5A5}
+	.det-impact-label{font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
+	  color:#6B7280}
+	.det-impact-ok .det-impact-label{color:#065F46}
+	.det-impact-ko .det-impact-label{color:#991B1B}
+	.det-impact-val{font-size:1rem;font-weight:900}
+	.det-impact-ok .det-impact-val{color:#059669}
+	.det-impact-ko .det-impact-val{color:#DC2626}
+	/* Score bar */
+	.det-score-block{display:flex;align-items:center;gap:.75rem}
+	.det-score-bar-wrap{flex:1;height:8px;background:#F3F4F6;border-radius:99px;overflow:hidden}
+	.det-score-bar-fill{height:100%;border-radius:99px;transition:width .6s ease}
+	.det-score-num{font-size:1rem;font-weight:900;flex-shrink:0;min-width:40px;text-align:right}
+	/* Participants */
+	.det-part-row{
+	  display:flex;align-items:center;gap:.45rem;
+	  font-size:.78rem;color:#9CA3AF;font-weight:500;
+	  padding-top:.5rem;border-top:1px solid #F3F4F6;
+	}
+
+	@media(max-width:1200px){.ev-cards-grid{grid-template-columns:repeat(2,1fr)}}
+	@media(max-width:1024px){.ev-stats{grid-template-columns:repeat(2,1fr)}}
+	@media(max-width:768px){.ev-cards-grid{grid-template-columns:1fr}.drawer-panel{width:100%}.ev-tab-bar{flex-direction:column;align-items:flex-start}}
+	@media(max-width:640px){.ev-stats{grid-template-columns:1fr}.card-main{flex-wrap:wrap}.card-right{display:none}.mf-row{grid-template-columns:1fr}.cal-two-months{grid-template-columns:1fr}.ev-tabs{flex-wrap:wrap}}
+	</style>
+	
+	{% endblock %}

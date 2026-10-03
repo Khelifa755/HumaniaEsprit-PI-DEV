@@ -1,0 +1,950 @@
+{% extends 'base.html.twig' %}
+{% block title %}Plans de Développement – Humania{% endblock %}
+
+{% block body %}
+<div class="pdi-wrapper">
+
+  {# ══ HEADER ══════════════════════════════════════════════════════════════ #}
+  <div class="pdi-header">
+    <div>
+      <h1 class="pdi-title">Plans de Développement – PDI</h1>
+      <p class="pdi-sub">Suivez et gérez les objectifs de développement des employés</p>
+    </div>
+    {% if is_granted('ROLE_ADMIN') or is_granted('ROLE_RH') or is_granted('ROLE_MANAGER') %}
+      <button class="btn-create" onclick="openNewModal()">＋ Créer un PDI</button>
+    {% endif %}
+  </div>
+
+  {# ══ FLASH ════════════════════════════════════════════════════════════════ #}
+  {% for msg in app.flashes('success') %}<div class="flash-ok">{{ msg }}</div>{% endfor %}
+  {% for msg in app.flashes('error')   %}<div class="flash-err">{{ msg }}</div>{% endfor %}
+
+  {# ══ STAT CARDS ══════════════════════════════════════════════════════════ #}
+  <div class="pdi-stats">
+    <div class="stat-card" style="--accent:#3B82F6">
+      <div class="stat-top">
+        <div class="stat-icon" style="background:#EFF6FF;color:#3B82F6">🎯</div>
+        <div><div class="stat-num">{{ stats.activePlans }}</div><div class="stat-lbl">Plans Actifs</div></div>
+      </div>
+      <div class="stat-hint" style="color:#3B82F6">📋 Plans de développement actifs</div>
+    </div>
+    <div class="stat-card" style="--accent:#10B981">
+      <div class="stat-top">
+        <div class="stat-icon" style="background:#D1FAE5;color:#059669">📈</div>
+        <div><div class="stat-num">{{ stats.avgProgress }}%</div><div class="stat-lbl">Progression Moyenne</div></div>
+      </div>
+      <div class="stat-hint" style="color:#10B981">🚀 Progression moyenne des PDI</div>
+    </div>
+    <div class="stat-card" style="--accent:#F59E0B">
+      <div class="stat-top">
+        <div class="stat-icon" style="background:#FEF3C7;color:#D97706">⏰</div>
+        <div><div class="stat-num" style="color:#EF4444">{{ stats.actionsDue }}</div><div class="stat-lbl">Actions à réaliser</div></div>
+      </div>
+      <div class="stat-hint" style="color:#F59E0B">⚡ Actions à réaliser bientôt</div>
+    </div>
+    <div class="stat-card" style="--accent:#8B5CF6">
+      <div class="stat-top">
+        <div class="stat-icon" style="background:#EDE9FE;color:#7C3AED">✔</div>
+        <div><div class="stat-num">{{ stats.completed }}</div><div class="stat-lbl">Terminés</div></div>
+      </div>
+      <div class="stat-hint" style="color:#8B5CF6">🏆 PDI complètement finalisés</div>
+    </div>
+  </div>
+
+  {# ══ LISTE PDI ══════════════════════════════════════════════════════════ #}
+  {% if pdis|length == 0 %}
+    <div class="pdi-empty">
+      <div style="font-size:2.5rem;margin-bottom:.5rem">🎯</div>
+      <p>Aucun plan de développement trouvé.</p>
+      {% if is_granted('ROLE_ADMIN') or is_granted('ROLE_RH') or is_granted('ROLE_MANAGER') %}
+        <button class="btn-create" onclick="openNewModal()">＋ Créer un PDI</button>
+      {% endif %}
+    </div>
+  {% else %}
+
+    {% for pdi in pdis %}
+      {% set pct = pdi.pct %}
+      {% set sc = pdi.statut == 'Completed' ? ['#059669','#10B981'] : (pdi.statut == 'Draft' ? ['#6B7280','#9CA3AF'] : ['#4F46E5','#7C3AED']) %}
+      {% set progColor = pct >= 100 ? '#10B981' : (pct >= 60 ? '#3B82F6' : (pct >= 30 ? '#F59E0B' : '#EF4444')) %}
+
+      <div class="pdi-card" id="pdi-{{ pdi.id }}">
+
+        {# ── Banner ── #}
+        <div class="pdi-banner" style="background:linear-gradient(135deg,{{ sc[0] }},{{ sc[1] }})">
+          <div class="pdi-avatar">
+            {{ pdi.employe_nom|split(' ')|map(w => w|first)|join('')|upper|slice(0,2) }}
+          </div>
+          <div class="pdi-banner-info">
+            <div class="pdi-emp-name">{{ pdi.employe_nom }}</div>
+            <div class="pdi-meta">PDI {{ pdi.annee }} · Créé le {{ pdi.dateCreation|date('Y-m-d') }}</div>
+          </div>
+          <span class="pdi-status-badge">
+            {% if pdi.statut == 'Active' %}🟢{% elseif pdi.statut == 'Completed' %}✔{% elseif pdi.statut == 'Draft' %}📝{% else %}⏸{% endif %}
+            {{ pdi.statut|upper }}
+          </span>
+          <div class="pdi-donut" title="{{ pct }}%">
+            <svg viewBox="0 0 36 36" class="donut-svg">
+              <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="3.5"/>
+              <circle cx="18" cy="18" r="14" fill="none" stroke="white" stroke-width="3.5"
+                      stroke-dasharray="{{ pct }},100" stroke-dashoffset="25" stroke-linecap="round"/>
+            </svg>
+            <span class="donut-pct">{{ pct }}%</span>
+          </div>
+        </div>
+
+        {# ── Barre de progression ── #}
+        <div class="prog-bar-wrap">
+          <div class="prog-bar-fill" style="width:{{ pct }}%;background:{{ progColor }}"></div>
+        </div>
+
+        {# ── Corps ── #}
+        <div class="pdi-body">
+
+          {# Colonne gauche #}
+          <div class="pdi-left">
+            <div class="left-section-title">🎯 Objectifs</div>
+            <div class="obj-list">
+              {# ✅ FIX: use camelCase typeAction #}
+              {% for a in pdi.actions %}
+                {% set done  = a.statut == 'Completed' %}
+                {% set inpr  = a.statut == 'In Progress' %}
+                {% set label = a.typeAction ? a.typeAction : '(action sans titre)' %}
+                {% set isForm = 'Formation :' in label %}
+                <div class="obj-item {{ done ? 'obj-done' : (inpr ? 'obj-inprog' : '') }} {{ isForm ? 'obj-form' : '' }}">
+                  {{ done ? '✅' : (inpr ? '🔄' : '🎯') }} {{ label }}
+                </div>
+              {% else %}
+                <div class="obj-empty">Aucun objectif. Inscrivez-vous à une formation !</div>
+              {% endfor %}
+            </div>
+
+            <div class="left-section-title" style="margin-top:1rem">🏆 Compétences cibles</div>
+            <div class="comp-tags">
+              {% set validTags = pdi.comp_tags|filter(t => t is not empty) %}
+              {% if validTags|length > 0 %}
+                {% for tag in validTags|slice(0, 5) %}
+                  <span class="comp-tag">{{ tag|length > 20 ? tag|slice(0,19) ~ '…' : tag }}</span>
+                {% endfor %}
+              {% else %}
+                <span class="obj-empty">Aucune compétence associée</span>
+              {% endif %}
+            </div>
+
+            <div class="pdi-left-btns">
+              {% if is_granted('ROLE_ADMIN') or is_granted('ROLE_RH') or is_granted('ROLE_MANAGER') or pdi.employe_id == app.user.id %}
+                <button class="btn-edit-pdi" onclick="openEditModal({{ pdi.id }}, '{{ pdi.statut }}', {{ pdi.annee }})">
+                  ✏ Modifier PDI
+                </button>
+              {% endif %}
+              {% if is_granted('ROLE_ADMIN') or is_granted('ROLE_RH') %}
+                <button class="btn-del-pdi" onclick="openConfirmModal('Supprimer ce PDI ?', 'Toutes les actions associées seront supprimées définitivement.', '{{ path('pdi_delete', {id: pdi.id}) }}', 'danger')">🗑 Supprimer</button>
+              {% endif %}
+            </div>
+          </div>
+
+          {# Colonne droite — Kanban #}
+          <div class="pdi-right">
+            <div class="kanban-header">
+              <span class="kanban-title">⚡ Development Actions</span>
+              <div class="kanban-stats">
+                <span class="ks ks-todo">{{ pdi.todo|length }}</span>
+                <span class="ks ks-prog">{{ pdi.in_prog|length }}</span>
+                <span class="ks ks-done">{{ pdi.done|length }}</span>
+              </div>
+              {% if isAdmin or isManager or pdi.employe_id == currentUserId %}
+                <button class="btn-add-action" onclick="openAddActionModal({{ pdi.id }})">＋ Ajouter</button>
+              {% endif %}
+            </div>
+
+            <div class="kanban-board">
+
+              {# À faire #}
+              <div class="kanban-col col-todo" id="col-todo-{{ pdi.id }}" data-pdi="{{ pdi.id }}" data-statut="Pending"
+                   ondragover="event.preventDefault()" ondrop="dropAction(event)">
+                <div class="col-head head-todo">
+                  📌 À faire <span class="col-badge badge-todo">{{ pdi.todo|length }}</span>
+                </div>
+                <div class="col-body">
+                  {% if pdi.todo|length == 0 %}<div class="col-empty">—</div>{% endif %}
+                  {% for a in pdi.todo %}
+                    {{ _self.renderAction(a, pdi, isAdmin, isManager, currentUserId) }}
+                  {% endfor %}
+                </div>
+              </div>
+
+              {# En cours #}
+              <div class="kanban-col col-prog" id="col-prog-{{ pdi.id }}" data-pdi="{{ pdi.id }}" data-statut="In Progress"
+                   ondragover="event.preventDefault()" ondrop="dropAction(event)">
+                <div class="col-head head-prog">
+                  🔄 En cours <span class="col-badge badge-prog">{{ pdi.in_prog|length }}</span>
+                </div>
+                <div class="col-body">
+                  {% if pdi.in_prog|length == 0 %}<div class="col-empty">—</div>{% endif %}
+                  {% for a in pdi.in_prog %}
+                    {{ _self.renderAction(a, pdi, isAdmin, isManager, currentUserId) }}
+                  {% endfor %}
+                </div>
+              </div>
+
+              {# Terminé #}
+              <div class="kanban-col col-done" id="col-done-{{ pdi.id }}" data-pdi="{{ pdi.id }}" data-statut="Completed"
+                   ondragover="event.preventDefault()" ondrop="dropAction(event)">
+                <div class="col-head head-done">
+                  ✅ Terminé <span class="col-badge badge-done">{{ pdi.done|length }}</span>
+                </div>
+                <div class="col-body">
+                  {% if pdi.done|length == 0 %}<div class="col-empty">—</div>{% endif %}
+                  {% for a in pdi.done %}
+                    {{ _self.renderAction(a, pdi, isAdmin, isManager, currentUserId) }}
+                  {% endfor %}
+                </div>
+              </div>
+
+            </div>{# /kanban-board #}
+          </div>{# /pdi-right #}
+
+        </div>{# /pdi-body #}
+      </div>{# /pdi-card #}
+    {% endfor %}
+  {% endif %}
+
+</div>
+
+{# ══ MACRO — carte action ═════════════════════════════════════════════════ #}
+{% macro renderAction(a, pdi, isAdmin, isManager, currentUserId) %}
+  {# ✅ FIX: camelCase typeAction / dateFinPrevue / dateDebut #}
+  {% set label      = a.typeAction ? a.typeAction : '(action sans titre)' %}
+  {% set isForm     = 'Formation :' in label %}
+  {% set canEdit    = is_granted('ROLE_ADMIN') or is_granted('ROLE_RH') or is_granted('ROLE_MANAGER') or pdi.employe_id == app.user.id %}
+  {% set hasDueDate = a.dateFinPrevue and a.dateFinPrevue != '0000-00-00' %}
+  {% set debutSafe  = (a.dateDebut and a.dateDebut != '0000-00-00') ? a.dateDebut : '' %}
+  <div class="action-card {{ a.late ? 'action-late' : '' }}"
+       draggable="{{ canEdit ? 'true' : 'false' }}"
+       data-action-id="{{ a.id }}"
+       data-pdi-id="{{ pdi.id }}"
+       ondragstart="dragStart(event, {{ a.id }}, {{ pdi.id }})">
+    <div class="action-title">
+      {{ label }}
+      {% if isForm %}<span class="tag-form">⇒ Formation</span>{% endif %}
+    </div>
+    {% if a.late %}
+      <div class="action-late-badge">⚠ En retard</div>
+    {% endif %}
+    <div class="action-meta">
+      <span class="action-pdi-ref">PDI {{ pdi.annee }} · {{ pdi.employe_nom }}</span>
+      {% if a.late %}
+        <span class="late-days">⏰ {{ a.days_late }}j de retard</span>
+      {% elseif hasDueDate %}
+        <span>📅 {{ a.dateFinPrevue|date('d/m/Y') }}</span>
+      {% endif %}
+    </div>
+    <div class="action-prio">
+      {% for i in 1..5 %}
+        <span class="star {{ i <= a.priorite ? 'star-on' : 'star-off' }}">★</span>
+      {% endfor %}
+      <span class="prio-txt">Priorité {{ a.priorite }}/5</span>
+    </div>
+    {% if canEdit %}
+      <div class="action-hint">Glisser pour changer le statut</div>
+      <div class="action-btns">
+        <button class="btn-ae btn-ae-edit"
+                onclick="openEditActionModal({{ a.id }}, '{{ label|e('html_attr') }}', '{{ a.statut }}', '{{ debutSafe }}', '{{ hasDueDate ? a.dateFinPrevue : '' }}', {{ a.priorite }}, {{ a.formation_id ?? 0 }})">✏</button>
+        <button class="btn-ae btn-ae-del"
+                onclick="openConfirmModal('Supprimer cette action ?', 'Cette action sera supprimée définitivement du plan.', '{{ path('pdi_action_delete', {id: a.id}) }}', 'danger')">🗑</button>
+      </div>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+{# ══ MODAL — Nouveau PDI ══════════════════════════════════════════════════ #}
+<div id="modalNew" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeNewModal()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 class="modal-title">🎯 Nouveau PDI</h3>
+      <button class="modal-close" onclick="closeNewModal()">✕</button>
+    </div>
+    <form method="post" action="{{ path('pdi_new') }}" class="modal-form" onsubmit="return validateForm(this)" novalidate>
+      <div class="mf-group">
+        <label class="mf-lbl">Employé <span class="req">*</span></label>
+        <select name="employe_id" class="mf-input" required oninput="validateField(this)">
+          <option value="">— Choisir —</option>
+          {% for emp in employees %}
+            <option value="{{ emp.id }}">{{ emp.fullName }}</option>
+          {% endfor %}
+        </select>
+        <span class="error-msg" style="display:none"></span>
+      </div>
+      <div class="mf-group">
+        <label class="mf-lbl">Année</label>
+        <input type="number" name="annee" class="mf-input" value="{{ 'now'|date('Y') }}" min="2020" max="2030">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="closeNewModal()">Annuler</button>
+        <button type="submit" class="btn-save">✅ Créer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ══ MODAL — Edit PDI ═════════════════════════════════════════════════════ #}
+<div id="modalEdit" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeEditModal()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 class="modal-title">✏ Modifier le PDI</h3>
+      <button class="modal-close" onclick="closeEditModal()">✕</button>
+    </div>
+    <form method="post" id="formEdit" class="modal-form" onsubmit="return validateForm(this)" novalidate>
+      <div class="mf-group">
+        <label class="mf-lbl">Statut</label>
+        <select name="statut" id="edit_statut" class="mf-input">
+          <option value="Draft">📝 Draft</option>
+          <option value="Active">🟢 Active</option>
+          <option value="Completed">✔ Completed</option>
+          <option value="Archived">⏸ Archived</option>
+        </select>
+      </div>
+      <div class="mf-group">
+        <label class="mf-lbl">Année</label>
+        <input type="number" name="annee" id="edit_annee" class="mf-input" min="2020" max="2030">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="closeEditModal()">Annuler</button>
+        <button type="submit" class="btn-save">💾 Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ══ MODAL — Ajouter action (ENHANCED) ═══════════════════════════════════ #}
+<div id="modalAddAction" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeAddActionModal()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 class="modal-title">⚡ Ajouter une action</h3>
+      <button class="modal-close" onclick="closeAddActionModal()">✕</button>
+    </div>
+    <form method="post" id="formAddAction" class="modal-form" onsubmit="return submitAddAction(event)" novalidate>
+
+      {# ── Hidden fields sent to controller ── #}
+      <input type="hidden" name="formation_id" id="add_formation_id" value="">
+      {# type_action holds either the formation label OR the custom text #}
+      <input type="hidden" name="type_action" id="add_type_action_hidden" value="">
+
+      {# ── Type d'action toggle ── #}
+      <div class="mf-group">
+        <label class="mf-lbl">Type d'action</label>
+        <div class="action-type-toggle">
+          <button type="button" class="atb active" id="atb-formation" onclick="setActionType('formation')">
+            🎓 Lier à une Formation
+          </button>
+          <button type="button" class="atb" id="atb-custom" onclick="setActionType('custom')">
+            ✏ Action personnalisée
+          </button>
+        </div>
+      </div>
+
+      {# ── Formation picker (shown when type = formation) ── #}
+      <div id="add-formation-section">
+        <div class="mf-group">
+          <label class="mf-lbl">
+            Formation
+            <span class="req">*</span>
+            <span class="mf-lbl-hint">(obligatoire si pas d'action personnalisée)</span>
+          </label>
+          <div class="formation-picker">
+            <input type="text" id="add_formation_search" class="mf-input"
+                   placeholder="🔍 Rechercher une formation…"
+                   oninput="filterFormations(this.value)" autocomplete="off">
+            <div id="formation-dropdown" class="formation-dropdown" style="display:none">
+              {% for f in formations %}
+                <div class="fdrop-item" data-id="{{ f.id }}" data-titre="{{ f.titre|e('html_attr') }}"
+                     onclick="selectFormation({{ f.id }}, '{{ f.titre|e('js') }}')">
+                  <span class="fdrop-icon">🎓</span>
+                  <span class="fdrop-titre">{{ f.titre }}</span>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+          <div id="add-formation-selected" class="formation-selected-badge" style="display:none"></div>
+          <span class="error-msg" id="add-formation-error" style="display:none">
+            ⚠ Veuillez sélectionner une formation ou basculer vers « Action personnalisée »
+          </span>
+        </div>
+      </div>
+
+      {# ── Custom action label (shown when type = custom) ── #}
+      <div id="add-custom-section" style="display:none">
+        <div class="mf-group">
+          <label class="mf-lbl">
+            Action personnalisée
+            <span class="req">*</span>
+            <span class="mf-lbl-hint">(obligatoire si pas de formation liée)</span>
+          </label>
+          <input type="text" id="add_custom_label" class="mf-input"
+                 placeholder="ex: Passer la certification AWS, Lire un livre…"
+                 oninput="clearAddCustomError()">
+          <span class="error-msg" id="add-custom-error" style="display:none">
+            ⚠ Veuillez saisir une description d'au moins 2 caractères
+          </span>
+        </div>
+      </div>
+
+      {# ── Common fields ── #}
+      <div class="mf-row">
+        <div class="mf-group">
+          <label class="mf-lbl">Statut</label>
+          <select name="statut" class="mf-input">
+            <option value="Pending">📌 Pending</option>
+            <option value="In Progress">🔄 In Progress</option>
+            <option value="Completed">✅ Completed</option>
+          </select>
+        </div>
+        <div class="mf-group">
+          <label class="mf-lbl">Priorité (1-5)</label>
+          <input type="number" name="priorite" class="mf-input" value="3" min="1" max="5">
+        </div>
+      </div>
+      <div class="mf-row">
+        <div class="mf-group">
+          <label class="mf-lbl">Date début</label>
+          <input type="date" name="date_debut" class="mf-input" value="{{ 'now'|date('Y-m-d') }}">
+        </div>
+        <div class="mf-group">
+          <label class="mf-lbl">Échéance</label>
+          <input type="date" name="date_fin_prevue" class="mf-input" value="{{ '+1 month'|date('Y-m-d') }}">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="closeAddActionModal()">Annuler</button>
+        <button type="submit" class="btn-save">✅ Ajouter l'action</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ══ MODAL — Edit action ══════════════════════════════════════════════════ #}
+<div id="modalEditAction" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeEditActionModal()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 class="modal-title">✏ Modifier l'action</h3>
+      <button class="modal-close" onclick="closeEditActionModal()">✕</button>
+    </div>
+    <form method="post" id="formEditAction" class="modal-form" onsubmit="return validateEditAction(event)" novalidate>
+      <input type="hidden" name="formation_id" id="ea_formation_id" value="">
+      <div class="mf-group">
+        <label class="mf-lbl">Action <span class="req">*</span></label>
+        <input type="text" name="type_action" id="ea_type" class="mf-input" required
+               placeholder="ex: Formation React, Certification AWS…"
+               oninput="clearEaError()">
+        <div class="edit-formation-hint" id="ea_formation_hint" style="display:none">
+          <span class="efh-badge">🎓 Formation liée</span>
+          <span id="ea_formation_name"></span>
+          <button type="button" class="efh-unlink" onclick="unlinkFormation()">✕ Délier</button>
+        </div>
+        <span class="error-msg" id="ea-type-error" style="display:none">
+          ⚠ Ce champ est obligatoire (min 2 caractères)
+        </span>
+      </div>
+      <div class="mf-row">
+        <div class="mf-group">
+          <label class="mf-lbl">Statut</label>
+          <select name="statut" id="ea_statut" class="mf-input">
+            <option value="Pending">📌 Pending</option>
+            <option value="In Progress">🔄 In Progress</option>
+            <option value="Completed">✅ Completed</option>
+          </select>
+        </div>
+        <div class="mf-group">
+          <label class="mf-lbl">Priorité</label>
+          <input type="number" name="priorite" id="ea_prio" class="mf-input" min="1" max="5">
+        </div>
+      </div>
+      <div class="mf-row">
+        <div class="mf-group">
+          <label class="mf-lbl">Date début</label>
+          <input type="date" name="date_debut" id="ea_debut" class="mf-input">
+        </div>
+        <div class="mf-group">
+          <label class="mf-lbl">Échéance</label>
+          <input type="date" name="date_fin_prevue" id="ea_fin" class="mf-input">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="closeEditActionModal()">Annuler</button>
+        <button type="submit" class="btn-save">💾 Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ══ MODAL — Confirmation ══════════════════════════════════════════════════ #}
+<div id="modalConfirm" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeConfirmModal()">
+  <div class="modal-box modal-confirm-box">
+    <div class="confirm-icon-wrap" id="confirmIconWrap">
+      <div class="confirm-icon-inner">🗑️</div>
+    </div>
+    <h3 class="confirm-title" id="confirmTitle">Confirmer la suppression</h3>
+    <p class="confirm-sub" id="confirmSub">Cette action est irréversible.</p>
+    <div class="confirm-actions">
+      <button class="btn-cancel" onclick="closeConfirmModal()">Annuler</button>
+      <button class="btn-confirm-ok" id="confirmOkBtn" onclick="doConfirmAction()">Supprimer</button>
+    </div>
+  </div>
+</div>
+<form method="post" id="confirmHiddenForm" style="display:none"></form>
+
+<script>
+// ── Confirm modal ─────────────────────────────────────────────────────────
+let _confirmAction = null;
+
+function openConfirmModal(title, sub, actionUrl, type = 'danger') {
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmSub').textContent   = sub;
+  const iconWrap = document.getElementById('confirmIconWrap');
+  const okBtn    = document.getElementById('confirmOkBtn');
+  if (type === 'danger') {
+    iconWrap.style.background = '#FEF2F2';
+    iconWrap.querySelector('.confirm-icon-inner').textContent = '🗑️';
+    okBtn.style.background = '#DC2626';
+    okBtn.textContent = 'Supprimer';
+  } else {
+    iconWrap.style.background = '#FEF3C7';
+    iconWrap.querySelector('.confirm-icon-inner').textContent = '⚠️';
+    okBtn.style.background = '#D97706';
+    okBtn.textContent = 'Confirmer';
+  }
+  _confirmAction = actionUrl;
+  document.getElementById('modalConfirm').style.display = 'flex';
+}
+function closeConfirmModal() {
+  document.getElementById('modalConfirm').style.display = 'none';
+  _confirmAction = null;
+}
+function doConfirmAction() {
+  if (!_confirmAction) return;
+  const form = document.getElementById('confirmHiddenForm');
+  form.action = _confirmAction;
+  form.method = 'post';
+  form.submit();
+}
+
+function showAlert(msg, type = 'error') {
+  const toast = document.createElement('div');
+  toast.className = 'pdi-toast pdi-toast-' + type;
+  toast.innerHTML = `<span>${msg}</span><button onclick="this.parentElement.remove()">✕</button>`;
+  document.body.appendChild(toast);
+  setTimeout(() => { if (toast.parentElement) toast.remove(); }, 5000);
+}
+
+// ── Drag & Drop Kanban ────────────────────────────────────────────────────
+function dragStart(event, actionId, pdiId) {
+  event.dataTransfer.setData('actionId', actionId);
+  event.dataTransfer.setData('pdiId', pdiId);
+  event.currentTarget.style.opacity = '0.5';
+}
+async function dropAction(event) {
+  event.preventDefault();
+  const actionId  = event.dataTransfer.getData('actionId');
+  const pdiId     = event.dataTransfer.getData('pdiId');
+  const col       = event.currentTarget.closest('.kanban-col');
+  const newStatut = col.dataset.statut;
+  document.querySelectorAll('.action-card').forEach(c => c.style.opacity = '1');
+  const fd = new FormData();
+  fd.append('statut', newStatut);
+  const res  = await fetch(`/pdi/action/${actionId}/move`, { method: 'POST', body: fd });
+  const data = await res.json();
+  if (data.ok) {
+    const donut = document.querySelector(`#pdi-${pdiId} .donut-pct`);
+    const fill  = document.querySelector(`#pdi-${pdiId} .prog-bar-fill`);
+    if (donut) donut.textContent = data.pct + '%';
+    if (fill)  fill.style.width = data.pct + '%';
+    location.reload();
+  } else {
+    showAlert('Erreur lors du déplacement.');
+  }
+}
+
+// ── PDI modals ────────────────────────────────────────────────────────────
+function openNewModal()  { document.getElementById('modalNew').style.display  = 'flex'; }
+function closeNewModal() { document.getElementById('modalNew').style.display  = 'none'; }
+function closeEditModal(){ document.getElementById('modalEdit').style.display = 'none'; }
+
+function openEditModal(id, statut, annee) {
+  document.getElementById('edit_statut').value = statut;
+  document.getElementById('edit_annee').value  = annee;
+  document.getElementById('formEdit').action   = `/pdi/${id}/edit`;
+  document.getElementById('modalEdit').style.display = 'flex';
+}
+
+// ── Add Action Modal ──────────────────────────────────────────────────────
+let _currentActionType = 'formation';
+
+function openAddActionModal(pdiId) {
+  document.getElementById('formAddAction').action = `/pdi/${pdiId}/action/add`;
+  // Reset
+  setActionType('formation');
+  document.getElementById('add_formation_search').value          = '';
+  document.getElementById('add_formation_id').value              = '';
+  document.getElementById('add_type_action_hidden').value        = '';
+  document.getElementById('add-formation-selected').style.display = 'none';
+  document.getElementById('add-formation-selected').innerHTML    = '';
+  document.getElementById('add_custom_label').value             = '';
+  document.getElementById('formation-dropdown').style.display   = 'none';
+  document.getElementById('add-formation-error').style.display  = 'none';
+  document.getElementById('add-custom-error').style.display     = 'none';
+  document.getElementById('modalAddAction').style.display = 'flex';
+}
+function closeAddActionModal() {
+  document.getElementById('modalAddAction').style.display = 'none';
+}
+
+function setActionType(type) {
+  _currentActionType = type;
+  document.getElementById('atb-formation').classList.toggle('active', type === 'formation');
+  document.getElementById('atb-custom').classList.toggle('active',    type === 'custom');
+  document.getElementById('add-formation-section').style.display = type === 'formation' ? 'block' : 'none';
+  document.getElementById('add-custom-section').style.display    = type === 'custom'    ? 'block' : 'none';
+  // Clear errors when switching
+  document.getElementById('add-formation-error').style.display = 'none';
+  document.getElementById('add-custom-error').style.display    = 'none';
+}
+
+// Formation search dropdown
+const allFormations = [
+  {% for f in formations %}
+    { id: {{ f.id }}, titre: "{{ f.titre|e('js') }}" },
+  {% endfor %}
+];
+
+function filterFormations(query) {
+  const dropdown = document.getElementById('formation-dropdown');
+  const q = query.toLowerCase().trim();
+  if (q.length === 0) { dropdown.style.display = 'none'; return; }
+  const items = dropdown.querySelectorAll('.fdrop-item');
+  let visible = 0;
+  items.forEach(item => {
+    const match = item.dataset.titre.toLowerCase().includes(q);
+    item.style.display = match ? 'flex' : 'none';
+    if (match) visible++;
+  });
+  dropdown.style.display = visible > 0 ? 'block' : 'none';
+}
+
+function selectFormation(id, titre) {
+  document.getElementById('add_formation_id').value       = id;
+  // Controller reads formation_id and builds "Formation : <titre>" itself
+  // but we also store in hidden input as fallback label
+  document.getElementById('add_type_action_hidden').value = 'Formation : ' + titre;
+  document.getElementById('add_formation_search').value   = '';
+  document.getElementById('formation-dropdown').style.display = 'none';
+  const badge = document.getElementById('add-formation-selected');
+  badge.style.display = 'flex';
+  badge.innerHTML = `<span class="fsel-icon">🎓</span><span class="fsel-titre">Formation : ${titre}</span><button type="button" class="fsel-remove" onclick="clearFormationSelection()">✕</button>`;
+  document.getElementById('add-formation-error').style.display = 'none';
+}
+
+function clearFormationSelection() {
+  document.getElementById('add_formation_id').value       = '';
+  document.getElementById('add_type_action_hidden').value = '';
+  const badge = document.getElementById('add-formation-selected');
+  badge.style.display = 'none';
+  badge.innerHTML     = '';
+}
+function clearAddCustomError() {
+  document.getElementById('add-custom-error').style.display = 'none';
+}
+
+// Show dropdown on focus
+document.addEventListener('DOMContentLoaded', () => {
+  const searchInput = document.getElementById('add_formation_search');
+  if (searchInput) {
+    searchInput.addEventListener('focus', () => {
+      const dropdown = document.getElementById('formation-dropdown');
+      dropdown.querySelectorAll('.fdrop-item').forEach(i => i.style.display = 'flex');
+      dropdown.style.display = 'block';
+    });
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.formation-picker')) {
+        document.getElementById('formation-dropdown').style.display = 'none';
+      }
+    });
+  }
+});
+
+// ✅ ENHANCED: mutual validation — one of the two is required
+function submitAddAction(event) {
+  event.preventDefault();
+
+  if (_currentActionType === 'formation') {
+    const formId = document.getElementById('add_formation_id').value;
+    if (!formId) {
+      document.getElementById('add-formation-error').style.display = 'block';
+      document.getElementById('add_formation_search').classList.add('mf-input-error');
+      document.getElementById('add_formation_search').focus();
+      return false;
+    }
+    // formation_id set; type_action hidden already set by selectFormation()
+    // controller will rebuild label from formation_id
+    document.getElementById('add-formation-error').style.display = 'none';
+    document.getElementById('add_formation_search').classList.remove('mf-input-error');
+
+  } else {
+    // Custom action
+    const customLabel = document.getElementById('add_custom_label').value.trim();
+    if (!customLabel || customLabel.length < 2) {
+      document.getElementById('add-custom-error').style.display = 'block';
+      document.getElementById('add_custom_label').classList.add('mf-input-error');
+      document.getElementById('add_custom_label').focus();
+      return false;
+    }
+    // Write the custom label into the hidden type_action field
+    document.getElementById('add_type_action_hidden').value = customLabel;
+    document.getElementById('add_formation_id').value       = '';
+    document.getElementById('add-custom-error').style.display = 'none';
+    document.getElementById('add_custom_label').classList.remove('mf-input-error');
+  }
+
+  // Submit the form
+  document.getElementById('formAddAction').submit();
+  return true;
+}
+
+// ── Edit Action Modal ─────────────────────────────────────────────────────
+function closeEditActionModal() {
+  document.getElementById('modalEditAction').style.display = 'none';
+}
+function clearEaError() {
+  document.getElementById('ea-type-error').style.display = 'none';
+  document.getElementById('ea_type').classList.remove('mf-input-error');
+}
+
+function openEditActionModal(id, type, statut, debut, fin, prio, formationId) {
+  document.getElementById('ea_type').value         = type;
+  document.getElementById('ea_statut').value       = statut;
+  document.getElementById('ea_debut').value        = debut || '';
+  document.getElementById('ea_fin').value          = fin   || '';
+  document.getElementById('ea_prio').value         = prio;
+  document.getElementById('ea_formation_id').value = formationId > 0 ? formationId : '';
+  document.getElementById('formEditAction').action = `/pdi/action/${id}/edit`;
+  document.getElementById('ea-type-error').style.display = 'none';
+  document.getElementById('ea_type').classList.remove('mf-input-error');
+
+  // Show formation hint if linked
+  const hint   = document.getElementById('ea_formation_hint');
+  const nameEl = document.getElementById('ea_formation_name');
+  if (formationId && formationId > 0) {
+    const f = allFormations.find(f => f.id === formationId);
+    hint.style.display  = 'flex';
+    nameEl.textContent  = f ? f.titre : 'Formation #' + formationId;
+  } else {
+    hint.style.display = 'none';
+  }
+  document.getElementById('modalEditAction').style.display = 'flex';
+}
+
+function unlinkFormation() {
+  document.getElementById('ea_formation_id').value      = '';
+  document.getElementById('ea_formation_hint').style.display = 'none';
+}
+
+// ✅ Edit action validation
+function validateEditAction(event) {
+  event.preventDefault();
+  const val = document.getElementById('ea_type').value.trim();
+  if (!val || val.length < 2) {
+    document.getElementById('ea-type-error').style.display = 'block';
+    document.getElementById('ea_type').classList.add('mf-input-error');
+    document.getElementById('ea_type').focus();
+    return false;
+  }
+  document.getElementById('formEditAction').submit();
+  return true;
+}
+
+// ── Generic form validation ────────────────────────────────────────────────
+function validateField(input) {
+  const errorMsgEl = input.parentElement.querySelector('.error-msg');
+  let isValid = true, errorMsg = '';
+  if (input.type === 'text') {
+    if (input.required && input.value.trim() === '') { isValid = false; errorMsg = 'Ce champ est requis'; }
+    else if (input.value.trim().length < 2)          { isValid = false; errorMsg = 'Minimum 2 caractères'; }
+  } else if (input.tagName === 'SELECT') {
+    if (input.required && input.value === '') { isValid = false; errorMsg = 'Veuillez sélectionner'; }
+  }
+  input.classList.toggle('mf-input-error', !isValid);
+  if (errorMsgEl) { errorMsgEl.textContent = errorMsg; errorMsgEl.style.display = isValid ? 'none' : 'block'; }
+  return isValid;
+}
+function validateForm(form) {
+  let allValid = true;
+  form.querySelectorAll('input[required], select[required]').forEach(i => { if (!validateField(i)) allValid = false; });
+  return allValid;
+}
+</script>
+
+<style>
+:root{--p:#4F46E5;--g50:#F8FAFC;--g100:#F1F5F9;--g200:#E2E8F0;--g500:#64748B;--g900:#0F172A}
+*{box-sizing:border-box}
+.pdi-wrapper{padding:2rem;max-width:1300px;margin:0 auto}
+
+.pdi-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem}
+.pdi-title{font-size:1.8rem;font-weight:800;color:var(--g900);margin:0}
+.pdi-sub{color:var(--g500);font-size:.9rem;margin:4px 0 0}
+.btn-create{background:linear-gradient(135deg,#4F46E5,#7C3AED);color:white;border:none;padding:11px 24px;border-radius:12px;font-weight:700;font-size:.9rem;cursor:pointer;box-shadow:0 4px 14px rgba(79,70,229,.35)}
+.btn-create:hover{opacity:.9}
+.flash-ok{background:#D1FAE5;color:#065F46;padding:12px 16px;border-radius:10px;font-weight:600;margin-bottom:1rem}
+.flash-err{background:#FEE2E2;color:#991B1B;padding:12px 16px;border-radius:10px;font-weight:600;margin-bottom:1rem}
+
+.pdi-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.75rem}
+.stat-card{background:white;border-radius:14px;border:1px solid var(--g200);overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.stat-card::before{content:'';display:block;height:4px;background:var(--accent)}
+.stat-top{display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem .25rem}
+.stat-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0}
+.stat-num{font-size:2rem;font-weight:800;color:var(--g900);line-height:1}
+.stat-lbl{font-size:.8rem;color:var(--g500);margin-top:2px}
+.stat-hint{font-size:.72rem;font-weight:700;padding:.4rem 1.25rem .9rem}
+
+.pdi-card{background:white;border-radius:20px;margin-bottom:1.5rem;box-shadow:0 4px 18px rgba(0,0,0,.1);overflow:hidden;transition:box-shadow .2s}
+.pdi-card:hover{box-shadow:0 8px 28px rgba(0,0,0,.14)}
+.pdi-empty{text-align:center;padding:4rem;background:white;border-radius:16px;border:2px dashed var(--g200);color:var(--g500)}
+
+.pdi-banner{display:flex;align-items:center;gap:1rem;padding:1.25rem 1.5rem;flex-wrap:wrap}
+.pdi-avatar{width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.25);color:white;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:800;flex-shrink:0}
+.pdi-banner-info{flex:1;min-width:0}
+.pdi-emp-name{font-size:1.1rem;font-weight:800;color:white}
+.pdi-meta{font-size:.8rem;color:rgba(255,255,255,.75);margin-top:2px}
+.pdi-status-badge{background:rgba(255,255,255,.22);color:white;font-size:.75rem;font-weight:700;padding:5px 14px;border-radius:20px;white-space:nowrap}
+.pdi-donut{position:relative;width:56px;height:56px;flex-shrink:0}
+.donut-svg{width:56px;height:56px;transform:rotate(-90deg)}
+.donut-pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:800;color:white}
+.prog-bar-wrap{height:5px;background:#E5E7EB}
+.prog-bar-fill{height:100%;transition:width .4s}
+.pdi-body{display:grid;grid-template-columns:280px 1fr;gap:1.5rem;padding:1.5rem}
+
+.pdi-left{display:flex;flex-direction:column;gap:.5rem}
+.left-section-title{font-size:.85rem;font-weight:800;color:#1F2937}
+.obj-list{display:flex;flex-direction:column;gap:.35rem}
+.obj-item{font-size:.8rem;padding:6px 12px;border-radius:8px;background:#F9FAFB;color:#374151;border:1px solid #E5E7EB}
+.obj-done{background:#F0FDF4;color:#059669;border-color:#BBF7D0}
+.obj-inprog{background:#FFFBEB;color:#D97706;border-color:#FDE68A}
+.obj-form{border-left:3px solid #E0E7FF}
+.obj-empty{font-size:.78rem;color:#9CA3AF}
+.comp-tags{display:flex;flex-wrap:wrap;gap:.4rem}
+.comp-tag{background:#EEF2FF;color:#4F46E5;font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:20px}
+.pdi-left-btns{display:flex;gap:.75rem;margin-top:.5rem;flex-wrap:wrap}
+.btn-edit-pdi{background:#FFF7ED;color:#EA580C;border:1px solid #FDBA74;padding:8px 16px;border-radius:10px;font-size:.8rem;font-weight:700;cursor:pointer}
+.btn-edit-pdi:hover{background:#FED7AA}
+.btn-del-pdi{background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;padding:8px 16px;border-radius:10px;font-size:.8rem;font-weight:700;cursor:pointer}
+.btn-del-pdi:hover{background:#FEE2E2}
+
+.kanban-header{display:flex;align-items:center;gap:.75rem;margin-bottom:.9rem;flex-wrap:wrap}
+.kanban-title{font-size:.9rem;font-weight:800;color:#1F2937}
+.kanban-stats{display:flex;gap:.35rem}
+.ks{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:800;color:white}
+.ks-todo{background:#6B7280}.ks-prog{background:#F59E0B}.ks-done{background:#10B981}
+.btn-add-action{background:#4F46E5;color:white;border:none;padding:6px 14px;border-radius:8px;font-size:.78rem;font-weight:700;cursor:pointer;margin-left:auto}
+.btn-add-action:hover{background:#4338CA}
+.kanban-board{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem}
+.kanban-col{border-radius:14px;border:1px solid;overflow:hidden;min-height:120px}
+.col-todo{background:#F9FAFB;border-color:#E5E7EB}
+.col-prog{background:#FFFBEB;border-color:#FDE68A}
+.col-done{background:#F0FDF4;border-color:#BBF7D0}
+.col-head{display:flex;align-items:center;gap:.4rem;padding:8px 12px;font-size:.78rem;font-weight:700;border-bottom:1px solid}
+.head-todo{color:#6B7280;background:#6B728018;border-color:#E5E7EB}
+.head-prog{color:#F59E0B;background:#F59E0B18;border-color:#FDE68A}
+.head-done{color:#10B981;background:#10B98118;border-color:#BBF7D0}
+.col-badge{padding:1px 6px;border-radius:10px;font-size:.68rem;color:white}
+.badge-todo{background:#6B7280}.badge-prog{background:#F59E0B}.badge-done{background:#10B981}
+.col-body{padding:8px;display:flex;flex-direction:column;gap:.5rem;min-height:80px}
+.col-empty{text-align:center;color:#D1D5DB;font-size:1.2rem;padding:.5rem 0}
+
+.action-card{background:white;border-radius:10px;border:1px solid #E5E7EB;padding:.7rem .85rem;cursor:grab;transition:box-shadow .15s,opacity .2s;user-select:none}
+.action-card:hover{box-shadow:0 3px 12px rgba(0,0,0,.1)}
+.action-card.action-late{border-color:#FECACA;background:#FFF5F5}
+.action-title{font-size:.78rem;font-weight:700;color:#111827;margin-bottom:.25rem;line-height:1.3}
+.tag-form{background:#EEF2FF;color:#4F46E5;font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:5px;margin-left:.3rem}
+.action-late-badge{background:#FEE2E2;color:#DC2626;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:5px;display:inline-block;margin-bottom:.2rem}
+.action-meta{font-size:.68rem;color:#9CA3AF;margin-bottom:.2rem}
+.action-pdi-ref{color:#9CA3AF}
+.late-days{color:#DC2626;font-weight:700}
+.action-prio{display:flex;align-items:center;gap:1px;margin-bottom:.2rem}
+.star{font-size:.65rem}.star-on{color:#F59E0B}.star-off{color:#E5E7EB}
+.prio-txt{font-size:.6rem;color:#9CA3AF;margin-left:.25rem}
+.action-hint{font-size:.6rem;color:#CBD5E1;font-style:italic}
+.action-btns{display:flex;gap:.25rem;margin-top:.3rem}
+.btn-ae{background:none;border:none;cursor:pointer;font-size:.78rem;padding:2px 6px;border-radius:5px}
+.btn-ae-edit{color:#D97706;background:#FFFBEB}
+.btn-ae-del{color:#DC2626;background:#FEF2F2}
+.btn-ae:hover{opacity:.75}
+
+/* Modals */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem}
+.modal-box{background:white;border-radius:20px;width:100%;max-width:500px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);animation:modalIn .2s ease}
+@keyframes modalIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.modal-head{display:flex;justify-content:space-between;align-items:center;padding:1.25rem 1.5rem;border-bottom:1px solid var(--g100);position:sticky;top:0;background:white;z-index:1}
+.modal-title{font-size:1.05rem;font-weight:800;color:var(--g900);margin:0}
+.modal-close{background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--g500);padding:4px 8px;border-radius:6px}
+.modal-close:hover{background:var(--g100)}
+.modal-form{padding:1.25rem 1.5rem}
+.mf-row{display:grid;grid-template-columns:1fr 1fr;gap:.9rem}
+.mf-group{display:flex;flex-direction:column;gap:4px;margin-bottom:.9rem}
+.mf-lbl{font-size:.7rem;font-weight:800;color:var(--g500);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+.mf-lbl-hint{font-size:.65rem;font-weight:500;color:#9CA3AF;text-transform:none;letter-spacing:0;font-style:italic}
+.mf-input{padding:9px 12px;border:1.5px solid var(--g200);border-radius:8px;font-size:.88rem;outline:none;background:var(--g50);transition:border-color .15s}
+.mf-input:focus{border-color:var(--p);box-shadow:0 0 0 3px #4F46E518;background:white}
+.mf-input-error{border-color:#DC2626!important;background:#FEF2F2!important}
+.error-msg{display:none;font-size:.75rem;color:#DC2626;font-weight:600;margin-top:4px;display:none;align-items:center;gap:.3rem}
+.req{color:#DC2626}
+.modal-footer{display:flex;justify-content:flex-end;gap:.75rem;padding-top:1rem;border-top:1px solid var(--g100);margin-top:.25rem}
+.btn-cancel{padding:9px 18px;border-radius:8px;background:var(--g100);color:var(--g500);font-weight:700;border:none;cursor:pointer}
+.btn-save{padding:9px 22px;border-radius:8px;background:var(--p);color:white;font-weight:700;border:none;cursor:pointer;transition:background .15s}
+.btn-save:hover{background:#4338CA}
+
+/* Action type toggle */
+.action-type-toggle{display:flex;background:#F3F4F6;border-radius:12px;padding:4px;gap:4px}
+.atb{flex:1;padding:9px 12px;border-radius:9px;border:none;background:transparent;font-size:.82rem;font-weight:700;color:var(--g500);cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px}
+.atb:hover:not(.active){background:rgba(255,255,255,.6)}
+.atb.active{background:white;color:var(--p);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+
+/* Formation picker */
+.formation-picker{position:relative}
+.formation-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:white;border:1.5px solid var(--g200);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:200;max-height:220px;overflow-y:auto}
+.fdrop-item{display:flex;align-items:center;gap:.6rem;padding:.65rem 1rem;cursor:pointer;font-size:.85rem;color:var(--g900);transition:background .1s}
+.fdrop-item:hover{background:#EEF2FF}
+.fdrop-icon{font-size:.9rem;flex-shrink:0}
+.fdrop-titre{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.formation-selected-badge{display:flex;align-items:center;gap:.5rem;background:#EEF2FF;border:1.5px solid #C7D2FE;border-radius:9px;padding:.5rem .85rem;margin-top:.5rem;font-size:.82rem;color:#4F46E5}
+.fsel-icon{font-size:.9rem}
+.fsel-titre{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fsel-remove{background:none;border:none;color:#6366F1;cursor:pointer;font-size:.85rem;padding:0 0 0 .25rem;flex-shrink:0}
+.fsel-remove:hover{color:#DC2626}
+
+/* Edit formation hint */
+.edit-formation-hint{display:flex;align-items:center;gap:.5rem;background:#EEF2FF;border:1px solid #C7D2FE;border-radius:8px;padding:.45rem .85rem;margin-top:.4rem;font-size:.78rem;color:#4F46E5;flex-wrap:wrap}
+.efh-badge{font-weight:700;font-size:.72rem;background:#6366F1;color:white;padding:2px 8px;border-radius:20px}
+.efh-unlink{background:none;border:none;color:#DC2626;cursor:pointer;font-size:.75rem;margin-left:auto;font-weight:700}
+.efh-unlink:hover{text-decoration:underline}
+
+/* Confirm modal */
+.modal-confirm-box{max-width:400px;text-align:center;padding:2rem 1.75rem}
+.confirm-icon-wrap{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;background:#FEF2F2}
+.confirm-icon-inner{font-size:1.75rem}
+.confirm-title{font-size:1.1rem;font-weight:800;color:var(--g900);margin:0 0 .4rem}
+.confirm-sub{font-size:.85rem;color:var(--g500);margin:0 0 1.5rem}
+.confirm-actions{display:flex;gap:.75rem;justify-content:center}
+.btn-confirm-ok{padding:10px 24px;border-radius:10px;background:#DC2626;color:white;font-weight:700;font-size:.9rem;border:none;cursor:pointer;transition:opacity .15s}
+.btn-confirm-ok:hover{opacity:.85}
+
+/* Toast */
+.pdi-toast{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;align-items:center;gap:.75rem;padding:.85rem 1.25rem;border-radius:12px;font-size:.87rem;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.15);animation:toastIn .25s ease;max-width:380px}
+.pdi-toast-error{background:#FEF2F2;color:#991B1B;border:1px solid #FECACA}
+.pdi-toast-success{background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7}
+.pdi-toast button{background:none;border:none;font-size:1rem;cursor:pointer;opacity:.6;color:inherit}
+.pdi-toast button:hover{opacity:1}
+@keyframes toastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+@media(max-width:1100px){.pdi-body{grid-template-columns:1fr}.kanban-board{grid-template-columns:1fr}}
+@media(max-width:1024px){.pdi-stats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.pdi-stats{grid-template-columns:1fr}.pdi-header{flex-direction:column}}
+</style>
+{% endblock %}

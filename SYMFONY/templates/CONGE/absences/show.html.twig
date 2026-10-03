@@ -1,0 +1,62 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Absence{% endblock %}
+
+{% block body %}
+    <h1>Absence</h1>
+
+    <table class="table">
+        <tbody>
+            <tr>
+                <th>Id</th>
+                <td>{{ absence.id }}</td>
+            </tr>
+            <tr>
+                <th>Date_debut</th>
+                <td>{{ absence.dateDebut ? absence.dateDebut|date('Y-m-d') : '' }}</td>
+            </tr>
+            <tr>
+                <th>Date_fin</th>
+                <td>{{ absence.dateFin ? absence.dateFin|date('Y-m-d') : '' }}</td>
+            </tr>
+            <tr>
+                <th>Nbr_jours</th>
+                <td>{{ absence.nbrJours }}</td>
+            </tr>
+            <tr>
+                <th>Statut</th>
+                <td>{{ absence.statut }}</td>
+            </tr>
+            <tr>
+                <th>Type_absence_id</th>
+                <td>{{ absence.typeAbsenceId }}</td>
+            </tr>
+            <tr>
+                <th>Utilisateur_id</th>
+                <td>{{ absence.utilisateurId }}</td>
+            </tr>
+            <tr>
+                <th>Heure_debut</th>
+                <td>{{ absence.heureDebut }}</td>
+            </tr>
+            <tr>
+                <th>Heure_fin</th>
+                <td>{{ absence.heureFin }}</td>
+            </tr>
+            <tr>
+                <th>Duree_minutes</th>
+                <td>{{ absence.dureeMinutes }}</td>
+            </tr>
+            <tr>
+                <th>Motif</th>
+                <td>{{ absence.motif }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <a href="{{ path('app_absence_index') }}">back to list</a>
+
+    <a href="{{ path('app_absence_edit', {'id': absence.id}) }}">edit</a>
+
+    {{ include('absence/_delete_form.html.twig') }}
+{% endblock %}

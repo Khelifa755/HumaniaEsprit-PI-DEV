@@ -1,0 +1,107 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Congé #{{ conge.id }} — Humania{% endblock %}
+
+{% block body %}
+
+<!-- En-tête -->
+<div class="page-header">
+    <div>
+        <div class="page-header-title">🌴 Détail du congé #{{ conge.id }}</div>
+        <div class="page-header-sub">Informations complètes de la demande</div>
+    </div>
+    <a href="{{ path('app_conge_index') }}" class="btn btn-white">
+        ← Retour à la liste
+    </a>
+</div>
+
+{% if conge.statut == 'Approuvé' %}
+    {% set accentClass = 'accent-success' %}
+    {% set badgeClass  = 'badge-success' %}
+    {% set headerBg    = 'linear-gradient(to right, #f0fdf4, #dcfce7)' %}
+    {% set icon        = '✅' %}
+{% elseif conge.statut == 'Refusé' %}
+    {% set accentClass = 'accent-danger' %}
+    {% set badgeClass  = 'badge-danger' %}
+    {% set headerBg    = 'linear-gradient(to right, #fff1f2, #fee2e2)' %}
+    {% set icon        = '❌' %}
+{% else %}
+    {% set accentClass = 'accent-warning' %}
+    {% set badgeClass  = 'badge-warning' %}
+    {% set headerBg    = 'linear-gradient(to right, #fffbeb, #fef3c7)' %}
+    {% set icon        = '⏳' %}
+{% endif %}
+
+<div style="max-width:680px; margin:0 auto;">
+
+    <!-- Carte principale -->
+    <div class="card" style="overflow:hidden; margin-bottom:20px;">
+
+        <!-- Bande colorée top -->
+        <div style="height:5px; background:{% if conge.statut == 'Approuvé' %}var(--success){% elseif conge.statut == 'Refusé' %}var(--danger){% else %}var(--warning){% endif %};"></div>
+
+        <!-- Header carte -->
+        <div style="background:{{ headerBg }}; padding:24px 28px; display:flex; align-items:center; gap:16px; border-bottom:1px solid var(--border);">
+            <div style="font-size:32px; background:white; border-radius:50%; width:60px; height:60px;
+                        display:flex; align-items:center; justify-content:center;
+                        box-shadow:0 2px 10px rgba(0,0,0,0.08);">
+                {{ icon }}
+            </div>
+            <div style="flex:1;">
+                <div style="font-size:18px; font-weight:800; color:var(--text);">Demande de congé</div>
+                <div style="font-size:13px; color:var(--muted); margin-top:3px;">Créée le {{ "now"|date("d/m/Y") }}</div>
+            </div>
+            <span class="badge {{ badgeClass }}" style="font-size:12px; padding:6px 18px;">{{ conge.statut }}</span>
+        </div>
+
+        <!-- Body -->
+        <div class="card-body">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+
+                <!-- Date début -->
+                <div style="background:#f8faff; border-radius:12px; padding:16px 20px; border:1px solid var(--border);">
+                    <div style="font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">📅 Date de début</div>
+                    <div style="font-size:20px; font-weight:700; color:var(--text);">
+                        {{ conge.dateDebut ? conge.dateDebut|date('d/m/Y') : '—' }}
+                    </div>
+                </div>
+
+                <!-- Date fin -->
+                <div style="background:#f8faff; border-radius:12px; padding:16px 20px; border:1px solid var(--border);">
+                    <div style="font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">📅 Date de fin</div>
+                    <div style="font-size:20px; font-weight:700; color:var(--text);">
+                        {{ conge.dateFin ? conge.dateFin|date('d/m/Y') : '—' }}
+                    </div>
+                </div>
+
+                <!-- Durée -->
+                <div style="background:#f0fdf4; border-radius:12px; padding:16px 20px; border:1px solid #d1fae5;">
+                    <div style="font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">📆 Durée</div>
+                    <div style="font-size:24px; font-weight:800; color:#059669;">
+                        {{ conge.nbrJours }} <span style="font-size:14px;">jour{{ conge.nbrJours > 1 ? 's' : '' }}</span>
+                    </div>
+                </div>
+
+                <!-- Statut -->
+                <div style="background:#f8faff; border-radius:12px; padding:16px 20px; border:1px solid var(--border);">
+                    <div style="font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">📊 Statut</div>
+                    <span class="badge {{ badgeClass }}" style="font-size:13px; padding:6px 16px;">{{ conge.statut }}</span>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div style="display:flex; gap:12px; justify-content:space-between;">
+        <form method="post" action="{{ path('app_conge_delete', {'id': conge.id}) }}"
+              onsubmit="return confirm('Supprimer définitivement ce congé ?')">
+            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ conge.id) }}">
+            <button class="btn btn-danger">🗑️ Supprimer</button>
+        </form>
+        <a href="{{ path('app_conge_edit', {'id': conge.id}) }}" class="btn btn-primary">✏️ Modifier</a>
+    </div>
+
+</div>
+
+{% endblock %}

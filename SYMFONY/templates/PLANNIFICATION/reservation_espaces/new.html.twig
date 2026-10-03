@@ -1,0 +1,11 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Nouvelle réservation{% endblock %}
+
+{% block body %}
+    <h1>Nouvelle réservation d'espace</h1>
+
+    {{ include('PLANNIFICATION/reservation_espaces/_form.html.twig') }}
+
+    <a href="{{ path('app_reservation_espaces_index') }}">Retour à la liste</a>
+{% endblock %}

@@ -1,0 +1,236 @@
+{% extends 'base.html.twig' %}
+{% block title %}Nouvelle Formation – Humania{% endblock %}
+
+{% block body %}
+<div class="form-wrapper">
+  <div class="form-card">
+
+    <div class="form-head">
+      <div>
+        <h2 class="form-title">+ New Training</h2>
+        <p class="form-sub">Créer une nouvelle formation dans le catalogue</p>
+      </div>
+      <a href="{{ path('formation_catalog') }}" class="btn-back">← Retour</a>
+    </div>
+
+    {% for msg in app.flashes('error') %}
+      <div class="f-alert-error">{{ msg }}</div>
+    {% endfor %}
+
+    <form method="post" action="{{ path('formation_new') }}" novalidate id="formationForm">
+      <input type="hidden" name="_token" value="{{ csrf_token('formation_new') }}">
+
+      {# ── Titre ── #}
+      <div class="f-group" id="g-titre">
+        <label class="f-label">TITRE <span class="req">*</span></label>
+        <input type="text" name="titre" id="titre"
+               class="f-input" placeholder="Ex : AWS Certification"
+               value="{{ formData.titre ?? '' }}"
+               minlength="3" maxlength="255" required
+               oninput="validateField(this)">
+        <span class="f-hint" id="hint-titre"></span>
+      </div>
+
+      {# ── Description ── #}
+      <div class="f-group">
+        <label class="f-label">DESCRIPTION</label>
+        <textarea name="description" class="f-input f-textarea"
+                  placeholder="Décrivez le contenu et les objectifs de la formation..."
+                  rows="3">{{ formData.description ?? '' }}</textarea>
+      </div>
+
+      {# ── Durée + Coût ── #}
+      <div class="f-row">
+        <div class="f-group" id="g-duree">
+          <label class="f-label">DURÉE (heures) <span class="req">*</span></label>
+          <input type="number" name="duree" id="duree"
+                 class="f-input" placeholder="Ex : 8"
+                 value="{{ formData.duree ?? '' }}"
+                 min="1" max="500" required
+                 oninput="validateField(this)">
+          <span class="f-hint" id="hint-duree"></span>
+        </div>
+        <div class="f-group" id="g-cout">
+          <label class="f-label">COÛT (DTN)</label>
+          <input type="number" name="cout"
+                 class="f-input" placeholder="Ex : 500"
+                 value="{{ formData.cout ?? '0' }}"
+                 min="0" step="0.01"
+                 oninput="validateCout(this)">
+          <span class="f-hint" id="hint-cout"></span>
+        </div>
+      </div>
+
+      {# ── Type + Catégorie ── #}
+      <div class="f-row">
+        <div class="f-group" id="g-type">
+          <label class="f-label">TYPE <span class="req">*</span></label>
+          <select name="typeFormation" id="typeFormation" class="f-input" required
+                  onchange="validateField(this)">
+            <option value="">— Choisir —</option>
+            {% for key, t in types %}
+              <option value="{{ key }}" {{ formData.typeFormation ?? '' == key ? 'selected' : '' }}>
+                {{ t.icon }} {{ t.label }}
+              </option>
+            {% endfor %}
+          </select>
+          <span class="f-hint" id="hint-type"></span>
+        </div>
+        <div class="f-group">
+          <label class="f-label">CATÉGORIE</label>
+          <select name="categorie_id" class="f-input">
+            <option value="">— Aucune —</option>
+            {% for cat in categories %}
+              <option value="{{ cat.id }}" {{ (formData.categorie_id ?? '') == cat.id ? 'selected' : '' }}>
+                {{ cat.libelle }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      {# ── Formateur ── #}
+      <div class="f-group">
+        <label class="f-label">FORMATEUR</label>
+        <select name="formateur_id" class="f-input">
+          <option value="">— Non assigné —</option>
+          {% for f in formateurs %}
+            <option value="{{ f.id }}">{{ f.nom }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {# ── Première session (optionnel) ── #}
+      <div class="f-divider">
+        <span>Session initiale (optionnel)</span>
+      </div>
+
+      <div class="f-row">
+        <div class="f-group" id="g-sdebut">
+          <label class="f-label">DATE DÉBUT SESSION</label>
+          <input type="date" name="session_debut" id="session_debut"
+                 class="f-input"
+                 value="{{ formData.session_debut ?? '' }}"
+                 onchange="validateSessionDates()">
+          <span class="f-hint" id="hint-sdebut"></span>
+        </div>
+        <div class="f-group" id="g-sfin">
+          <label class="f-label">DATE FIN SESSION</label>
+          <input type="date" name="session_fin" id="session_fin"
+                 class="f-input"
+                 value="{{ formData.session_fin ?? '' }}"
+                 onchange="validateSessionDates()">
+          <span class="f-hint" id="hint-sfin"></span>
+        </div>
+      </div>
+
+      <div class="f-group">
+        <label class="f-label">LIEU</label>
+        <input type="text" name="session_lieu" class="f-input"
+               placeholder="En ligne / Salle 101 / ..."
+               value="{{ formData.session_lieu ?? 'En ligne' }}">
+      </div>
+
+      {# ── Submit ── #}
+      <div class="f-footer">
+        <a href="{{ path('formation_catalog') }}" class="btn-cancel">Annuler</a>
+        <button type="submit" class="btn-submit" id="submitBtn">✅ Créer la formation</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function validateField(el) {
+  const id = el.id;
+  const hint = document.getElementById('hint-' + id);
+  const group = document.getElementById('g-' + id);
+  if (!hint || !group) return;
+
+  let msg = '';
+  const v = el.value.trim();
+
+  if (id === 'titre') {
+    if (!v) msg = 'Le titre est obligatoire.';
+    else if (v.length < 3) msg = 'Minimum 3 caractères.';
+    else if (v.length > 255) msg = 'Maximum 255 caractères.';
+  } else if (id === 'duree') {
+    const n = parseInt(v);
+    if (!v || isNaN(n)) msg = 'La durée est obligatoire.';
+    else if (n < 1) msg = 'Minimum 1 heure.';
+    else if (n > 500) msg = 'Maximum 500 heures.';
+  } else if (id === 'typeFormation') {
+    if (!v) msg = 'Veuillez sélectionner un type.';
+  }
+
+  hint.textContent = msg;
+  group.classList.toggle('f-group-error', !!msg);
+  group.classList.toggle('f-group-ok', !msg && !!v);
+}
+
+function validateCout(el) {
+  const hint = document.getElementById('hint-cout');
+  const group = document.getElementById('g-cout');
+  if (!hint || !group) return;
+  const v = parseFloat(el.value);
+  const msg = isNaN(v) || v < 0 ? 'Le coût ne peut pas être négatif.' : '';
+  hint.textContent = msg;
+  group.classList.toggle('f-group-error', !!msg);
+}
+
+function validateSessionDates() {
+  const debut = document.getElementById('session_debut').value;
+  const fin   = document.getElementById('session_fin').value;
+  const hint  = document.getElementById('hint-sfin');
+  const group = document.getElementById('g-sfin');
+  if (!hint || !group) return;
+  if (debut && fin && debut > fin) {
+    hint.textContent = 'La date de fin doit être après la date de début.';
+    group.classList.add('f-group-error');
+  } else {
+    hint.textContent = '';
+    group.classList.remove('f-group-error');
+  }
+}
+
+document.getElementById('formationForm').addEventListener('submit', function(e) {
+  ['titre','duree','typeFormation'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) validateField(el);
+  });
+  if (document.querySelectorAll('.f-group-error').length > 0) {
+    e.preventDefault();
+    document.querySelector('.f-group-error')?.scrollIntoView({behavior:'smooth',block:'center'});
+  }
+});
+</script>
+
+<style>
+:root{--p:#4F46E5;--g100:#F3F4F6;--g200:#E5E7EB;--g500:#6B7280;--g900:#111827;--red:#DC2626;--green:#059669}
+*{box-sizing:border-box}
+.form-wrapper{padding:2rem;max-width:780px;margin:0 auto}
+.form-card{background:white;border-radius:20px;border:1px solid var(--g200);padding:2rem;box-shadow:0 4px 20px rgba(0,0,0,.07)}
+.form-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.75rem}
+.form-title{font-size:1.5rem;font-weight:800;color:var(--g900);margin:0}
+.form-sub{font-size:.88rem;color:var(--g500);margin:4px 0 0}
+.btn-back{color:var(--p);text-decoration:none;font-weight:600;font-size:.9rem}
+.f-alert-error{background:#FEF2F2;color:var(--red);border:1px solid #FECACA;padding:10px 14px;border-radius:10px;font-size:.85rem;margin-bottom:1rem}
+.f-group{margin-bottom:1.1rem}
+.f-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.f-label{display:block;font-size:.72rem;font-weight:800;color:var(--g500);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.req{color:var(--red)}
+.f-input{width:100%;padding:10px 14px;border:1px solid var(--g200);border-radius:10px;font-size:.9rem;outline:none;transition:border-color .2s,box-shadow .2s;background:white}
+.f-input:focus{border-color:var(--p);box-shadow:0 0 0 3px #4F46E518}
+.f-textarea{resize:vertical;min-height:90px}
+.f-hint{display:block;font-size:.75rem;margin-top:4px;min-height:18px;color:var(--red)}
+.f-group-error .f-input{border-color:var(--red)!important;box-shadow:0 0 0 2px #FEE2E2}
+.f-group-ok .f-input{border-color:var(--green)}
+.f-divider{display:flex;align-items:center;gap:.75rem;margin:1.5rem 0 1.25rem;color:var(--g500);font-size:.82rem;font-weight:600}
+.f-divider::before,.f-divider::after{content:'';flex:1;height:1px;background:var(--g200)}
+.f-footer{display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.75rem;padding-top:1.25rem;border-top:1px solid var(--g100)}
+.btn-cancel{padding:10px 20px;border-radius:10px;text-decoration:none;font-weight:700;color:var(--g500);background:var(--g100)}
+.btn-submit{padding:10px 24px;border-radius:10px;border:none;background:var(--p);color:white;font-weight:700;cursor:pointer;font-size:.95rem}
+.btn-submit:hover{background:#4338CA}
+@media(max-width:600px){.f-row{grid-template-columns:1fr}}
+</style>
+{% endblock %}

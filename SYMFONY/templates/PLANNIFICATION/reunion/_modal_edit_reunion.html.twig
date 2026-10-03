@@ -1,0 +1,132 @@
+{#
+  templates/PLANNIFICATION/reunion/_modal_edit_reunion.html.twig
+  Fragment injecté par AJAX dans le rm-overlay — ne pas étendre base.html.twig
+#}
+<div class="rm-dialog__head">
+    <div class="rm-dialog__head-left">
+        <span class="rm-dialog__head-icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2.2"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+        </span>
+        <div>
+            <h2 id="rm-dialog-title" class="rm-dialog__title">Modifier la réunion</h2>
+            <p class="rm-dialog__subtitle">{{ reunion.titre|default('Édition en cours') }}</p>
+        </div>
+    </div>
+    <button type="button" class="rm-dialog__close" data-rm-close aria-label="Fermer">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6"  x2="6"  y2="18"/>
+            <line x1="6"  y1="6"  x2="18" y2="18"/>
+        </svg>
+    </button>
+</div>
+
+<div class="rm-dialog__body">
+    <div id="rm-form-errors"  class="rm-form-errors"  role="alert"  hidden></div>
+    <div id="rm-form-success" class="rm-form-success" role="status" hidden></div>
+
+    {# Info banner showing current meeting details #}
+    {% if reunion.dateHeureDebut %}
+    <div style="background:#f0fdf9;border:1.5px solid #d1fae5;border-radius:9px;padding:9px 13px;font-size:12.5px;color:#065f46;display:flex;align-items:center;gap:8px">
+        <span style="font-size:16px">📋</span>
+        <span>
+            <strong>Réunion actuelle :</strong>
+            {{ reunion.dateHeureDebut|date('d/m/Y') }} de {{ reunion.dateHeureDebut|date('H:i') }} à {{ reunion.dateHeureFin|date('H:i') }}
+            {% if reunion.enLigne %}
+                · <span style="color:#0F6E56;font-weight:600">🎥 En ligne</span>
+            {% elseif reunion.idSalle %}
+                · <span style="color:#374151;font-weight:600">🏢 {{ reunion.idSalle.nom }}</span>
+            {% endif %}
+        </span>
+    </div>
+    {% endif %}
+
+    {{ form_start(form, {
+        attr: { id: 'reunion-modal-form', class: 'rm-form', novalidate: 'novalidate' }
+    }) }}
+
+    <div class="rm-field">
+        {{ form_label(form.titre) }}
+        {{ form_widget(form.titre) }}
+        {{ form_errors(form.titre) }}
+    </div>
+
+    <div class="rm-field">
+        {{ form_label(form.description) }}
+        {{ form_widget(form.description) }}
+        {{ form_errors(form.description) }}
+    </div>
+
+    <p class="rm-section-label"><span>📅 Date &amp; heure de début</span></p>
+    <div class="rm-row">
+        <div class="rm-field">
+            <label>Date</label>
+            {{ form_widget(form.debut_date) }}
+            {{ form_errors(form.debut_date) }}
+        </div>
+        <div class="rm-field">
+            <label>Heure</label>
+            {{ form_widget(form.debut_time) }}
+            {{ form_errors(form.debut_time) }}
+        </div>
+    </div>
+
+    <p class="rm-section-label"><span>🏁 Date &amp; heure de fin</span></p>
+    <div class="rm-row">
+        <div class="rm-field">
+            <label>Date</label>
+            {{ form_widget(form.fin_date) }}
+            {{ form_errors(form.fin_date) }}
+        </div>
+        <div class="rm-field">
+            <label>Heure</label>
+            {{ form_widget(form.fin_time) }}
+            {{ form_errors(form.fin_time) }}
+        </div>
+    </div>
+
+    <p class="rm-section-label"><span>📡 Modalité</span></p>
+
+    <label class="rm-toggle-row" for="{{ form.enLigne.vars.id }}">
+        <span class="rm-toggle">
+            {{ form_widget(form.enLigne) }}
+            <span class="rm-toggle__slider" aria-hidden="true"></span>
+        </span>
+        <span class="rm-toggle__text">
+            🎥 Réunion en ligne (Visioconférence)
+            <span>Activez pour générer un lien Zoom automatiquement</span>
+        </span>
+    </label>
+    {{ form_errors(form.enLigne) }}
+
+    <div class="rm-field" id="rm-salle-field">
+        {{ form_label(form.idSalle) }}
+        {{ form_widget(form.idSalle) }}
+        {{ form_errors(form.idSalle) }}
+    </div>
+
+    <p class="rm-section-label"><span>👥 Participants</span></p>
+    <div class="rm-field">
+        {{ form_widget(form.participants) }}
+        {{ form_errors(form.participants) }}
+    </div>
+
+    <div class="rm-form-footer">
+        <button type="button" class="rm-btn rm-btn--cancel" data-rm-close>Annuler</button>
+        <button type="submit" class="rm-btn rm-btn--submit">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2.5"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Enregistrer les modifications
+        </button>
+    </div>
+
+    {{ form_end(form) }}
+</div>

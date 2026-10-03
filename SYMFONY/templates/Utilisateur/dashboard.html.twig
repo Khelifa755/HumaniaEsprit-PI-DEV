@@ -1,0 +1,1483 @@
+{% extends "base.html.twig" %}
+
+{% block title %}Bienvenue — Humania{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+
+/* ═══════════════════════════════════════════════════════════════
+   ROOT & TOKENS
+═══════════════════════════════════════════════════════════════ */
+:root {
+  --hue: 234;
+  --bg:          #F4F6FB;
+  --surface:     #ffffff; 
+  --surface2:    #f4f6fb;
+  --border:      rgba(15, 23, 42, .08);
+  --border2:     rgba(15, 23, 42, .14);
+  --text:        #141827;
+  --muted:       #5c6578;
+  --accent:      #4f5fef;
+  --accent2:     #8b4fd9;
+  --accent3:     #0aa894;
+  --danger:      #e02445;
+  --warn:        #d97706;
+  --success:     #0d9f6e;
+  --info:        #0e8ecf;
+  --shadow:      0 4px 24px rgba(15, 23, 42, .08);
+  --ring-track:  rgba(15, 23, 42, .1);
+  --radius:      14px;
+  --radius-lg:   20px;
+  --font-head:   'Syne', sans-serif;
+  --font-body:   'DM Sans', sans-serif;
+  --transition:  .22s cubic-bezier(.4,0,.2,1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════════════════════════════ */
+.hm-dash {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+  position: relative;
+}
+
+/* Ambient blobs */
+.hm-dash::before, .hm-dash::after {
+  content: '';
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(100px);
+  pointer-events: none;
+  z-index: 0;
+  opacity: .1;
+}
+.hm-dash::before {
+  width: 500px; height: 500px;
+  background: var(--accent);
+  top: -100px; left: -100px;
+}
+.hm-dash::after {
+  width: 400px; height: 400px;
+  background: var(--accent2);
+  bottom: 100px; right: -80px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOP BAR
+═══════════════════════════════════════════════════════════════ */
+.hm-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2.5rem;
+  position: relative;
+  z-index: 1;
+}
+.hm-topbar-left h1 {
+  font-family: var(--font-head);
+  font-size: 1.75rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #141827 35%, var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.2;
+}
+.hm-topbar-left p {
+  color: var(--muted);
+  font-size: .88rem;
+  margin-top: .3rem;
+}
+.hm-topbar-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  background: rgba(13,159,110,.1);
+  color: var(--success);
+  border: 1px solid rgba(13,159,110,.22);
+  border-radius: 20px;
+  font-size: .75rem;
+  font-weight: 600;
+  padding: .3rem .75rem;
+  margin-top: .5rem;
+}
+.hm-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+.hm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .55rem 1.1rem;
+  border-radius: 10px;
+  font-size: .84rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--text);
+  transition: var(--transition);
+  cursor: pointer;
+  font-family: var(--font-body);
+}
+.hm-btn:hover {
+  background: var(--surface2);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+.hm-btn-danger {
+  background: rgba(242,92,122,.1);
+  border-color: rgba(242,92,122,.3);
+  color: var(--danger);
+}
+.hm-btn-danger:hover {
+  background: rgba(242,92,122,.2);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ROLE BANNER
+═══════════════════════════════════════════════════════════════ */
+.hm-role-banner {
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 2rem;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  overflow: hidden;
+}
+.hm-role-banner::after {
+  content: '';
+  position: absolute;
+  right: -40px; top: -40px;
+  width: 200px; height: 200px;
+  background: var(--accent);
+  border-radius: 50%;
+  opacity: .08;
+}
+.hm-role-avatar {
+  width: 56px; height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  color: #fff;
+}
+.hm-role-info h2 {
+  font-family: var(--font-head);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+.hm-role-info p { color: var(--muted); font-size: .85rem; margin-top: .2rem; }
+.hm-role-pill {
+  margin-left: auto;
+  padding: .4rem 1rem;
+  border-radius: 20px;
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.hm-role-pill.admin   { background: rgba(79,95,239,.12); color: #3730a3; border: 1px solid rgba(79,95,239,.28); }
+.hm-role-pill.manager { background: rgba(217,119,6,.1); color: #b45309; border: 1px solid rgba(217,119,6,.28); }
+.hm-role-pill.rh      { background: rgba(139,79,217,.1); color: #6b21a8; border: 1px solid rgba(139,79,217,.28); }
+.hm-role-pill.employe { background: rgba(10,168,148,.1); color: #0f766e; border: 1px solid rgba(10,168,148,.28); }
+
+/* ═══════════════════════════════════════════════════════════════
+   SECTION HEADER
+═══════════════════════════════════════════════════════════════ */
+.hm-section-header {
+  position: relative; z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin: 2.5rem 0 1.25rem;
+}
+.hm-section-header .icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .95rem;
+  flex-shrink: 0;
+}
+.hm-section-header h3 {
+  font-family: var(--font-head);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+.hm-section-header::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+  margin-left: .5rem;
+}
+
+/* Color variants */
+.icon-blue  { background: rgba(91,110,245,.15); color: var(--accent); }
+.icon-green { background: rgba(52,208,138,.12); color: var(--success); }
+.icon-purple{ background: rgba(155,92,246,.12); color: var(--accent2); }
+.icon-teal  { background: rgba(14,201,176,.12); color: var(--accent3); }
+.icon-orange{ background: rgba(245,166,35,.12); color: var(--warn); }
+.icon-red   { background: rgba(242,92,122,.12); color: var(--danger); }
+.icon-info  { background: rgba(56,178,249,.12); color: var(--info); }
+
+/* ═══════════════════════════════════════════════════════════════
+   KPI GRID
+═══════════════════════════════════════════════════════════════ */
+.hm-kpi-grid {
+  position: relative; z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: .5rem;
+}
+.hm-kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.4rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  position: relative;
+  overflow: hidden;
+  transition: var(--transition);
+  text-decoration: none;
+  color: inherit;
+}
+.hm-kpi::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.hm-kpi:hover {
+  border-color: var(--border2);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+}
+.hm-kpi-icon {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem;
+  margin-bottom: .25rem;
+}
+.hm-kpi-val {
+  font-family: var(--font-head);
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--text);
+}
+.hm-kpi-label {
+  font-size: .8rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+.hm-kpi-footer {
+  display: flex; align-items: center; gap: .35rem;
+  font-size: .75rem;
+  color: var(--muted);
+  margin-top: .25rem;
+  border-top: 1px solid var(--border);
+  padding-top: .65rem;
+}
+.hm-kpi-footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
+.hm-kpi-footer a:hover { text-decoration: underline; }
+
+/* accent-colored tops */
+.kpi-blue::before   { background: var(--accent); }
+.kpi-green::before  { background: var(--success); }
+.kpi-purple::before { background: var(--accent2); }
+.kpi-teal::before   { background: var(--accent3); }
+.kpi-orange::before { background: var(--warn); }
+.kpi-red::before    { background: var(--danger); }
+.kpi-info::before   { background: var(--info); }
+.kpi-muted::before  { background: var(--muted); }
+
+/* ═══════════════════════════════════════════════════════════════
+   TWO-COLUMN LAYOUT
+═══════════════════════════════════════════════════════════════ */
+.hm-two-col {
+  position: relative; z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin-bottom: .5rem;
+}
+.hm-three-col {
+  position: relative; z-index: 1;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.25rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CARDS
+═══════════════════════════════════════════════════════════════ */
+.hm-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  position: relative; z-index: 1;
+}
+.hm-card-title {
+  font-family: var(--font-head);
+  font-size: .95rem;
+  font-weight: 700;
+  margin-bottom: 1.25rem;
+  display: flex; align-items: center; gap: .5rem;
+}
+.hm-card-title i { color: var(--accent); }
+
+/* ═══════════════════════════════════════════════════════════════
+   PROGRESS BARS
+═══════════════════════════════════════════════════════════════ */
+.hm-progress-row {
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+  margin-bottom: 1rem;
+}
+.hm-progress-row:last-child { margin-bottom: 0; }
+.hm-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: .82rem;
+}
+.hm-progress-label { color: var(--text); font-weight: 500; display: flex; align-items: center; gap: .5rem; }
+.hm-progress-count { color: var(--muted); font-weight: 600; font-size: .8rem; }
+.hm-bar-bg {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.hm-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width .6s cubic-bezier(.4,0,.2,1);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   STATUS BADGE
+═══════════════════════════════════════════════════════════════ */
+.hm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .2rem .65rem;
+  border-radius: 20px;
+  font-size: .72rem;
+  font-weight: 600;
+}
+.badge-success { background: rgba(52,208,138,.12); color: var(--success); }
+.badge-warn    { background: rgba(245,166,35,.12);  color: var(--warn); }
+.badge-danger  { background: rgba(242,92,122,.12);  color: var(--danger); }
+.badge-info    { background: rgba(56,178,249,.12);  color: var(--info); }
+.badge-muted   { background: rgba(123,130,176,.1);  color: var(--muted); }
+.badge-purple  { background: rgba(155,92,246,.12);  color: var(--accent2); }
+
+/* ═══════════════════════════════════════════════════════════════
+   QUICK ACTIONS
+═══════════════════════════════════════════════════════════════ */
+.hm-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .85rem;
+}
+.hm-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .6rem;
+  padding: 1.25rem .75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  text-decoration: none;
+  color: var(--text);
+  font-size: .8rem;
+  font-weight: 600;
+  text-align: center;
+  transition: var(--transition);
+}
+.hm-action:hover {
+  border-color: var(--accent);
+  background: rgba(91,110,245,.08);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(91,110,245,.2);
+}
+.hm-action i {
+  font-size: 1.3rem;
+  width: 42px; height: 42px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CHART
+═══════════════════════════════════════════════════════════════ */
+.hm-chart-wrap {
+  position: relative;
+  height: 210px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODULE MINI CARDS (6-module overview)
+═══════════════════════════════════════════════════════════════ */
+.hm-modules-grid {
+  position: relative; z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 1rem;
+  margin-bottom: .5rem;
+}
+.hm-module {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1rem;
+  text-align: center;
+  text-decoration: none;
+  color: inherit;
+  transition: var(--transition);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .5rem;
+}
+.hm-module:hover {
+  border-color: var(--border2);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+  background: var(--surface2);
+}
+.hm-module i {
+  font-size: 1.4rem;
+}
+.hm-module-name {
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--muted);
+  line-height: 1.3;
+}
+.hm-module-val {
+  font-family: var(--font-head);
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ACTIVITY FEED
+═══════════════════════════════════════════════════════════════ */
+.hm-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.hm-feed-item {
+  display: flex;
+  align-items: flex-start;
+  gap: .85rem;
+  padding: .85rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.hm-feed-item:last-child { border-bottom: none; }
+.hm-feed-dot {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .8rem;
+  flex-shrink: 0;
+  margin-top: .1rem;
+}
+.hm-feed-content { flex: 1; min-width: 0; }
+.hm-feed-title {
+  font-size: .84rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hm-feed-sub { font-size: .75rem; color: var(--muted); margin-top: .15rem; }
+.hm-feed-time { font-size: .72rem; color: var(--muted); flex-shrink: 0; }
+
+/* ═══════════════════════════════════════════════════════════════
+   DONUT / RING STAT
+═══════════════════════════════════════════════════════════════ */
+.hm-ring-wrap {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+.hm-ring { position: relative; flex-shrink: 0; }
+.hm-ring svg { transform: rotate(-90deg); }
+.hm-ring-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-head);
+  font-weight: 800;
+  font-size: 1.3rem;
+  color: var(--text);
+}
+.hm-ring-label span { font-size: .65rem; font-weight: 500; color: var(--muted); font-family: var(--font-body); }
+.hm-ring-legend { flex: 1; display: flex; flex-direction: column; gap: .6rem; }
+.hm-ring-legend-item {
+  display: flex; align-items: center; gap: .6rem;
+  font-size: .8rem;
+}
+.hm-ring-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.hm-ring-legend-name { color: var(--muted); flex: 1; }
+.hm-ring-legend-val { font-weight: 700; color: var(--text); }
+
+/* ═══════════════════════════════════════════════════════════════
+   FULL-WIDTH ROW
+═══════════════════════════════════════════════════════════════ */
+.hm-full { position: relative; z-index: 1; }
+
+/* ═══════════════════════════════════════════════════════════════
+   EMPTY STATE
+═══════════════════════════════════════════════════════════════ */
+.hm-empty {
+  text-align: center;
+  padding: 2rem;
+  color: var(--muted);
+  font-size: .85rem;
+}
+.hm-empty i { font-size: 2rem; margin-bottom: .5rem; display: block; opacity: .4; }
+
+/* ═══════════════════════════════════════════════════════════════
+   SEPARATOR
+═══════════════════════════════════════════════════════════════ */
+.hm-sep { height: 1.5rem; }
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════════════════════ */
+@media (max-width: 1280px) {
+  .hm-modules-grid { grid-template-columns: repeat(3, 1fr); }
+  .hm-kpi-grid     { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 900px) {
+  .hm-two-col, .hm-three-col { grid-template-columns: 1fr; }
+  .hm-actions-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 640px) {
+  .hm-modules-grid { grid-template-columns: repeat(2, 1fr); }
+  .hm-kpi-grid     { grid-template-columns: 1fr; }
+  .hm-topbar { flex-direction: column; align-items: flex-start; gap: 1rem; }
+  .hm-topbar-right { flex-wrap: wrap; }
+  .hm-actions-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ANIMATION
+═══════════════════════════════════════════════════════════════ */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hm-kpi, .hm-card, .hm-module {
+  animation: fadeUp .45s ease both;
+}
+.hm-kpi:nth-child(1)  { animation-delay: .04s; }
+.hm-kpi:nth-child(2)  { animation-delay: .08s; }
+.hm-kpi:nth-child(3)  { animation-delay: .12s; }
+.hm-kpi:nth-child(4)  { animation-delay: .16s; }
+.hm-kpi:nth-child(5)  { animation-delay: .20s; }
+.hm-kpi:nth-child(6)  { animation-delay: .24s; }
+.hm-kpi:nth-child(7)  { animation-delay: .28s; }
+.hm-kpi:nth-child(8)  { animation-delay: .32s; }
+.hm-module:nth-child(1){ animation-delay: .05s; }
+.hm-module:nth-child(2){ animation-delay: .10s; }
+.hm-module:nth-child(3){ animation-delay: .15s; }
+.hm-module:nth-child(4){ animation-delay: .20s; }
+.hm-module:nth-child(5){ animation-delay: .25s; }
+.hm-module:nth-child(6){ animation-delay: .30s; }
+
+</style>
+{% endblock %}
+
+{% block body %}
+{% set role = app.user ? app.user.role.value : 'EMPLOYE' %}
+{% set isAdmin   = role == 'ADMIN' %}
+{% set isRH      = role == 'RH' %}
+{% set isManager = role == 'MANAGER' %}
+{% set isEmploye = role == 'EMPLOYE' %}
+{% set hasStats  = stats is defined %}
+
+<div class="hm-dash">
+
+  {# ── TOP BAR ────────────────────────────────────────────────── #}
+  <div class="hm-topbar">
+    <div class="hm-topbar-left">
+      <h1><i class="fa-solid fa-hand-sparkles" style="font-size:1.3rem;-webkit-text-fill-color:var(--accent);"></i>&nbsp; Bienvenue{% if app.user %}, {{ app.user.prenom }}{% endif %}</h1>
+      <p>{{ "now"|date("l d F Y") }} &mdash; Humania RH</p>
+      <div class="hm-topbar-badge">
+        <i class="fa-solid fa-circle" style="font-size:.5rem;"></i>
+        Système opérationnel
+      </div>
+    </div>
+    <div class="hm-topbar-right">
+      {% if isAdmin or isRH %}
+        <a href="{{ path('app_admin_users') }}" class="hm-btn">
+          <i class="fa-solid fa-users-gear"></i> Utilisateurs
+        </a>
+      {% endif %}
+      <a href="{{ path('app_profil') }}" class="hm-btn">
+        <i class="fa-solid fa-circle-user"></i> Mon Profil
+      </a>
+      <a href="{{ path('app_logout') }}" class="hm-btn hm-btn-danger">
+        <i class="fa-solid fa-arrow-right-from-bracket"></i> Déconnexion
+      </a>
+    </div>
+  </div>
+
+  {# ── ROLE BANNER ────────────────────────────────────────────── #}
+  <div class="hm-role-banner">
+    <div class="hm-role-avatar">
+      {% if isAdmin %}   <i class="fa-solid fa-shield-halved"></i>
+      {% elseif isRH %}  <i class="fa-solid fa-briefcase"></i>
+      {% elseif isManager %} <i class="fa-solid fa-user-tie"></i>
+      {% else %}         <i class="fa-solid fa-user"></i>
+      {% endif %}
+    </div>
+    <div class="hm-role-info">
+      <h2>{{ app.user ? app.user.prenom ~ ' ' ~ app.user.nom : 'Utilisateur' }}</h2>
+      <p>{{ app.user ? app.user.posteActuel ?? app.user.email : '' }}</p>
+    </div>
+    <div class="hm-role-pill {{ role|lower }}">
+      {% if isAdmin %}   <i class="fa-solid fa-shield-halved"></i>&nbsp; Admin
+      {% elseif isRH %}  <i class="fa-solid fa-briefcase"></i>&nbsp; RH
+      {% elseif isManager %} <i class="fa-solid fa-user-tie"></i>&nbsp; Manager
+      {% else %}         <i class="fa-solid fa-user"></i>&nbsp; Employé
+      {% endif %}
+    </div>
+  </div>
+
+  {# ══════════════════════════════════════════════════════════════
+     DASHBOARD EMPLOYÉ — vue personnelle
+  ══════════════════════════════════════════════════════════════ #}
+  {% if isEmploye %}
+
+  {# — Mini modules rapides — #}
+  <div class="hm-section-header">
+    <div class="icon icon-blue"><i class="fa-solid fa-grip"></i></div>
+    <h3>Mon espace</h3>
+  </div>
+
+  <div class="hm-modules-grid" style="grid-template-columns:repeat(4,1fr);">
+    <a href="{{ path('app_conge_index') }}" class="hm-module">
+      <i class="fa-solid fa-umbrella-beach" style="color:var(--success);"></i>
+      <div class="hm-module-val">{{ stats.mesConges ?? '—' }}</div>
+      <div class="hm-module-name">Mes<br>Congés</div>
+    </a>
+    <a href="{{ path('mes_lecons_index') }}" class="hm-module">
+      <i class="fa-solid fa-graduation-cap" style="color:var(--accent2);"></i>
+      <div class="hm-module-val">{{ stats.mesFormations ?? '—' }}</div>
+      <div class="hm-module-name">Mes<br>Formations</div>
+    </a>
+    <a href="{{ path('competence_catalog') }}" class="hm-module">
+      <i class="fa-solid fa-star" style="color:var(--warn);"></i>
+      <div class="hm-module-val">{{ stats.mesCompetences ?? '—' }}</div>
+      <div class="hm-module-name">Mes<br>Compétences</div>
+    </a>
+    <a href="{{ path('social_feed') }}" class="hm-module">
+      <i class="fa-solid fa-comments" style="color:var(--accent3);"></i>
+      <div class="hm-module-val">{{ stats.totalPublications ?? '—' }}</div>
+      <div class="hm-module-name">Publications<br>Social</div>
+    </a>
+  </div>
+
+  {# — Congés & Absences (vue employé) — #}
+  <div class="hm-section-header">
+    <div class="icon icon-green"><i class="fa-solid fa-umbrella-beach"></i></div>
+    <h3>Mes Congés &amp; Absences</h3>
+  </div>
+
+  <div class="hm-kpi-grid">
+    <div class="hm-kpi kpi-green">
+      <div class="hm-kpi-icon icon-green"><i class="fa-solid fa-calendar-check"></i></div>
+      <div class="hm-kpi-val">{{ stats.mesConges ?? '—' }}</div>
+      <div class="hm-kpi-label">Total mes congés</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-list fa-xs"></i><span>Toutes périodes</span></div>
+    </div>
+    <div class="hm-kpi kpi-orange">
+      <div class="hm-kpi-icon icon-orange"><i class="fa-solid fa-hourglass-half"></i></div>
+      <div class="hm-kpi-val">{{ stats.mesCongesEnAttente ?? '—' }}</div>
+      <div class="hm-kpi-label">En attente d'approbation</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-clock fa-xs"></i><span>À valider</span></div>
+    </div>
+    <div class="hm-kpi kpi-teal">
+      <div class="hm-kpi-icon icon-teal"><i class="fa-solid fa-check-double"></i></div>
+      <div class="hm-kpi-val">{{ stats.mesCongesApprouves ?? '—' }}</div>
+      <div class="hm-kpi-label">Congés approuvés</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-circle-check fa-xs" style="color:var(--success);"></i><span>Validés</span></div>
+    </div>
+    <div class="hm-kpi kpi-blue">
+      <div class="hm-kpi-icon icon-blue"><i class="fa-solid fa-person-walking-arrow-right"></i></div>
+      <div class="hm-kpi-val">{{ stats.mesAbsences ?? '—' }}</div>
+      <div class="hm-kpi-label">Absences déclarées</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-calendar-xmark fa-xs"></i><span>Ce mois</span></div>
+    </div>
+  </div>
+
+  {# — Formations & Évaluations (vue employé) — #}
+  <div class="hm-section-header">
+    <div class="icon icon-purple"><i class="fa-solid fa-graduation-cap"></i></div>
+    <h3>Mes Formations &amp; Évaluations</h3>
+  </div>
+
+  <div class="hm-kpi-grid">
+    <div class="hm-kpi kpi-purple">
+      <div class="hm-kpi-icon icon-purple"><i class="fa-solid fa-book-open"></i></div>
+      <div class="hm-kpi-val">{{ stats.mesFormations ?? '—' }}</div>
+      <div class="hm-kpi-label">Formations inscrites</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-layer-group fa-xs"></i><span>Mes inscriptions</span></div>
+    </div>
+    <div class="hm-kpi kpi-info">
+      <div class="hm-kpi-icon icon-info"><i class="fa-solid fa-spinner"></i></div>
+      <div class="hm-kpi-val">{{ stats.mesFormationsEnCours ?? '—' }}</div>
+      <div class="hm-kpi-label">En cours</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-person-chalkboard fa-xs"></i><span>Apprentissage actif</span></div>
+    </div>
+    <div class="hm-kpi kpi-orange">
+      <div class="hm-kpi-icon icon-orange"><i class="fa-solid fa-clipboard-question"></i></div>
+      <div class="hm-kpi-val">{{ stats.mesEvaluations ?? '—' }}</div>
+      <div class="hm-kpi-label">Évaluations passées</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-square-poll-vertical fa-xs"></i><span>QCM &amp; exercices</span></div>
+    </div>
+    <div class="hm-kpi kpi-green">
+      <div class="hm-kpi-icon icon-green"><i class="fa-solid fa-star-half-stroke"></i></div>
+      <div class="hm-kpi-val">{{ stats.monScoreEval ?? '—' }}</div>
+      <div class="hm-kpi-label">Mon score moyen</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-trophy fa-xs" style="color:var(--warn);"></i><span>Mes résultats</span></div>
+    </div>
+  </div>
+
+  {# — Compétences (vue employé) — #}
+  <div class="hm-section-header">
+    <div class="icon icon-orange"><i class="fa-solid fa-star"></i></div>
+    <h3>Mes Compétences</h3>
+  </div>
+
+  <div class="hm-two-col">
+    <div class="hm-card">
+      <div class="hm-card-title">
+        <i class="fa-solid fa-chart-pie"></i>
+        Répartition par type
+      </div>
+      {% set compTypes = {'CRITIQUE': 'var(--danger)', 'IMPORTANTE': 'var(--warn)', 'SECONDAIRE': 'var(--info)'} %}
+      {% set compIcons = {'CRITIQUE': 'fa-fire', 'IMPORTANTE': 'fa-triangle-exclamation', 'SECONDAIRE': 'fa-circle-info'} %}
+      {% if stats.mesCompetencesByType is defined %}
+        {% for type, count in stats.mesCompetencesByType %}
+          <div class="hm-progress-row">
+            <div class="hm-progress-header">
+              <span class="hm-progress-label">
+                <i class="fa-solid {{ compIcons[type] ?? 'fa-star' }}" style="color:{{ compTypes[type] ?? 'var(--muted)' }};font-size:.75rem;"></i>
+                {{ type }}
+              </span>
+              <span class="hm-progress-count">{{ count }}</span>
+            </div>
+            {% set pctC = stats.mesCompetences is defined and stats.mesCompetences > 0 ? (count / stats.mesCompetences * 100)|round : 0 %}
+            <div class="hm-bar-bg">
+              <div class="hm-bar-fill" style="width:{{ pctC }}%;background:{{ compTypes[type] ?? 'var(--muted)' }};"></div>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="hm-empty"><i class="fa-solid fa-star"></i> Aucune compétence enregistrée</div>
+      {% endif %}
+      <div class="hm-kpi-footer" style="margin-top:1rem;border-top:1px solid var(--border);padding-top:.75rem;">
+        <i class="fa-solid fa-database fa-xs"></i>
+        <span>{{ stats.mesCompetences ?? '—' }} compétences au total</span>
+      </div>
+    </div>
+
+    <div class="hm-card">
+      <div class="hm-card-title">
+        <i class="fa-solid fa-user-graduate"></i>
+        Ma maîtrise
+      </div>
+      {% set ringTotal     = (stats.mesCompetences ?? 10) %}
+      {% set ringValidated = (stats.mesCompetencesValidees ?? 0) %}
+      {% set pctRing       = ringTotal > 0 ? (ringValidated / ringTotal * 100)|round : 0 %}
+      {% set dash          = 220 %}
+      {% set dashOffset    = dash - (dash * pctRing / 100) %}
+      <div class="hm-ring-wrap">
+        <div class="hm-ring" style="width:100px;height:100px;">
+          <svg width="100" height="100" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="35" fill="none" stroke="var(--ring-track)" stroke-width="10"/>
+            <circle cx="50" cy="50" r="35" fill="none" stroke="var(--accent2)" stroke-width="10"
+              stroke-dasharray="{{ dash }}" stroke-dashoffset="{{ dashOffset }}"
+              stroke-linecap="round" style="transition:stroke-dashoffset .8s ease;"/>
+          </svg>
+          <div class="hm-ring-label">{{ pctRing }}%<span>validé</span></div>
+        </div>
+        <div class="hm-ring-legend">
+          <div class="hm-ring-legend-item">
+            <div class="hm-ring-legend-dot" style="background:var(--accent2);"></div>
+            <span class="hm-ring-legend-name">Validées</span>
+            <span class="hm-ring-legend-val">{{ ringValidated }}</span>
+          </div>
+          <div class="hm-ring-legend-item">
+            <div class="hm-ring-legend-dot" style="background:var(--border2);"></div>
+            <span class="hm-ring-legend-name">Non validées</span>
+            <span class="hm-ring-legend-val">{{ ringTotal - ringValidated }}</span>
+          </div>
+          <div class="hm-ring-legend-item">
+            <div class="hm-ring-legend-dot" style="background:var(--warn);"></div>
+            <span class="hm-ring-legend-name">Total</span>
+            <span class="hm-ring-legend-val">{{ ringTotal }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# — Social (vue employé) — #}
+  <div class="hm-section-header">
+    <div class="icon icon-teal"><i class="fa-solid fa-comments"></i></div>
+    <h3>Social &amp; Événements</h3>
+  </div>
+
+  <div class="hm-kpi-grid">
+    <div class="hm-kpi kpi-teal">
+      <div class="hm-kpi-icon icon-teal"><i class="fa-solid fa-newspaper"></i></div>
+      <div class="hm-kpi-val">{{ stats.totalPublications ?? '—' }}</div>
+      <div class="hm-kpi-label">Publications actives</div>
+      <div class="hm-kpi-footer"><i class="fa-brands fa-rocketchat fa-xs"></i><span>Fil d'actualité</span></div>
+    </div>
+    <div class="hm-kpi kpi-info">
+      <div class="hm-kpi-icon icon-info"><i class="fa-solid fa-envelope-open-text"></i></div>
+      <div class="hm-kpi-val">{{ stats.totalMessages ?? '—' }}</div>
+      <div class="hm-kpi-label">Messages échangés</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-comments fa-xs"></i><span>Messagerie privée</span></div>
+    </div>
+    <div class="hm-kpi kpi-purple">
+      <div class="hm-kpi-icon icon-purple"><i class="fa-solid fa-calendar-days"></i></div>
+      <div class="hm-kpi-val">{{ stats.totalEvenements ?? '—' }}</div>
+      <div class="hm-kpi-label">Événements planifiés</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-location-dot fa-xs"></i><span>À venir</span></div>
+    </div>
+    <div class="hm-kpi kpi-orange">
+      <div class="hm-kpi-icon icon-orange"><i class="fa-solid fa-bell"></i></div>
+      <div class="hm-kpi-val">{{ stats.totalNotifications ?? '—' }}</div>
+      <div class="hm-kpi-label">Mes notifications</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-satellite-dish fa-xs"></i><span>Système</span></div>
+    </div>
+  </div>
+
+  {# — Actions Rapides Employé — #}
+  <div class="hm-sep"></div>
+  <div class="hm-full">
+    <div class="hm-card">
+      <div class="hm-card-title"><i class="fa-solid fa-bolt"></i> Actions Rapides</div>
+      <div class="hm-actions-grid">
+        <a href="{{ path('app_conge_index') }}" class="hm-action">
+          <i class="fa-solid fa-umbrella-beach" style="background:rgba(52,208,138,.12);color:var(--success);"></i>
+          Mes Congés
+        </a>
+        <a href="{{ path('mes_lecons_index') }}" class="hm-action">
+          <i class="fa-solid fa-graduation-cap" style="background:rgba(155,92,246,.12);color:var(--accent2);"></i>
+          Formations
+        </a>
+        <a href="{{ path('competence_catalog') }}" class="hm-action">
+          <i class="fa-solid fa-star" style="background:rgba(245,166,35,.12);color:var(--warn);"></i>
+          Compétences
+        </a>
+        <a href="{{ path('social_feed') }}" class="hm-action">
+          <i class="fa-solid fa-comments" style="background:rgba(14,201,176,.12);color:var(--accent3);"></i>
+          Social
+        </a>
+        <a href="{{ path('app_profil') }}" class="hm-action">
+          <i class="fa-solid fa-circle-user" style="background:rgba(79,95,239,.12);color:var(--accent);"></i>
+          Mon Profil
+        </a>
+        <a href="{{ path('mes_lecons_index') }}" class="hm-action">
+          <i class="fa-solid fa-book-bookmark" style="background:rgba(56,178,249,.12);color:var(--info);"></i>
+          Mes Leçons
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {% else %}{# — ADMIN / RH / MANAGER — #}
+
+  {% if hasStats %}
+
+  {# ══════════════════════════════════════════════════════════════
+     MODULE OVERVIEW — 6 modules
+  ══════════════════════════════════════════════════════════════ #}
+  <div class="hm-section-header">
+    <div class="icon icon-blue"><i class="fa-solid fa-grip"></i></div>
+    <h3>Vue d'ensemble des modules</h3>
+  </div>
+
+  <div class="hm-modules-grid">
+    <a href="{{ path('app_admin_users') }}" class="hm-module">
+      <i class="fa-solid fa-users" style="color:var(--accent);"></i>
+      <div class="hm-module-val">{{ stats.actifs ?? 0 }}</div>
+      <div class="hm-module-name">Utilisateurs<br>Actifs</div>
+    </a>
+    <a href="{{ path('app_conge_index') }}" class="hm-module">
+      <i class="fa-solid fa-umbrella-beach" style="color:var(--success);"></i>
+      <div class="hm-module-val">{{ stats.totalConges ?? '—' }}</div>
+      <div class="hm-module-name">Congés &amp;<br>Absences</div>
+    </a>
+    <a href="{{ path('mes_lecons_index') }}" class="hm-module">
+      <i class="fa-solid fa-graduation-cap" style="color:var(--accent2);"></i>
+      <div class="hm-module-val">{{ stats.totalFormations ?? '—' }}</div>
+      <div class="hm-module-name">Formations<br>Disponibles</div>
+    </a>
+    <a href="{{ path('competence_catalog') }}" class="hm-module">
+      <i class="fa-solid fa-star" style="color:var(--warn);"></i>
+      <div class="hm-module-val">{{ stats.totalCompetences ?? '—' }}</div>
+      <div class="hm-module-name">Compétences<br>Référentiel</div>
+    </a>
+    <a href="{{ path('app_analyse_rh_index') }}" class="hm-module">
+      <i class="fa-solid fa-id-card" style="color:var(--info);"></i>
+      <div class="hm-module-val">{{ stats.totalCandidatures ?? 0 }}</div>
+      <div class="hm-module-name">Candidatures<br>Total</div>
+    </a>
+    <a href="{{ path('social_feed') }}" class="hm-module">
+      <i class="fa-solid fa-comments" style="color:var(--accent3);"></i>
+      <div class="hm-module-val">{{ stats.totalPublications ?? '—' }}</div>
+      <div class="hm-module-name">Publications<br>Social</div>
+    </a>
+  </div>
+
+  {# ══════════════════════════════════════════════════════════════
+     1) UTILISATEURS — Admin / RH
+  ══════════════════════════════════════════════════════════════ #}
+  {% if isAdmin or isRH %}
+  <div class="hm-section-header">
+    <div class="icon icon-blue"><i class="fa-solid fa-users"></i></div>
+    <h3>Utilisateurs</h3>
+  </div>
+
+  <div class="hm-kpi-grid">
+    <div class="hm-kpi kpi-blue">
+      <div class="hm-kpi-icon icon-blue"><i class="fa-solid fa-users"></i></div>
+      <div class="hm-kpi-val">{{ stats.actifs }}</div>
+      <div class="hm-kpi-label">Utilisateurs actifs</div>
+      <div class="hm-kpi-footer">
+        <i class="fa-solid fa-arrow-up-right-from-square fa-xs"></i>
+        <a href="{{ path('app_admin_users') }}">Gérer</a>
+      </div>
+    </div>
+    <div class="hm-kpi kpi-muted">
+      <div class="hm-kpi-icon icon-blue"><i class="fa-solid fa-box-archive"></i></div>
+      <div class="hm-kpi-val">{{ stats.archives }}</div>
+      <div class="hm-kpi-label">Utilisateurs archivés</div>
+      <div class="hm-kpi-footer">
+        <i class="fa-solid fa-arrow-up-right-from-square fa-xs"></i>
+        <a href="{{ path('app_admin_archives') }}">Archives</a>
+      </div>
+    </div>
+    <div class="hm-kpi kpi-green">
+      <div class="hm-kpi-icon icon-green"><i class="fa-solid fa-user-check"></i></div>
+      <div class="hm-kpi-val">{{ stats.candidats }}</div>
+      <div class="hm-kpi-label">Candidats à convertir</div>
+      <div class="hm-kpi-footer">
+        <i class="fa-solid fa-arrow-up-right-from-square fa-xs"></i>
+        <a href="{{ path('app_admin_candidats_acceptes') }}">Convertir</a>
+      </div>
+    </div>
+    <div class="hm-kpi kpi-purple">
+      <div class="hm-kpi-icon icon-purple"><i class="fa-solid fa-database"></i></div>
+      <div class="hm-kpi-val">{{ stats.total }}</div>
+      <div class="hm-kpi-label">Total utilisateurs</div>
+      <div class="hm-kpi-footer">
+        <i class="fa-solid fa-circle-info fa-xs"></i>
+        <span>Actifs + archivés</span>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ══════════════════════════════════════════════════════════════
+     2) CANDIDATURES
+  ══════════════════════════════════════════════════════════════ #}
+  {% if isAdmin or isRH or isManager %}
+  <div class="hm-section-header">
+    <div class="icon icon-info"><i class="fa-solid fa-id-card"></i></div>
+    <h3>Recrutement &amp; Candidatures</h3>
+  </div>
+
+  <div class="hm-kpi-grid">
+    <div class="hm-kpi kpi-info">
+      <div class="hm-kpi-icon icon-info"><i class="fa-solid fa-inbox"></i></div>
+      <div class="hm-kpi-val">{{ stats.totalCandidatures }}</div>
+      <div class="hm-kpi-label">Total candidatures</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-calendar-days fa-xs"></i><span>Toutes périodes</span></div>
+    </div>
+    <div class="hm-kpi kpi-orange">
+      <div class="hm-kpi-icon icon-orange"><i class="fa-solid fa-bolt"></i></div>
+      <div class="hm-kpi-val">{{ stats.recentSubmissions }}</div>
+      <div class="hm-kpi-label">Soumises (7 derniers jours)</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-fire fa-xs" style="color:var(--warn);"></i><span>Nouvelles arrivées</span></div>
+    </div>
+    <div class="hm-kpi kpi-purple">
+      <div class="hm-kpi-icon icon-purple"><i class="fa-solid fa-robot"></i></div>
+      <div class="hm-kpi-val">{{ stats.avgScoring }}</div>
+      <div class="hm-kpi-label">Score IA moyen</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-wand-magic-sparkles fa-xs"></i><span>Scoring automatique</span></div>
+    </div>
+    <div class="hm-kpi kpi-green">
+      <div class="hm-kpi-icon icon-green"><i class="fa-solid fa-chart-line"></i></div>
+      <div class="hm-kpi-val">{{ stats.conversionRate }}%</div>
+      <div class="hm-kpi-label">Taux de conversion</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-arrow-trend-up fa-xs" style="color:var(--success);"></i><span>Candidats → Employés</span></div>
+    </div>
+  </div>
+
+  {# Chart + Status side by side #}
+  <div class="hm-sep"></div>
+  <div class="hm-three-col">
+    {# Chart #}
+    <div class="hm-card">
+      <div class="hm-card-title">
+        <i class="fa-solid fa-chart-area"></i>
+        Soumissions mensuelles
+      </div>
+      <div class="hm-chart-wrap">
+        <canvas id="submissionsChart"></canvas>
+      </div>
+    </div>
+
+    {# Status breakdown #}
+    <div class="hm-card">
+      <div class="hm-card-title">
+        <i class="fa-solid fa-list-check"></i>
+        Statuts Pipeline
+      </div>
+      {% set statusColors = {
+        'Accepté':          'var(--success)',
+        'Rejeté':           'var(--danger)',
+        'En attente':       'var(--warn)',
+        'Entretien':        'var(--info)',
+        'Test':             'var(--accent2)',
+        'Offre':            'var(--accent3)',
+        'Candidature reçue':'var(--muted)',
+        'En cours':         'var(--accent)',
+        'Pré-selection':    'var(--accent)',
+        'Nouvelle':         'var(--muted)'
+      } %}
+      {% set statusIcons = {
+        'Accepté':          'fa-circle-check',
+        'Rejeté':           'fa-circle-xmark',
+        'En attente':       'fa-clock',
+        'Entretien':        'fa-microphone',
+        'Test':             'fa-pen-to-square',
+        'Offre':            'fa-briefcase',
+        'Candidature reçue':'fa-envelope-open-text',
+        'En cours':         'fa-spinner',
+        'Pré-selection':    'fa-filter',
+        'Nouvelle':         'fa-file-circle-plus'
+      } %}
+      {% if stats.candidatureByStatus is defined and stats.candidatureByStatus|length %}
+        {% for status, count in stats.candidatureByStatus %}
+          {% set pct = stats.totalCandidatures > 0 ? (count / stats.totalCandidatures * 100)|round : 0 %}
+          {% set color = statusColors[status] ?? 'var(--muted)' %}
+          {% set icon  = statusIcons[status] ?? 'fa-tag' %}
+          <div class="hm-progress-row">
+            <div class="hm-progress-header">
+              <span class="hm-progress-label">
+                <i class="fa-solid {{ icon }}" style="color:{{ color }};font-size:.75rem;"></i>
+                {{ status }}
+              </span>
+              <span class="hm-progress-count">{{ count }}</span>
+            </div>
+            <div class="hm-bar-bg">
+              <div class="hm-bar-fill" style="width:{{ pct }}%;background:{{ color }};"></div>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="hm-empty"><i class="fa-solid fa-inbox"></i> Aucune donnée</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ══════════════════════════════════════════════════════════════
+     3) CONGÉS & ABSENCES
+  ══════════════════════════════════════════════════════════════ #}
+  <div class="hm-section-header">
+    <div class="icon icon-green"><i class="fa-solid fa-umbrella-beach"></i></div>
+    <h3>Congés &amp; Absences</h3>
+  </div>
+
+  <div class="hm-kpi-grid">
+    <div class="hm-kpi kpi-green">
+      <div class="hm-kpi-icon icon-green"><i class="fa-solid fa-calendar-check"></i></div>
+      <div class="hm-kpi-val">{{ stats.totalConges ?? '—' }}</div>
+      <div class="hm-kpi-label">Total congés</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-list fa-xs"></i><span>Toutes périodes</span></div>
+    </div>
+    <div class="hm-kpi kpi-warn">
+      <div class="hm-kpi-icon icon-orange"><i class="fa-solid fa-hourglass-half"></i></div>
+      <div class="hm-kpi-val">{{ stats.congesEnAttente ?? '—' }}</div>
+      <div class="hm-kpi-label">En attente approbation</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-bell fa-xs"></i><span>À traiter</span></div>
+    </div>
+    <div class="hm-kpi kpi-blue">
+      <div class="hm-kpi-icon icon-blue"><i class="fa-solid fa-person-walking-arrow-right"></i></div>
+      <div class="hm-kpi-val">{{ stats.totalAbsences ?? '—' }}</div>
+      <div class="hm-kpi-label">Absences déclarées</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-calendar-xmark fa-xs"></i><span>Ce mois</span></div>
+    </div>
+    <div class="hm-kpi kpi-teal">
+      <div class="hm-kpi-icon icon-teal"><i class="fa-solid fa-check-double"></i></div>
+      <div class="hm-kpi-val">{{ stats.congesApprouves ?? '—' }}</div>
+      <div class="hm-kpi-label">Congés approuvés</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-circle-check fa-xs" style="color:var(--success);"></i><span>Validés</span></div>
+    </div>
+  </div>
+
+  {# ══════════════════════════════════════════════════════════════
+     4) FORMATIONS & ÉVALUATIONS
+  ══════════════════════════════════════════════════════════════ #}
+  <div class="hm-section-header">
+    <div class="icon icon-purple"><i class="fa-solid fa-graduation-cap"></i></div>
+    <h3>Formations &amp; Évaluations</h3>
+  </div>
+
+  <div class="hm-kpi-grid">
+    <div class="hm-kpi kpi-purple">
+      <div class="hm-kpi-icon icon-purple"><i class="fa-solid fa-book-open"></i></div>
+      <div class="hm-kpi-val">{{ stats.totalFormations ?? '—' }}</div>
+      <div class="hm-kpi-label">Formations disponibles</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-layer-group fa-xs"></i><span>Catalogue</span></div>
+    </div>
+    <div class="hm-kpi kpi-info">
+      <div class="hm-kpi-icon icon-info"><i class="fa-solid fa-person-chalkboard"></i></div>
+      <div class="hm-kpi-val">{{ stats.totalInscriptions ?? '—' }}</div>
+      <div class="hm-kpi-label">Inscriptions actives</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-users fa-xs"></i><span>Apprenants</span></div>
+    </div>
+    <div class="hm-kpi kpi-orange">
+      <div class="hm-kpi-icon icon-orange"><i class="fa-solid fa-clipboard-question"></i></div>
+      <div class="hm-kpi-val">{{ stats.totalEvaluations ?? '—' }}</div>
+      <div class="hm-kpi-label">Évaluations disponibles</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-square-poll-vertical fa-xs"></i><span>QCM &amp; exercices</span></div>
+    </div>
+    <div class="hm-kpi kpi-green">
+      <div class="hm-kpi-icon icon-green"><i class="fa-solid fa-star-half-stroke"></i></div>
+      <div class="hm-kpi-val">{{ stats.avgEvalScore ?? '—' }}</div>
+      <div class="hm-kpi-label">Score moyen évaluations</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-trophy fa-xs" style="color:var(--warn);"></i><span>Moyenne apprenants</span></div>
+    </div>
+  </div>
+
+  {# ══════════════════════════════════════════════════════════════
+     5) COMPÉTENCES
+  ══════════════════════════════════════════════════════════════ #}
+  <div class="hm-section-header">
+    <div class="icon icon-orange"><i class="fa-solid fa-star"></i></div>
+    <h3>Compétences</h3>
+  </div>
+
+  <div class="hm-two-col">
+    <div class="hm-card">
+      <div class="hm-card-title">
+        <i class="fa-solid fa-chart-pie"></i>
+        Répartition par type
+      </div>
+      {% set compTypes = {'CRITIQUE': 'var(--danger)', 'IMPORTANTE': 'var(--warn)', 'SECONDAIRE': 'var(--info)'} %}
+      {% set compIcons = {'CRITIQUE': 'fa-fire', 'IMPORTANTE': 'fa-triangle-exclamation', 'SECONDAIRE': 'fa-circle-info'} %}
+      {% if stats.competencesByType is defined %}
+        {% for type, count in stats.competencesByType %}
+          <div class="hm-progress-row">
+            <div class="hm-progress-header">
+              <span class="hm-progress-label">
+                <i class="fa-solid {{ compIcons[type] ?? 'fa-star' }}" style="color:{{ compTypes[type] ?? 'var(--muted)' }};font-size:.75rem;"></i>
+                {{ type }}
+              </span>
+              <span class="hm-progress-count">{{ count }}</span>
+            </div>
+            {% set pctC = stats.totalCompetences is defined and stats.totalCompetences > 0 ? (count / stats.totalCompetences * 100)|round : 0 %}
+            <div class="hm-bar-bg">
+              <div class="hm-bar-fill" style="width:{{ pctC }}%;background:{{ compTypes[type] ?? 'var(--muted)' }};"></div>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="hm-progress-row">
+          <div class="hm-progress-header">
+            <span class="hm-progress-label"><i class="fa-solid fa-fire" style="color:var(--danger);font-size:.75rem;"></i> CRITIQUE</span>
+            <span class="hm-progress-count">{{ stats.totalCompetences ?? '—' }}</span>
+          </div>
+          <div class="hm-bar-bg"><div class="hm-bar-fill" style="width:60%;background:var(--danger);"></div></div>
+        </div>
+        <div class="hm-progress-row">
+          <div class="hm-progress-header">
+            <span class="hm-progress-label"><i class="fa-solid fa-triangle-exclamation" style="color:var(--warn);font-size:.75rem;"></i> IMPORTANTE</span>
+            <span class="hm-progress-count">—</span>
+          </div>
+          <div class="hm-bar-bg"><div class="hm-bar-fill" style="width:30%;background:var(--warn);"></div></div>
+        </div>
+      {% endif %}
+      <div class="hm-kpi-footer" style="margin-top:1rem;border-top:1px solid var(--border);padding-top:.75rem;">
+        <i class="fa-solid fa-database fa-xs"></i>
+        <span>{{ stats.totalCompetences ?? '—' }} compétences au référentiel</span>
+      </div>
+    </div>
+
+    <div class="hm-card">
+      <div class="hm-card-title">
+        <i class="fa-solid fa-user-graduate"></i>
+        Maîtrise des employés
+      </div>
+      {% set ringTotal = (stats.totalCompetencesEmployes ?? 100) %}
+      {% set ringValidated = (stats.competencesValidees ?? 70) %}
+      {% set pctRing = ringTotal > 0 ? (ringValidated / ringTotal * 100)|round : 0 %}
+      {% set dash = 220 %}
+      {% set dashOffset = dash - (dash * pctRing / 100) %}
+      <div class="hm-ring-wrap">
+        <div class="hm-ring" style="width:100px;height:100px;">
+          <svg width="100" height="100" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="35" fill="none" stroke="var(--ring-track)" stroke-width="10"/>
+            <circle cx="50" cy="50" r="35" fill="none" stroke="var(--accent2)" stroke-width="10"
+              stroke-dasharray="{{ dash }}" stroke-dashoffset="{{ dashOffset }}"
+              stroke-linecap="round" style="transition:stroke-dashoffset .8s ease;"/>
+          </svg>
+          <div class="hm-ring-label">
+            {{ pctRing }}%
+            <span>validé</span>
+          </div>
+        </div>
+        <div class="hm-ring-legend">
+          <div class="hm-ring-legend-item">
+            <div class="hm-ring-legend-dot" style="background:var(--accent2);"></div>
+            <span class="hm-ring-legend-name">Validées</span>
+            <span class="hm-ring-legend-val">{{ stats.competencesValidees ?? '—' }}</span>
+          </div>
+          <div class="hm-ring-legend-item">
+            <div class="hm-ring-legend-dot" style="background:var(--border2);"></div>
+            <span class="hm-ring-legend-name">Non validées</span>
+            <span class="hm-ring-legend-val">{{ (ringTotal - ringValidated) }}</span>
+          </div>
+          <div class="hm-ring-legend-item">
+            <div class="hm-ring-legend-dot" style="background:var(--warn);"></div>
+            <span class="hm-ring-legend-name">Total entrées</span>
+            <span class="hm-ring-legend-val">{{ stats.totalCompetencesEmployes ?? '—' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ══════════════════════════════════════════════════════════════
+     6) SOCIAL / MESSAGING & ÉVÉNEMENTS
+  ══════════════════════════════════════════════════════════════ #}
+  <div class="hm-section-header">
+    <div class="icon icon-teal"><i class="fa-solid fa-comments"></i></div>
+    <h3>Social &amp; Événements</h3>
+  </div>
+
+  <div class="hm-kpi-grid">
+    <div class="hm-kpi kpi-teal">
+      <div class="hm-kpi-icon icon-teal"><i class="fa-solid fa-newspaper"></i></div>
+      <div class="hm-kpi-val">{{ stats.totalPublications ?? '—' }}</div>
+      <div class="hm-kpi-label">Publications actives</div>
+      <div class="hm-kpi-footer"><i class="fa-brands fa-rocketchat fa-xs"></i><span>Fil d'actualité</span></div>
+    </div>
+    <div class="hm-kpi kpi-info">
+      <div class="hm-kpi-icon icon-info"><i class="fa-solid fa-envelope-open-text"></i></div>
+      <div class="hm-kpi-val">{{ stats.totalMessages ?? '—' }}</div>
+      <div class="hm-kpi-label">Messages échangés</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-comments fa-xs"></i><span>Messagerie privée</span></div>
+    </div>
+    <div class="hm-kpi kpi-purple">
+      <div class="hm-kpi-icon icon-purple"><i class="fa-solid fa-calendar-days"></i></div>
+      <div class="hm-kpi-val">{{ stats.totalEvenements ?? '—' }}</div>
+      <div class="hm-kpi-label">Événements planifiés</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-location-dot fa-xs"></i><span>À venir</span></div>
+    </div>
+    <div class="hm-kpi kpi-orange">
+      <div class="hm-kpi-icon icon-orange"><i class="fa-solid fa-bell"></i></div>
+      <div class="hm-kpi-val">{{ stats.totalNotifications ?? '—' }}</div>
+      <div class="hm-kpi-label">Notifications envoyées</div>
+      <div class="hm-kpi-footer"><i class="fa-solid fa-satellite-dish fa-xs"></i><span>Système</span></div>
+    </div>
+  </div>
+
+  {# ══════════════════════════════════════════════════════════════
+     QUICK ACTIONS
+  ══════════════════════════════════════════════════════════════ #}
+  <div class="hm-sep"></div>
+  <div class="hm-full">
+    <div class="hm-card">
+      <div class="hm-card-title"><i class="fa-solid fa-bolt"></i> Actions Rapides</div>
+      <div class="hm-actions-grid">
+        {% if isAdmin or isRH %}
+        <a href="{{ path('app_admin_candidats_acceptes') }}" class="hm-action">
+          <i class="fa-solid fa-user-plus" style="background:rgba(52,208,138,.12);color:var(--success);"></i>
+          Convertir candidats
+        </a>
+        <a href="{{ path('app_admin_users') }}" class="hm-action">
+          <i class="fa-solid fa-users-gear" style="background:rgba(91,110,245,.12);color:var(--accent);"></i>
+          Gérer utilisateurs
+        </a>
+        <a href="{{ path('app_admin_archives') }}" class="hm-action">
+          <i class="fa-solid fa-box-archive" style="background:rgba(245,166,35,.12);color:var(--warn);"></i>
+          Archives
+        </a>
+        {% endif %}
+        {% if isAdmin or isRH or isManager %}
+        <a href="{{ path('app_analyse_rh_index') }}" class="hm-action">
+          <i class="fa-solid fa-id-card" style="background:rgba(56,178,249,.12);color:var(--info);"></i>
+          Candidatures
+        </a>
+        <a href="{{ path('mes_lecons_index') }}" class="hm-action">
+          <i class="fa-solid fa-graduation-cap" style="background:rgba(155,92,246,.12);color:var(--accent2);"></i>
+          Formations
+        </a>
+        {% endif %}
+        <a href="{{ path('app_conge_index') }}" class="hm-action">
+          <i class="fa-solid fa-umbrella-beach" style="background:rgba(52,208,138,.12);color:var(--success);"></i>
+          Mes Congés
+        </a>
+        {% if isAdmin %}
+        <a href="{{ path('competence_catalog') }}" class="hm-action">
+          <i class="fa-solid fa-star" style="background:rgba(245,166,35,.12);color:var(--warn);"></i>
+          Compétences
+        </a>
+        <a href="{{ path('social_feed') }}" class="hm-action">
+          <i class="fa-solid fa-comments" style="background:rgba(14,201,176,.12);color:var(--accent3);"></i>
+          Social
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% else %}
+  {# No stats: empty state #}
+  <div class="hm-card" style="text-align:center;padding:3rem;">
+    <i class="fa-solid fa-chart-bar" style="font-size:3rem;color:var(--muted);opacity:.4;display:block;margin-bottom:1rem;"></i>
+    <p style="color:var(--muted);">Les statistiques ne sont pas disponibles.</p>
+  </div>
+  {% endif %}{# fin hasStats #}
+
+  {% endif %}{# fin isEmploye / else admin-rh-manager #}
+
+</div>
+
+{# ── SCRIPTS ──────────────────────────────────────────────────── #}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const ctx = document.getElementById('submissionsChart');
+  if (!ctx) return;
+
+  let months = {{ chartMonths is defined ? chartMonths|raw : '[]' }};
+  let counts = {{ chartCounts is defined ? chartCounts|raw : '[]' }};
+  if (!months || months.length === 0) {
+    months = ['Sep 25','Oct 25','Nov 25','Déc 25','Jan 26','Fév 26','Mar 26','Avr 26'];
+    counts = [8, 12, 15, 18, 14, 20, 25, 22];
+  }
+
+  Chart.defaults.color = '#5c6578';
+  Chart.defaults.font.family = "'DM Sans', sans-serif";
+
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: months,
+      datasets: [{
+        label: 'Candidatures soumises',
+        data: counts,
+        borderColor: '#4f5fef',
+        backgroundColor: function(ctx) {
+          const c = ctx.chart.ctx;
+          const g = c.createLinearGradient(0, 0, 0, 200);
+          g.addColorStop(0, 'rgba(79,95,239,.22)');
+          g.addColorStop(1, 'rgba(79,95,239,0)');
+          return g;
+        },
+        borderWidth: 2.5,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        pointBackgroundColor: '#4f5fef',
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 2,
+        pointHoverRadius: 7,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#ffffff',
+          titleColor: '#141827',
+          bodyColor: '#5c6578',
+          borderColor: 'rgba(15,23,42,.12)',
+          borderWidth: 1,
+          padding: 10,
+          titleFont: { weight: '700' },
+          callbacks: {
+            label: ctx => ` ${ctx.parsed.y} candidature${ctx.parsed.y > 1 ? 's' : ''}`
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: 'rgba(15,23,42,.06)', drawBorder: false },
+          ticks: { font: { size: 11 }, color: '#5c6578' }
+        },
+        x: {
+          grid: { display: false, drawBorder: false },
+          ticks: { font: { size: 11 }, color: '#5c6578' }
+        }
+      }
+    }
+  });
+});
+</script>
+{% endblock %}

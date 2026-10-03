@@ -1,0 +1,54 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Réservation #{{ reservation.id }}{% endblock %}
+
+{% block body %}
+    <h1>Réservation d'espace</h1>
+
+    <table class="table">
+        <tbody>
+            <tr>
+                <th>Id</th>
+                <td>{{ reservation.id }}</td>
+            </tr>
+            <tr>
+                <th>Espace</th>
+                <td>{{ reservation.idEspace ? reservation.idEspace.nom : '' }}</td>
+            </tr>
+            <tr>
+                <th>Id employé</th>
+                <td>{{ reservation.idEmploye }}</td>
+            </tr>
+            <tr>
+                <th>Date réservation</th>
+                <td>{{ reservation.dateReservation ? reservation.dateReservation|date('Y-m-d') : '' }}</td>
+            </tr>
+            <tr>
+                <th>Heure début</th>
+                <td>{{ reservation.dateHeureDebut ? reservation.dateHeureDebut|date('Y-m-d H:i:s') : '' }}</td>
+            </tr>
+            <tr>
+                <th>Heure fin</th>
+                <td>{{ reservation.dateHeureFin ? reservation.dateHeureFin|date('Y-m-d H:i:s') : '' }}</td>
+            </tr>
+            <tr>
+                <th>Objectif</th>
+                <td>{{ reservation.objectif }}</td>
+            </tr>
+            <tr>
+                <th>Statut</th>
+                <td>{{ reservation.statut ? 'Oui' : 'Non' }}</td>
+            </tr>
+            <tr>
+                <th>Créé le</th>
+                <td>{{ reservation.creeLe ? reservation.creeLe|date('Y-m-d H:i:s') : '' }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <a href="{{ path('app_reservation_espaces_index') }}">Retour à la liste</a>
+
+    <a href="{{ path('app_reservation_espaces_edit', {'id': reservation.id}) }}">Modifier</a>
+
+    {{ include('PLANNIFICATION/reservation_espaces/_delete_form.html.twig') }}
+{% endblock %}

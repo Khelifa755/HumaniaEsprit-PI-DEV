@@ -1,0 +1,1060 @@
+{% extends 'SOCIALMEDIA/feed/base.html.twig' %}
+
+{% set colors = ['#3D7EE8', '#2DAA63', '#F5A623', '#E8392A'] %}
+{% set groupColor = colors[group.id % 4] %}
+
+{% block feed_content %}
+
+{# ════════════════════════════════════════════════════════════════ #}
+{# GROUP HEADER                                                      #}
+{# ════════════════════════════════════════════════════════════════ #}
+<div style="background: white; border-radius: 16px; border: 1.5px solid #E8EAF6; padding: 24px; margin-bottom: 20px; box-shadow: 0 2px 12px rgba(108, 92, 231, 0.05);">
+    <div style="display: flex; align-items: center; gap: 16px;">
+        {# Group Avatar #}
+        <div style="width: 64px; height: 64px; border-radius: 12px; background: linear-gradient(135deg, {{ groupColor }}, rgba(0,0,0,0.1)); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; color: white; flex-shrink: 0;">
+            {{ group.name|first|upper }}
+        </div>
+
+        {# Group Info #}
+        <div style="flex: 1;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                <h1 style="font-size: 22px; font-weight: 800; color: #1A1D2E; margin: 0;">{{ group.name }}</h1>
+                {% if isAdmin %}
+                    <span style="background: #EDFBF4; color: #059669; padding: 4px 10px; border-radius: 999px; font-size: 10px; font-weight: 700;">👑 Admin</span>
+                {% endif %}
+            </div>
+            <p style="color: #A0A8CC; margin: 8px 0 0 0; font-size: 12px;">{{ group.description }}</p>
+            <div style="display: flex; gap: 16px; margin-top: 10px; font-size: 11px; color: #A0A8CC;">
+                <span>👥 {{ memberCount }} {% if memberCount <= 1 %}membre{% else %}membres{% endif %}</span>
+                <span>📅 {{ group.createdAt|date('d/m/Y') }}</span>
+            </div>
+        </div>
+
+        {# Actions #}
+        <div style="display: flex; gap: 8px; flex-shrink: 0;">
+            <a href="{{ path('social_groups_index') }}" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #F4F5FB; color: {{ groupColor }}; border: none; border-radius: 50px; font-weight: 600; font-size: 12px; cursor: pointer; text-decoration: none; transition: all 0.2s;">
+                ← Retour
+            </a>
+            {% if isAdmin or currentUser.role == 'ADMIN' %}
+                {% if isAdmin %}
+                <button onclick="openEditGroupModal({{ group.id }}, '{{ group.name|escape('js') }}')" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: linear-gradient(135deg, {{ groupColor }}, rgba(0,0,0,0.05)); color: #fff; border: none; border-radius: 50px; font-weight: 600; font-size: 12px; cursor: pointer; transition: all 0.2s;">
+                    ✏️ Modifier
+                </button>
+                {% endif %}
+                <form action="{{ path('social_groups_delete', { id: group.id }) }}" method="post" style="display: inline;">
+                    <button type="submit" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce groupe ? Cette action est irréversible.')" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #FEE2E2; color: #DC2626; border: 1.5px solid #FECACA; border-radius: 50px; font-weight: 600; font-size: 12px; cursor: pointer; transition: all 0.2s;">
+                        🗑️ Supprimer
+                    </button>
+                </form>
+            {% elseif isMember %}
+                <form action="{{ path('social_groups_leave', { id: group.id }) }}" method="post" style="display: inline;">
+                    <button type="submit" onclick="return confirm('Quitter ce groupe ?')" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #F4F5FB; color: #4A5080; border: 1.5px solid #E8EAF6; border-radius: 50px; font-weight: 600; font-size: 12px; cursor: pointer; transition: all 0.2s;">
+                        Quitter
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{# ════════════════════════════════════════════════════════════════ #}
+{# ════════════════════════════════════════════════════════════════ #}
+{# CREATE POST FORM (members only)                                   #}
+{# ════════════════════════════════════════════════════════════════ #}
+{% if isMember %}
+<div style="background: white; border-radius: 16px; border: 1.5px solid #E8EAF6; padding: 16px 18px; margin-bottom: 16px; box-shadow: 0 2px 10px rgba(108, 92, 231, 0.06);">
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+        {# Current User Avatar #}
+        <div style="width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0; background: linear-gradient(135deg, #74b9ff, #0984e3); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; font-weight: 700; overflow: hidden; border: 2px solid #fff;">
+            {% if currentUser %}
+                {% if currentUser.avatarUrl %}
+                    <img src="{{ currentUser.avatarUrl }}" style="width: 100%; height: 100%; object-fit: cover;">
+                {% else %}
+                    {{ currentUser.firstName|slice(0, 1)|upper }}{{ currentUser.lastName|slice(0, 1)|upper }}
+                {% endif %}
+            {% else %}
+                ?
+            {% endif %}
+        </div>
+
+        {# Input field that opens modal #}
+        <div onclick="openCreatePostModal()"
+             style="flex: 1; height: 42px; border-radius: 50px; background: #F4F5FB; border: 1.5px solid #E8EAF6; padding: 0 18px; display: flex; align-items: center; font-size: 13px; color: #A0A8CC; cursor: pointer;">
+            Partagez quelque chose avec le groupe...
+        </div>
+    </div>
+
+    <div style="display: flex; gap: 8px;">
+        <button onclick="openCreatePostModal()"
+            style="display: flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: 9px; border: none; background: #F4F5FB; color: #4A5080; font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit;">
+            🖼️ Photo
+        </button>
+        <button onclick="openCreatePostModal()"
+            style="display: flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: 9px; border: none; background: #F4F5FB; color: #4A5080; font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit;">
+            😊 Sentiment
+        </button>
+    </div>
+</div>
+{% endif %}
+
+{# ════════════════════════════════════════════════════════════════ #}
+{# POSTS LIST                                                       #}
+{# ════════════════════════════════════════════════════════════════ #}
+{% if posts is empty %}
+    <div style="text-align: center; padding: 60px 20px; background: #fff; border-radius: 16px; border: 1.5px dashed #E8EAF6;">
+        <div style="font-size: 44px; margin-bottom: 10px;">📝</div>
+        <div style="font-size: 14px; font-weight: 600; color: #4A5080;">Aucune publication pour le moment</div>
+        <div style="font-size: 12px; color: #A0A8CC; margin-top: 5px;">{% if isMember %}Soyez le premier à partager quelque chose !{% endif %}</div>
+    </div>
+{% else %}
+    {% for post in posts %}
+        {% set author  = post.authorId %}
+        {% set pubId   = post.getId() %}
+        {% set myReact = userReactions[pubId] ?? null %}
+        {% set isSaved = userSaved[pubId] ?? false %}
+
+        {% include 'SOCIALMEDIA/feed/components/_publication-card.html.twig' with {
+            pub: post,
+            pubId: pubId,
+            author: author,
+            myReact: myReact,
+            isSaved: isSaved,
+            userShares: userShares,
+            currentUserId: currentUserId,
+            publicationComments: commentsByPublication[pubId] ?? [],
+            currentUser: currentUser,
+            reactionStats: reactionStats,
+            shareCount: shareCount
+        } %}
+
+    {% endfor %}
+{% endif %}
+
+<script>
+let currentGroupId = null;
+let searchTimeout = null;
+
+function searchMembers(query) {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        const membersList = document.getElementById('membersList');
+        membersList.innerHTML = '<div style="text-align:center;padding:20px;color:#A0A8CC">⏳ Recherche...</div>';
+        
+        console.log('Searching members with query:', query, 'groupId:', currentGroupId);
+        
+        fetch('{{ path("social_groups_search_users", {id: 0}) }}'.replace('/0', '/' + currentGroupId), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: 'query=' + encodeURIComponent(query) + '&limit=20'
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Search data:', data);
+            console.log('Users array length:', data.users ? data.users.length : 0);
+            if (data.users && data.users.length > 0) {
+                membersList.innerHTML = '';
+                data.users.forEach(user => {
+                    try {
+                        const userDiv = document.createElement('div');
+                        userDiv.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px;margin:4px;background:#F4F5FB;border-radius:10px;cursor:pointer;transition:all 0.2s';
+                        
+                        const firstName = user.firstName || '';
+                        const lastName = user.lastName || '';
+                        const avatar = (user.avatarUrl && user.avatarUrl.trim()) ? 
+                            '<img src="' + user.avatarUrl + '" style="width:100%;height:100%;object-fit:cover;">' : 
+                            (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
+                        
+                        userDiv.innerHTML = '<div style="width:40px;height:40px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#74b9ff,#0984e3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700;overflow:hidden">' + avatar + '</div>' +
+                            '<div style="flex:1;min-width:0">' +
+                            '<div style="font-size:12.5px;font-weight:600;color:#1A1D2E">' + firstName + ' ' + lastName + '</div>' +
+                            '<div style="font-size:11px;color:#A0A8CC;margin-top:2px">@' + (user.username || 'user') + '</div>' +
+                            '</div>' +
+                            '<button type="button" onclick="addMemberToGroup(' + user.id + ')" style="padding:6px 14px;background:#6C5CE7;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0">Ajouter</button>';
+                        
+                        userDiv.addEventListener('mouseover', function() {
+                            this.style.background = '#EFEFFF';
+                        });
+                        userDiv.addEventListener('mouseout', function() {
+                            this.style.background = '#F4F5FB';
+                        });
+                        
+                        membersList.appendChild(userDiv);
+                        console.log('Added user:', user.firstName, user.lastName);
+                    } catch (err) {
+                        console.error('Error rendering user:', user, err);
+                    }
+                });
+                console.log('Finished rendering users, total:', membersList.children.length);
+            } else {
+                console.log('No users found or empty array');
+                membersList.innerHTML = '<div style="text-align:center;padding:20px;color:#A0A8CC">Aucun utilisateur à ajouter</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Search error:', error);
+            membersList.innerHTML = '<div style="text-align:center;padding:20px;color:#E74C3C">⚠️ Erreur lors de la recherche</div>';
+        });
+    }, 300);
+}
+
+function addMemberToGroup(userId) {
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = '⏳';
+    
+    fetch('{{ path("social_groups_add_member", {id: 0}) }}'.replace('/0', '/' + currentGroupId), {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: 'userId=' + userId
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const parentDiv = btn.closest('div');
+            parentDiv.style.background = '#EDFBF4';
+            btn.textContent = '✓ Ajouté';
+            btn.style.background = '#059669';
+            setTimeout(() => {
+                parentDiv.style.opacity = '0';
+                parentDiv.style.transition = 'opacity 0.3s';
+                setTimeout(() => parentDiv.remove(), 300);
+            }, 1500);
+        } else {
+            alert('⚠️ ' + (data.error || 'Erreur lors de l\'ajout'));
+            btn.disabled = false;
+            btn.textContent = 'Ajouter';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('⚠️ Erreur de connexion');
+        btn.disabled = false;
+        btn.textContent = 'Ajouter';
+    });
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.getElementById('addMembersModal').style.display !== 'none') {
+        closeAddMembersModal();
+    }
+});
+</script>
+
+{# GIF PICKER MODAL #}
+<div id="gifPickerModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.45);align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:18px;width:100%;max-width:600px;margin:0 16px;box-shadow:0 20px 60px rgba(0,0,0,0.2);border:1.5px solid #E8EAF6;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #E8EAF6">
+            <div style="font-size:15px;font-weight:700;color:#1A1D2E">🎬 Sélectionner un GIF</div>
+            <button type="button" onclick="document.getElementById('gifPickerModal').style.display='none'" style="background:none;border:none;font-size:21px;color:#A0A8CC;cursor:pointer;line-height:1">×</button>
+        </div>
+        <div style="padding:18px 20px">
+            <div style="display:flex;gap:8px;margin-bottom:14px">
+                <input type="text" id="gifSearchInput" placeholder="Rechercher des GIFs..." style="flex:1;border:1.5px solid #E8EAF6;border-radius:9px;padding:10px 13px;font-size:13.5px;font-family:inherit;color:#1A1D2E;outline:none;background:#F4F5FB;box-sizing:border-box">
+                <button type="button" onclick="searchGifs()" style="padding:10px 20px;border-radius:9px;border:none;background:#6C5CE7;color:white;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">🔍 Chercher</button>
+            </div>
+            <div id="gifPickerResults" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(120px, 1fr));gap:10px;max-height:400px;overflow-y:auto;padding-right:8px"></div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:9px;padding:13px 20px;border-top:1px solid #E8EAF6">
+            <button type="button" onclick="document.getElementById('gifPickerModal').style.display='none'" style="padding:8px 18px;border-radius:9px;border:1.5px solid #E8EAF6;background:#F4F5FB;color:#4A5080;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">Fermer</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentGifContext = 'post';
+let currentCommentPublicationId = null;
+
+function openGifPickerModal(context, pubId = null) {
+    currentGifContext = context;
+    currentCommentPublicationId = pubId;
+    const modal = document.getElementById('gifPickerModal');
+    modal.style.display = 'flex';
+    loadTrendingGifs();
+}
+
+function loadTrendingGifs() {
+    const gifContainer = document.getElementById('gifPickerResults');
+    gifContainer.innerHTML = '<div style="text-align:center;padding:20px;color:#A0A8CC">⏳ Chargement...</div>';
+    
+    fetch('{{ path("social_gifs_trending") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ limit: 12 })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.gifs) {
+            displayGifs(data.gifs);
+        } else {
+            gifContainer.innerHTML = '<div style="padding:20px;color:#E74C3C">⚠️ Erreur lors du chargement des GIFs</div>';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        gifContainer.innerHTML = '<div style="padding:20px;color:#E74C3C">⚠️ Erreur de connexion</div>';
+    });
+}
+
+function searchGifs() {
+    const query = document.getElementById('gifSearchInput').value.trim();
+    if (!query || query.length < 2) {
+        alert('⚠️ Veuillez entrer au moins 2 caractères');
+        return;
+    }
+    
+    const gifContainer = document.getElementById('gifPickerResults');
+    gifContainer.innerHTML = '<div style="text-align:center;padding:20px;color:#A0A8CC">⏳ Recherche...</div>';
+    
+    fetch('{{ path("social_gifs_search") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ query: query, limit: 12 })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.gifs) {
+            displayGifs(data.gifs);
+        } else {
+            gifContainer.innerHTML = '<div style="padding:20px;color:#E74C3C">⚠️ Aucun GIF trouvé</div>';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        gifContainer.innerHTML = '<div style="padding:20px;color:#E74C3C">⚠️ Erreur de connexion</div>';
+    });
+}
+
+function displayGifs(gifs) {
+    const gifContainer = document.getElementById('gifPickerResults');
+    gifContainer.innerHTML = '';
+    
+    if (gifs.length === 0) {
+        gifContainer.innerHTML = '<div style="padding:20px;text-align:center;color:#A0A8CC">Aucun GIF trouvé</div>';
+        return;
+    }
+    
+    gifContainer.style.display = 'grid';
+    gifContainer.style.gridTemplateColumns = 'repeat(auto-fill, minmax(120px, 1fr))';
+    gifContainer.style.gap = '10px';
+    
+    gifs.forEach(gif => {
+        const gifDiv = document.createElement('div');
+        gifDiv.style.cssText = 'cursor:pointer;position:relative;overflow:hidden;border-radius:8px;aspect-ratio:1;';
+        gifDiv.innerHTML = `<img src="${gif.previewUrl}" alt="${gif.title}" style="width:100%;height:100%;object-fit:cover;transition:transform 0.2s">`;
+        
+        gifDiv.addEventListener('click', function() {
+            selectGif(gif.originalUrl, gif.previewUrl, gif.title);
+        });
+        
+        gifContainer.appendChild(gifDiv);
+    });
+}
+
+function selectGif(originalUrl, previewUrl, title) {
+    if (currentGifContext === 'post') {
+        const form = document.getElementById('createPostForm');
+        const input = form.querySelector('input[name="gifUrl"]');
+        if (input) {
+            input.value = originalUrl;
+        }
+        showGifPreview('post', previewUrl, title);
+    } else if (currentGifContext === 'groupPost') {
+        const form = document.getElementById('groupCreatePostForm');
+        const input = form.querySelector('input[name="gifUrl"]');
+        if (input) {
+            input.value = originalUrl;
+        }
+        showGifPreview('groupPost', previewUrl, title);
+    } else if (currentGifContext === 'comment' && currentCommentPublicationId) {
+        const commentForm = document.getElementById('commentForm-' + currentCommentPublicationId);
+        if (commentForm) {
+            const input = commentForm.querySelector('input[name="gifUrl"]');
+            if (input) {
+                input.value = originalUrl;
+            }
+        }
+        const previewDiv = document.getElementById('commentGifPreview-' + currentCommentPublicationId);
+        if (previewDiv) {
+            previewDiv.innerHTML = `<img src="${previewUrl}" alt="${title}" style="max-width:180px;height:auto;border-radius:6px;margin-right:8px;display:inline-block"><button type="button" onclick="removeCommentGif(${currentCommentPublicationId})" style="padding:4px 8px;background:#E74C3C;color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px">✕</button>`;
+            previewDiv.style.display = 'block';
+        }
+    }
+    document.getElementById('gifPickerModal').style.display = 'none';
+}
+
+function showGifPreview(context, gifUrl, title) {
+    if (context === 'post') {
+        const previewDiv = document.getElementById('postGifPreview');
+        if (previewDiv) {
+            previewDiv.innerHTML = `<img src="${gifUrl}" alt="${title}" style="max-width:100%;height:auto;border-radius:8px;margin-top:8px"><button type="button" onclick="removePostGif()" style="margin-top:8px;padding:4px 8px;background:#E74C3C;color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px">✕ Supprimer</button>`;
+            previewDiv.style.display = 'block';
+        }
+    } else if (context === 'groupPost') {
+        const previewDiv = document.getElementById('groupPostGifPreview');
+        if (previewDiv) {
+            previewDiv.innerHTML = `<img src="${gifUrl}" alt="${title}" style="max-width:100%;height:auto;border-radius:8px;margin-top:8px"><button type="button" onclick="removeGroupPostGif()" style="margin-top:8px;padding:4px 8px;background:#E74C3C;color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px">✕ Supprimer</button>`;
+            previewDiv.style.display = 'block';
+        }
+    }
+}
+
+function removePostGif() {
+    const form = document.getElementById('createPostForm');
+    const input = form.querySelector('input[name="gifUrl"]');
+    if (input) input.value = '';
+    const previewDiv = document.getElementById('postGifPreview');
+    if (previewDiv) previewDiv.style.display = 'none';
+}
+
+function removeGroupPostGif() {
+    const form = document.getElementById('groupCreatePostForm');
+    const input = form.querySelector('input[name="gifUrl"]');
+    if (input) input.value = '';
+    const previewDiv = document.getElementById('groupPostGifPreview');
+    if (previewDiv) previewDiv.style.display = 'none';
+}
+
+function improveGroupPostText() {
+    const textarea = document.getElementById('groupPostContent');
+    const text = textarea.value.trim();
+    
+    if (!text || text.length < 3) {
+        alert('⚠️ Veuillez entrer au moins 3 caractères');
+        return;
+    }
+    
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ En cours...';
+    btn.style.opacity = '0.6';
+    
+    fetch('{{ path("social_ai_improve") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ text: text })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.text) {
+            textarea.value = data.text;
+            textarea.focus();
+        } else {
+            alert('⚠️ Erreur: ' + (data.error || 'Impossible d\'améliorer le texte'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('⚠️ Erreur de connexion');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.textContent = originalText;
+        btn.style.opacity = '1';
+    });
+}
+
+function openGenerateGroupPostModal() {
+    document.getElementById('generateGroupPostModal').style.display = 'flex';
+}
+
+function generateGroupPostFromSubject() {
+    const subjectInput = document.getElementById('generateGroupSubject');
+    const toneSelect = document.getElementById('generateGroupTone');
+    const subject = subjectInput.value.trim();
+    const tone = toneSelect.value;
+    
+    if (!subject || subject.length < 3) {
+        alert('⚠️ Veuillez entrer un sujet valide (min 3 caractères)');
+        return;
+    }
+    
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ Génération...';
+    btn.style.opacity = '0.6';
+    
+    fetch('{{ path("social_ai_generate") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ subject: subject, tone: tone })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.text) {
+            const textarea = document.getElementById('groupPostContent');
+            textarea.value = data.text;
+            document.getElementById('generateGroupPostModal').style.display = 'none';
+            textarea.focus();
+        } else {
+            alert('⚠️ Erreur: ' + (data.error || 'Impossible de générer le texte'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('⚠️ Erreur de connexion');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.textContent = originalText;
+        btn.style.opacity = '1';
+    });
+}
+
+function removeCommentGif(pubId) {
+    const commentForm = document.getElementById('commentForm-' + pubId);
+    if (commentForm) {
+        const input = commentForm.querySelector('input[name="gifUrl"]');
+        if (input) input.value = '';
+    }
+    const previewDiv = document.getElementById('commentGifPreview-' + pubId);
+    if (previewDiv) previewDiv.style.display = 'none';
+}
+
+function validateCommentInput(input) {
+    const form = input.closest('form');
+    const submitBtn = form.querySelector('[type="submit"]');
+    const trimmedValue = input.value.trim();
+    
+    if (trimmedValue.length >= 1 && trimmedValue.length <= 500) {
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
+        submitBtn.style.cursor = 'pointer';
+    } else {
+        submitBtn.disabled = true;
+        submitBtn.style.opacity = '0.5';
+        submitBtn.style.cursor = 'not-allowed';
+    }
+}
+</script>
+
+{% endblock %}
+
+{# ════════════════════════════════════════════════════════════════ #}
+{# RIGHT SIDEBAR - GROUP MEMBERS TO FOLLOW                          #}
+{# ════════════════════════════════════════════════════════════════ #}
+{% block right_sidebar %}
+    {% if membersWithStatus|length > 0 %}
+        <div style="background: #fff; border-radius: 14px; border: 1.5px solid #E8EAF6; padding: 14px; margin-bottom: 14px; box-shadow: 0 2px 10px rgba(108, 92, 231, 0.05);">
+            <div style="font-size: 10px; font-weight: 700; color: #A0A8CC; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px;">
+                👥 Membres du groupe
+            </div>
+
+            {% for memberItem in membersWithStatus %}
+                <div style="display: flex; align-items: center; gap: 10px; padding: 10px; margin-bottom: 10px; background: #F4F5FB; border-radius: 10px; transition: all 0.2s;" onmouseover="this.style.background='#EFEFFF'" onmouseout="this.style.background='#F4F5FB'">
+                    <a href="{{ path('social_profile_show', { id: memberItem.user.id }) }}" style="display: flex; align-items: center; gap: 10px; flex: 1; text-decoration: none; color: inherit; cursor: pointer;">
+                        {# Avatar #}
+                        <div style="width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; background: linear-gradient(135deg, #74b9ff, #0984e3); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 700; overflow: hidden;">
+                            {% if memberItem.user.avatarUrl %}
+                                <img src="{{ memberItem.user.avatarUrl }}" style="width: 100%; height: 100%; object-fit: cover;">
+                            {% else %}
+                                {{ memberItem.user.firstName|first|upper }}{{ memberItem.user.lastName|first|upper }}
+                            {% endif %}
+                        </div>
+
+                        {# Info #}
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-size: 12px; font-weight: 600; color: #1A1D2E; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                {{ memberItem.user.firstName }} {{ memberItem.user.lastName }}
+                                {% if memberItem.user.id == group.getCreatedById().id %}
+                                    <span style="background: #DCFCE7; color: #059669; padding: 1px 6px; border-radius: 8px; font-size: 8px; font-weight: 700;">👑</span>
+                                {% endif %}
+                            </div>
+                            <div style="font-size: 10px; color: #A0A8CC;">
+                                @{{ memberItem.user.username ?? memberItem.user.email }}
+                            </div>
+                        </div>
+                    </a>
+
+                    {# Remove Button (only for admin) #}
+                    {% if isAdmin and memberItem.user.id != group.getCreatedById().id %}
+                        <form action="{{ path('social_groups_remove_member', { id: group.id, memberId: memberItem.user.id }) }}" method="post" style="display: inline;">
+                            <button type="submit" onclick="return confirm('Retirer {{ memberItem.user.firstName }} du groupe ?')" style="padding: 4px 8px; background: #FEE2E2; color: #DC2626; border: none; border-radius: 6px; font-size: 10px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.2s; flex-shrink: 0;" onmouseover="this.style.background='#FCA5A5'" onmouseout="this.style.background='#FEE2E2'">
+                                ✕
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block modals %}
+
+{# ════════════════════════════════════════════════════════════════ #}
+{# MODALS                                                            #}
+{# ════════════════════════════════════════════════════════════════ #}
+
+{# Create Post Modal #}
+<div id="createPostModal" style="display: none; position: fixed; inset: 0; z-index: 9998; background: rgba(0, 0, 0, 0.45); align-items: center; justify-content: center;">
+    <div style="background: #fff; border-radius: 18px; width: 100%; max-width: 520px; margin: 0 16px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2); border: 1.5px solid #E8EAF6; overflow: hidden;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #E8EAF6;">
+            <div style="font-size: 15px; font-weight: 700; color: #1A1D2E;">📝 Créer une publication</div>
+            <button type="button" onclick="closeCreatePostModal()" style="background: none; border: none; font-size: 21px; color: #A0A8CC; cursor: pointer; line-height: 1;">×</button>
+        </div>
+
+        <form id="groupCreatePostForm" action="{{ path('social_groups_create_post', { id: group.id }) }}" method="post" enctype="multipart/form-data" style="display: contents;">
+            <div style="padding: 18px 20px;">
+                {# User info section (no visibility selector in group context) #}
+                <div style="display: flex; align-items: center; gap: 11px; margin-bottom: 14px;">
+                    <div style="width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #A29BFE, #6C5CE7); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; font-weight: 700; flex-shrink: 0; overflow: hidden; border: 2px solid #fff;">
+                        {% if currentUser %}
+                            {% if currentUser.avatarUrl %}
+                                <img src="{{ currentUser.avatarUrl }}" style="width: 100%; height: 100%; object-fit: cover;">
+                            {% else %}
+                                {{ currentUser.firstName|slice(0, 1)|upper }}{{ currentUser.lastName|slice(0, 1)|upper }}
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    <div>
+                        <div style="font-size: 13.5px; font-weight: 700; color: #1A1D2E;">
+                            {% if currentUser %}{{ currentUser.firstName }} {{ currentUser.lastName }}{% endif %}
+                        </div>
+                        <div style="font-size: 11.5px; color: #A0A8CC; margin-top: 6px;">
+                            📍 Publier dans le groupe
+                        </div>
+                    </div>
+                </div>
+
+                <textarea name="contenu" id="groupPostContent" placeholder="Partagez quelque chose avec le groupe..." rows="4" required style="width: 100%; border: 1.5px solid #E8EAF6; border-radius: 11px; padding: 13px 15px; font-size: 13.5px; font-family: inherit; color: #1A1D2E; resize: vertical; outline: none; background: #F4F5FB; box-sizing: border-box;"></textarea>
+
+                {# GIF Picker Button + AI Buttons #}
+                <div style="display: flex; gap: 6px; margin-top: 9px; margin-bottom: 9px; flex-wrap: wrap;">
+                    <button type="button" onclick="openGifPickerModal('groupPost')" style="display: flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 7px; border: 1.5px solid #FF6B6B; background: none; color: #FF6B6B; font-size: 11.5px; font-weight: 600; cursor: pointer; font-family: inherit;">
+                        🎬 GIF
+                    </button>
+                    <button type="button" onclick="improveGroupPostText()" style="display: flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 7px; border: 1.5px solid #6C5CE7; background: none; color: #6C5CE7; font-size: 11.5px; font-weight: 600; cursor: pointer; font-family: inherit;">
+                        ✨ Améliorer
+                    </button>
+                    <button type="button" onclick="openGenerateGroupPostModal()" style="display: flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 7px; border: 1.5px solid #2DAA63; background: none; color: #2DAA63; font-size: 11.5px; font-weight: 600; cursor: pointer; font-family: inherit;">
+                        🤖 Générer
+                    </button>
+                </div>
+
+                {# GIF Preview #}
+                <div id="groupPostGifPreview" style="display: none; margin-bottom: 9px;"></div>
+
+                {# Hidden GIF URL field #}
+                <input type="hidden" name="gifUrl" value="">
+
+                {# Image Upload #}
+                <label style="display: block; margin-top: 9px; font-size: 12.5px; color: #4A5080; font-weight: 500; margin-bottom: 6px;">🖼️ Ajouter une image</label>
+                <input type="file" name="image" accept="image/*" style="width: 100%; border: 1.5px solid #E8EAF6; border-radius: 9px; padding: 9px 13px; font-size: 12.5px; font-family: inherit; outline: none; background: #F4F5FB; box-sizing: border-box;">
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 9px; padding: 13px 20px; border-top: 1px solid #E8EAF6;">
+                <button type="button" onclick="closeCreatePostModal()" style="padding: 8px 18px; border-radius: 9px; border: 1.5px solid #E8EAF6; background: #F4F5FB; color: #4A5080; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit;">
+                    Annuler
+                </button>
+                <button type="submit" style="padding: 8px 20px; border-radius: 9px; border: none; background: linear-gradient(135deg, #6C5CE7, #A29BFE); color: #fff; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit; box-shadow: 0 4px 12px rgba(108, 92, 231, 0.3);">
+                    Publier
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# Generate Group Post Modal #}
+<div id="generateGroupPostModal" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0, 0, 0, 0.45); align-items: center; justify-content: center;">
+    <div style="background: #fff; border-radius: 18px; width: 100%; max-width: 480px; margin: 0 16px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2); border: 1.5px solid #E8EAF6; overflow: hidden;">
+        {# Header #}
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #E8EAF6;">
+            <div style="font-size: 15px; font-weight: 700; color: #1A1D2E;">🤖 Générer une publication</div>
+            <button type="button" onclick="document.getElementById('generateGroupPostModal').style.display='none'" style="background: none; border: none; font-size: 21px; color: #A0A8CC; cursor: pointer; line-height: 1;">×</button>
+        </div>
+
+        <div style="padding: 18px 20px;">
+            {# Subject input #}
+            <div style="margin-bottom: 14px;">
+                <label style="display: block; font-size: 12.5px; color: #4A5080; font-weight: 600; margin-bottom: 8px;">📌 Sujet ou titre</label>
+                <input type="text" id="generateGroupSubject" placeholder="Ex: Les avantages du télétravail..." style="width: 100%; border: 1.5px solid #E8EAF6; border-radius: 9px; padding: 10px 13px; font-size: 13.5px; font-family: inherit; color: #1A1D2E; outline: none; background: #F4F5FB; box-sizing: border-box;">
+            </div>
+
+            {# Tone selector #}
+            <div style="margin-bottom: 18px;">
+                <label style="display: block; font-size: 12.5px; color: #4A5080; font-weight: 600; margin-bottom: 8px;">💬 Ton de la publication</label>
+                <select id="generateGroupTone" style="width: 100%; border: 1.5px solid #E8EAF6; border-radius: 9px; padding: 10px 13px; font-size: 13.5px; color: #4A5080; outline: none; background: #F4F5FB; box-sizing: border-box; font-family: inherit; cursor: pointer;">
+                    <option value="professionnel">💼 Professionnel</option>
+                    <option value="inspirationnel">✨ Inspirationnel</option>
+                    <option value="casual">😊 Casual</option>
+                    <option value="informatif">📚 Informatif</option>
+                    <option value="humoristique">😂 Humoristique</option>
+                </select>
+            </div>
+
+            {# Info text #}
+            <div style="padding: 11px 13px; background: #F0F4FF; border-radius: 8px; border-left: 4px solid #6C5CE7; margin-bottom: 14px; font-size: 12px; color: #4A5080; line-height: 1.5;">
+                💡 L'IA générera une publication adaptée au ton choisi en fonction de votre sujet.
+            </div>
+        </div>
+
+        {# Footer #}
+        <div style="display: flex; justify-content: flex-end; gap: 9px; padding: 13px 20px; border-top: 1px solid #E8EAF6;">
+            <button type="button" onclick="document.getElementById('generateGroupPostModal').style.display='none'" style="padding: 8px 18px; border-radius: 9px; border: 1.5px solid #E8EAF6; background: #F4F5FB; color: #4A5080; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit;">
+                Annuler
+            </button>
+            <button type="button" onclick="generateGroupPostFromSubject()" style="padding: 8px 20px; border-radius: 9px; border: none; background: linear-gradient(135deg, #2DAA63, #10b981); color: #fff; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit; box-shadow: 0 4px 12px rgba(45, 170, 99, 0.3);">
+                Générer
+            </button>
+        </div>
+    </div>
+</div>
+
+{# Edit Group Post Modal #}
+<div id="editGroupPostModal" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0, 0, 0, 0.45); align-items: center; justify-content: center;">
+    <div style="background: #fff; border-radius: 18px; width: 100%; max-width: 540px; margin: 0 16px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2); border: 1.5px solid #E8EAF6; overflow: hidden;">
+        {# Header #}
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #E8EAF6;">
+            <div style="font-size: 15px; font-weight: 700; color: #1A1D2E;">✏️ Éditer la publication</div>
+            <button type="button" onclick="closeEditGroupPostModal()" style="background: none; border: none; font-size: 21px; color: #A0A8CC; cursor: pointer; line-height: 1;">×</button>
+        </div>
+
+        <form id="editGroupPostForm" method="post" style="display: contents;">
+            <div style="padding: 18px 20px;">
+                <textarea id="editGroupContenu" name="contenu" rows="4" required style="width: 100%; border: 1.5px solid #E8EAF6; border-radius: 11px; padding: 13px 15px; font-size: 13.5px; font-family: inherit; color: #1A1D2E; resize: vertical; outline: none; background: #F4F5FB; box-sizing: border-box;"></textarea>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 9px; padding: 13px 20px; border-top: 1px solid #E8EAF6;">
+                <button type="button" onclick="closeEditGroupPostModal()" style="padding: 8px 18px; border-radius: 9px; border: 1.5px solid #E8EAF6; background: #F4F5FB; color: #4A5080; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit;">
+                    Annuler
+                </button>
+                <button type="submit" style="padding: 8px 20px; border-radius: 9px; border: none; background: linear-gradient(135deg, #6C5CE7, #A29BFE); color: #fff; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit; box-shadow: 0 4px 12px rgba(108, 92, 231, 0.3);">
+                    Enregistrer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# Share Modal #}
+<div id="shareModal" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0, 0, 0, 0.45); align-items: center; justify-content: center;">
+    <div style="background: #fff; border-radius: 18px; width: 100%; max-width: 520px; margin: 0 16px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2); border: 1.5px solid #E8EAF6; overflow: hidden;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #E8EAF6;">
+            <div style="font-size: 15px; font-weight: 700; color: #1A1D2E;">📤 Partager</div>
+            <button type="button" onclick="closeShareModal()" style="background: none; border: none; font-size: 21px; color: #A0A8CC; cursor: pointer; line-height: 1;">×</button>
+        </div>
+
+        <form id="shareForm" method="post" style="display: contents;">
+            <div style="padding: 18px 20px;">
+                <div style="padding: 13px 14px; background: #F3F4F6; border-radius: 11px; border-left: 4px solid #6C5CE7; margin-bottom: 14px;">
+                    <div style="font-size: 11px; color: #A0A8CC; margin-bottom: 6px; font-weight: 600;">Vous allez partager :</div>
+                    <div id="sharePreviewContent" style="font-size: 13px; color: #4A5080; line-height: 1.5;"></div>
+                </div>
+
+                <label style="display: block; font-size: 12.5px; color: #4A5080; font-weight: 600; margin-bottom: 6px;">
+                    Ajouter un message (optionnel)
+                </label>
+                <textarea name="shareMessage" rows="3" placeholder="Partager vos pensées..." style="width: 100%; border: 1.5px solid #E8EAF6; border-radius: 11px; padding: 13px 15px; font-size: 13.5px; font-family: inherit; color: #1A1D2E; resize: vertical; outline: none; background: #F4F5FB; box-sizing: border-box;"></textarea>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 9px; padding: 13px 20px; border-top: 1px solid #E8EAF6;">
+                <button type="button" onclick="closeShareModal()" style="padding: 8px 18px; border-radius: 9px; border: 1.5px solid #E8EAF6; background: #F4F5FB; color: #4A5080; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit;">
+                    Annuler
+                </button>
+                <button type="submit" style="padding: 8px 20px; border-radius: 9px; border: none; background: linear-gradient(135deg, #10b981, #34d399); color: #fff; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                    Partager
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# Edit Comment Modal #}
+<div id="editCommentModal" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0, 0, 0, 0.45); align-items: center; justify-content: center;">
+    <div style="background: #fff; border-radius: 18px; width: 100%; max-width: 400px; margin: 0 16px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2); border: 1.5px solid #E8EAF6; overflow: hidden;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #E8EAF6;">
+            <div style="font-size: 15px; font-weight: 700; color: #1A1D2E;">✏️ Éditer le commentaire</div>
+            <button type="button" onclick="closeEditCommentModal()" style="background: none; border: none; font-size: 21px; color: #A0A8CC; cursor: pointer; line-height: 1;">×</button>
+        </div>
+
+        <div style="padding: 18px 20px;">
+            <input type="hidden" id="editCommentId" value="">
+            <textarea id="editCommentContent" placeholder="Votre commentaire..." rows="4" style="width: 100%; border: 1.5px solid #E8EAF6; border-radius: 11px; padding: 13px 15px; font-size: 13.5px; font-family: inherit; color: #1A1D2E; resize: vertical; outline: none; background: #F4F5FB; box-sizing: border-box;"></textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 9px; padding: 13px 20px; border-top: 1px solid #E8EAF6;">
+            <button type="button" onclick="closeEditCommentModal()" style="padding: 8px 18px; border-radius: 9px; border: 1.5px solid #E8EAF6; background: #F4F5FB; color: #4A5080; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit;">
+                Annuler
+            </button>
+            <button type="button" onclick="submitEditComment()" style="padding: 8px 20px; border-radius: 9px; border: none; background: #6C5CE7; color: #fff; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit; box-shadow: 0 4px 12px rgba(108, 92, 231, 0.3);">
+                Enregistrer
+            </button>
+        </div>
+    </div>
+</div>
+
+{# ════════════════════════════════════════════════════════════════ #}
+{# EDIT GROUP MODAL                                                 #}
+{# ════════════════════════════════════════════════════════════════ #}
+<div id="editGroupModal" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0, 0, 0, 0.45); align-items: center; justify-content: center;">
+    <div style="background: #fff; border-radius: 18px; width: 100%; max-width: 500px; margin: 0 16px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2); border: 1.5px solid #E8EAF6; overflow: hidden; display: flex; flex-direction: column; max-height: 90vh;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #E8EAF6; flex-shrink: 0;">
+            <div style="font-size: 15px; font-weight: 700; color: #1A1D2E;">⚙️ Gérer le groupe</div>
+            <button type="button" onclick="closeEditGroupModal()" style="background: none; border: none; font-size: 21px; color: #A0A8CC; cursor: pointer; line-height: 1;">×</button>
+        </div>
+
+        <div style="overflow-y: auto; flex: 1;">
+            {# ── SECTION 1: Modifier le nom ── #}
+            <div style="padding: 18px 20px; border-bottom: 1px solid #E8EAF6;">
+                <label style="display: block; font-size: 12px; font-weight: 700; color: #4A5080; margin-bottom: 10px;">📝 MODIFIER LE NOM</label>
+                <form id="editGroupForm" style="display: flex; gap: 8px;">
+                    <input type="text" id="editGroupName" name="name" required maxlength="100" placeholder="Nom du groupe..." style="flex: 1; border: 1.5px solid #E8EAF6; border-radius: 9px; padding: 10px 13px; font-size: 13.5px; font-family: inherit; color: #1A1D2E; outline: none; background: #F4F5FB; box-sizing: border-box;">
+                    <button type="button" onclick="submitEditGroup()" style="padding: 10px 16px; border-radius: 9px; border: none; background: #6C5CE7; color: #fff; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap;">
+                        ✓ Enregistrer
+                    </button>
+                </form>
+                <div style="font-size: 10px; color: #A0A8CC; margin-top: 6px;">Maximum 100 caractères</div>
+            </div>
+
+            {# ── SECTION 2: Ajouter des membres ── #}
+            <div style="padding: 18px 20px; border-top: 1px solid #E8EAF6;">
+                <label style="display: block; font-size: 12px; font-weight: 700; color: #4A5080; margin-bottom: 10px;">➕ AJOUTER DES MEMBRES</label>
+                <div style="position: relative; margin-bottom: 12px;">
+                    <input type="text" id="memberSearchInput" placeholder="Chercher un utilisateur..." 
+                           oninput="searchMembers(this.value)"
+                           style="width: 100%; border: 1.5px solid #E8EAF6; border-radius: 9px; padding: 10px 16px; font-size: 13px; outline: none; font-family: inherit; background: #F4F5FB; box-sizing: border-box;">
+                    <span style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #A0A8CC; font-size: 13px; pointer-events: none;">🔍</span>
+                </div>
+                <div id="membersList" style="max-height: 280px; overflow-y: auto; border: 1.5px solid #E8EAF6; border-radius: 9px; padding: 8px;">
+                    <div style="text-align: center; padding: 20px; color: #A0A8CC; font-size: 13px;">Tapez pour rechercher...</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 9px; padding: 13px 20px; border-top: 1px solid #E8EAF6; flex-shrink: 0;">
+            <button type="button" onclick="closeEditGroupModal()" style="padding: 8px 18px; border-radius: 9px; border: 1.5px solid #E8EAF6; background: #F4F5FB; color: #4A5080; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit;">
+                Fermer
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block social_js %}
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// Modal Functions
+// ════════════════════════════════════════════════════════════════
+
+function openCreatePostModal() {
+    document.getElementById('createPostModal').style.display = 'flex';
+}
+
+function closeCreatePostModal() {
+    document.getElementById('createPostModal').style.display = 'none';
+}
+
+function openEditModal(pubId, contenu, visibility, groupId = null) {
+    // For group posts, open the group edit modal
+    if (groupId) {
+        const editGroupForm = document.getElementById('editGroupPostForm');
+        const editGroupContenu = document.getElementById('editGroupContenu');
+        editGroupContenu.value = contenu;
+        editGroupForm.action = '{{ path("social_groups_edit_post", {id: 0, postId: 0}) }}'.replace('/0/post/0', '/' + groupId + '/post/' + pubId);
+        document.getElementById('editGroupPostModal').style.display = 'flex';
+    }
+}
+
+function closeEditGroupPostModal() {
+    document.getElementById('editGroupPostModal').style.display = 'none';
+}
+
+function openShareModal(postId, preview) {
+    document.getElementById('sharePreviewContent').textContent = preview;
+    const form = document.getElementById('shareForm');
+    form.action = '{{ path("social_feed_share", {id: 0}) }}'.replace('/0', '/' + postId);
+    document.getElementById('shareModal').style.display = 'flex';
+}
+
+function closeShareModal() {
+    document.getElementById('shareModal').style.display = 'none';
+}
+
+function openEditCommentModal(commentId, content) {
+    document.getElementById('editCommentId').value = commentId;
+    document.getElementById('editCommentContent').value = content;
+    document.getElementById('editCommentModal').style.display = 'flex';
+}
+
+function closeEditCommentModal() {
+    document.getElementById('editCommentModal').style.display = 'none';
+}
+
+function openEditGroupModal(groupId, groupName) {
+    currentGroupId = groupId;
+    document.getElementById('editGroupName').value = groupName;
+    document.getElementById('memberSearchInput').value = '';
+    document.getElementById('membersList').innerHTML = '<div style="text-align:center;padding:20px;color:#A0A8CC;font-size:13px">⏳ Chargement...</div>';
+    document.getElementById('editGroupModal').style.display = 'flex';
+    document.getElementById('editGroupName').focus();
+    // Load initial members list
+    setTimeout(() => searchMembers(''), 100);
+}
+
+function closeEditGroupModal() {
+    document.getElementById('editGroupModal').style.display = 'none';
+    currentGroupId = null;
+}
+
+function submitEditGroup(groupId) {
+    const groupName = document.getElementById('editGroupName').value.trim();
+    const gId = currentGroupId || groupId;
+    
+    if (!groupName || groupName.length < 3) {
+        alert('⚠️ Le nom du groupe doit contenir au moins 3 caractères');
+        return;
+    }
+    
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = '⏳ En cours...';
+    
+    fetch('{{ path("social_groups_update", {id: 0}) }}'.replace('/0', '/' + gId), {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: 'name=' + encodeURIComponent(groupName)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update the group name in the page
+            document.querySelector('h1').textContent = groupName;
+            alert('✅ Groupe modifié avec succès');
+            location.reload(); // Reload to reflect all changes
+        } else {
+            alert('⚠️ ' + (data.error || 'Erreur lors de la modification'));
+            btn.disabled = false;
+            btn.textContent = '✓ Enregistrer';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('⚠️ Erreur de connexion');
+        btn.disabled = false;
+        btn.textContent = '✓ Enregistrer';
+    });
+}
+
+function submitEditComment() {
+    const commentId = document.getElementById('editCommentId').value;
+    const content = document.getElementById('editCommentContent').value.trim();
+
+    if (!content) {
+        alert('Le commentaire ne peut pas être vide');
+        return;
+    }
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ path("social_feed_edit_comment", {id: 0}) }}'.replace('/0', '/' + commentId);
+    form.innerHTML = '<input type="hidden" name="contenu" value="' + content.replace(/"/g, '&quot;') + '">';
+    form.innerHTML += '<input type="hidden" name="returnUrl" value="' + window.location.href + '">';
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// ════════════════════════════════════════════════════════════════
+// Post Functions
+// ════════════════════════════════════════════════════════════════
+
+function togglePostMenu(postId) {
+    const menu = document.getElementById('post-menu-' + postId);
+    if (menu) {
+        menu.style.display = menu.style.display === 'none' ? 'flex' : 'none';
+    }
+    // Close other menus
+    document.querySelectorAll('[id^="post-menu-"]').forEach(m => {
+        if (m.id !== 'post-menu-' + postId) m.style.display = 'none';
+    });
+}
+
+function closePostMenu(postId) {
+    const menu = document.getElementById('post-menu-' + postId);
+    if (menu) {
+        menu.style.display = 'none';
+    }
+}
+
+// ════════════════════════════════════════════════════════════════
+// Reaction & Comment Functions
+// ════════════════════════════════════════════════════════════════
+
+function submitReaction(postId, reactionType) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ path("social_feed_react", {id: 0}) }}'.replace('/0', '/' + postId);
+    form.innerHTML = '<input type="hidden" name="type" value="' + reactionType + '">';
+    form.innerHTML += '<input type="hidden" name="returnUrl" value="' + window.location.href + '">';
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function showReactionPicker(postId) {
+    const picker = document.getElementById('picker-' + postId);
+    if (picker) {
+        picker.style.display = 'flex';
+    }
+}
+
+function hideReactionPicker(postId) {
+    const picker = document.getElementById('picker-' + postId);
+    if (picker) {
+        picker.style.display = 'none';
+    }
+}
+
+function toggleComments(postId) {
+    const comments = document.getElementById('comments-' + postId);
+    if (comments) {
+        comments.style.display = comments.style.display === 'none' ? 'block' : 'none';
+    }
+}
+
+function toggleCommentMenu(commentId) {
+    const menu = document.getElementById('comment-menu-' + commentId);
+    if (menu) {
+        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    }
+    // Close other menus
+    document.querySelectorAll('[id^="comment-menu-"]').forEach(m => {
+        if (m.id !== 'comment-menu-' + commentId) m.style.display = 'none';
+    });
+}
+
+function closeCommentMenu(commentId) {
+    const menu = document.getElementById('comment-menu-' + commentId);
+    if (menu) {
+        menu.style.display = 'none';
+    }
+}
+</script>
+
+{% endblock %}

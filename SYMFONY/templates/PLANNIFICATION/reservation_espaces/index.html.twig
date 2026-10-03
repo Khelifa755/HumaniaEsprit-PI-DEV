@@ -1,0 +1,1355 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Réserver un Espace — Humania{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --primary:       #2563eb;
+        --primary-hover: #1d4ed8;
+        --green:         #10b981;
+        --green-light:   #d1fae5;
+        --green-dark:    #065f46;
+        --red:           #ef4444;
+        --red-light:     #fee2e2;
+        --red-dark:      #991b1b;
+        --blue-chair:    #3b82f6;
+        --gray-50:       #f9fafb;
+        --gray-100:      #f3f4f6;
+        --gray-200:      #e5e7eb;
+        --gray-400:      #9ca3af;
+        --gray-500:      #6b7280;
+        --gray-600:      #4b5563;
+        --gray-800:      #1f2937;
+        --gray-900:      #111827;
+        --radius-card:   14px;
+        --shadow-sm:     0 1px 3px rgba(0,0,0,.08);
+        --shadow-md:     0 6px 20px rgba(0,0,0,.10);
+    }
+
+    body { font-family: 'DM Sans', sans-serif; background: var(--gray-50); color: var(--gray-800); }
+
+    /* ── Page header ────────────────────────────────────────────── */
+    .page-header    { margin-bottom: 24px; }
+    .page-header h1 { font-size: 1.85rem; font-weight: 700; margin: 0 0 5px; color: var(--gray-900); }
+    .page-header p  { margin: 0; color: var(--gray-400); font-size: .9rem; }
+
+    /* ── Search bar ─────────────────────────────────────────────── */
+    .search-bar {
+        display: flex; align-items: center; gap: 10px;
+        background: #fff; border: 1.5px solid var(--gray-200);
+        border-radius: 14px; padding: 10px 16px;
+        margin-bottom: 16px; max-width: 420px;
+        box-shadow: var(--shadow-sm);
+    }
+    .search-bar input {
+        border: none; outline: none; font-size: .9rem;
+        font-family: inherit; color: var(--gray-900); background: transparent; flex: 1;
+    }
+    .search-bar input::placeholder { color: var(--gray-400); }
+    .search-ico { font-size: 1rem; color: var(--gray-400); line-height: 1; }
+
+    /* ── Filter bar ─────────────────────────────────────────────── */
+    .filter-bar {
+        display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+        background: #fff; border: 1px solid var(--gray-200);
+        border-radius: 14px; padding: 14px 20px; margin-bottom: 28px;
+    }
+    .filter-group { display: flex; align-items: center; gap: 8px; }
+    .filter-group + .filter-group { padding-left: 16px; border-left: 1px solid var(--gray-200); }
+    .filter-label { font-size: .88rem; font-weight: 700; color: var(--gray-900); }
+
+    .filter-btn {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 7px 16px; border-radius: 99px; font-size: .82rem; font-weight: 600;
+        cursor: pointer; border: 1.5px solid var(--gray-200);
+        background: #fff; color: var(--gray-500); font-family: inherit;
+        transition: background .15s, color .15s, border-color .15s;
+    }
+    .filter-btn:hover { background: var(--gray-50); border-color: #cbd5e1; }
+    .filter-btn.is-active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .filter-btn.btn-dispo.is-active  { background: var(--green);  border-color: var(--green);  color: #fff; }
+    .filter-btn.btn-occupe.is-active { background: var(--red);    border-color: var(--red);    color: #fff; }
+
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+    .dot-green { background: var(--green); }
+    .dot-red   { background: var(--red); }
+
+    /* ── Cards grid ─────────────────────────────────────────────── */
+    .espaces-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+    }
+
+    /* ── Espace card ────────────────────────────────────────────── */
+    .espace-card {
+        background: #fff;
+        border-radius: var(--radius-card);
+        border: 1px solid var(--gray-200);
+        box-shadow: var(--shadow-sm);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        transition: box-shadow .18s, transform .18s;
+    }
+    .espace-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+
+    .card-img-wrap {
+        position: relative; height: 210px;
+        background: var(--gray-100); overflow: hidden; flex-shrink: 0;
+    }
+    .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .card-img-placeholder {
+        width: 100%; height: 100%;
+        background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+        display: flex; align-items: center; justify-content: center;
+        color: var(--gray-400); font-size: 2.5rem;
+    }
+
+    .card-type-badge {
+        position: absolute; top: 12px; left: 12px;
+        display: inline-flex; align-items: center; gap: 5px;
+        background: rgba(0,0,0,.52); color: #fff; backdrop-filter: blur(4px);
+        padding: 4px 11px; border-radius: 99px; font-size: .75rem; font-weight: 600;
+    }
+    .card-status-badge {
+        position: absolute; top: 12px; right: 12px;
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 5px 12px; border-radius: 99px; font-size: .78rem; font-weight: 700;
+        backdrop-filter: blur(4px);
+    }
+    .card-status-badge.dispo  { background: rgba(255,255,255,.92); color: var(--green-dark); border: 1.5px solid var(--green); }
+    .card-status-badge.occupe { background: rgba(255,255,255,.92); color: var(--red-dark);   border: 1.5px solid var(--red); }
+
+    .card-body { padding: 20px 20px 8px; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+    .card-name { font-size: 1.12rem; font-weight: 700; color: var(--gray-900); margin: 0; }
+    .card-info { display: flex; flex-direction: column; gap: 5px; }
+    .card-info-row {
+        display: flex; align-items: center; gap: 8px;
+        font-size: .88rem; color: var(--gray-600); font-weight: 500;
+    }
+    .card-info-row svg { flex-shrink: 0; color: var(--gray-400); }
+
+    .card-equip { display: flex; gap: 6px; flex-wrap: wrap; }
+    .equip-tag {
+        padding: 3px 10px; border-radius: 99px; font-size: .75rem; font-weight: 500;
+        border: 1.5px solid var(--gray-200); color: var(--gray-600); background: #fff;
+    }
+    .equip-tag.blue   { border-color: #bfdbfe; color: #1d4ed8; background: #eff6ff; }
+    .equip-tag.purple { border-color: #ddd6fe; color: #6d28d9; background: #f5f3ff; }
+    .equip-tag.cyan   { border-color: #a5f3fc; color: #0e7490; background: #ecfeff; }
+    .equip-tag.amber  { border-color: #fde68a; color: #92400e; background: #fffbeb; }
+    .equip-tag.green  { border-color: #bbf7d0; color: #065f46; background: #f0fdf4; }
+
+    .card-footer { padding: 12px 20px 20px; }
+    .btn-cta {
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        width: 100%; padding: 13px 20px;
+        background: var(--primary); color: #fff;
+        border: none; border-radius: 10px;
+        font-size: .95rem; font-weight: 700; font-family: inherit;
+        cursor: pointer; text-decoration: none;
+        transition: background .15s, transform .1s, box-shadow .15s;
+    }
+    .btn-cta:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37,99,235,.3); }
+    .btn-cta:active { transform: translateY(0); }
+    .btn-cta.disabled {
+        background: var(--gray-100); color: var(--gray-400);
+        pointer-events: none; cursor: default;
+    }
+
+    .espaces-empty { grid-column: 1/-1; text-align: center; color: var(--gray-400); padding: 40px; font-size: 1.1rem; }
+
+    /* ═══════════════════════════════════════════════════════════════
+       RESERVATION MODAL
+    ═══════════════════════════════════════════════════════════════ */
+    .modal-overlay {
+        position: fixed; inset: 0; z-index: 1000;
+        background: rgba(17,24,39,.55); backdrop-filter: blur(6px);
+        display: flex; align-items: center; justify-content: center;
+        padding: 20px;
+        opacity: 0; pointer-events: none;
+        transition: opacity .25s ease;
+    }
+    .modal-overlay.is-open {
+        opacity: 1; pointer-events: all;
+    }
+
+    .modal-box {
+        background: #fff; border-radius: 20px;
+        box-shadow: 0 24px 60px rgba(0,0,0,.18);
+        width: 100%; max-width: 660px; max-height: 90vh;
+        overflow-y: auto; display: flex; flex-direction: column;
+        transform: translateY(24px) scale(.97);
+        transition: transform .28s cubic-bezier(.34,1.56,.64,1);
+        scrollbar-width: thin; scrollbar-color: var(--gray-200) transparent;
+    }
+    .modal-overlay.is-open .modal-box {
+        transform: translateY(0) scale(1);
+    }
+
+    /* Modal header image */
+    .modal-hero {
+        position: relative; height: 160px; flex-shrink: 0;
+        background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+        border-radius: 20px 20px 0 0; overflow: hidden;
+    }
+    .modal-hero img { width: 100%; height: 100%; object-fit: cover; opacity: .85; }
+    .modal-hero-overlay {
+        position: absolute; inset: 0;
+        background: linear-gradient(to top, rgba(0,0,0,.55) 0%, transparent 60%);
+        display: flex; flex-direction: column; justify-content: flex-end;
+        padding: 18px 22px;
+    }
+    .modal-hero-badge {
+        display: inline-flex; align-items: center; gap: 5px;
+        background: rgba(255,255,255,.18); backdrop-filter: blur(6px);
+        color: #fff; font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+        padding: 3px 10px; border-radius: 99px; margin-bottom: 6px; width: fit-content;
+        border: 1px solid rgba(255,255,255,.25);
+    }
+    .modal-hero-title { color: #fff; font-size: 1.3rem; font-weight: 700; margin: 0 0 3px; }
+    .modal-hero-sub   { color: rgba(255,255,255,.75); font-size: .83rem; margin: 0; }
+
+    .modal-close {
+        position: absolute; top: 14px; right: 14px;
+        width: 32px; height: 32px; border-radius: 50%;
+        background: rgba(255,255,255,.2); backdrop-filter: blur(4px);
+        border: 1px solid rgba(255,255,255,.3); color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; font-size: 1.1rem; font-family: inherit;
+        transition: background .15s; z-index: 2;
+    }
+    .modal-close:hover { background: rgba(255,255,255,.35); }
+
+    /* Modal body */
+    .modal-body { padding: 24px; flex: 1; }
+
+    /* Mode toggle */
+    .mode-toggle {
+        display: flex; background: var(--gray-100); border-radius: 12px; padding: 4px;
+        gap: 4px; margin-bottom: 24px;
+    }
+    .mode-btn {
+        flex: 1; padding: 10px 16px; border-radius: 9px; border: none;
+        font-size: .87rem; font-weight: 600; font-family: inherit;
+        cursor: pointer; color: var(--gray-500); background: transparent;
+        transition: background .18s, color .18s, box-shadow .18s;
+        display: flex; align-items: center; justify-content: center; gap: 7px;
+    }
+    .mode-btn.is-active {
+        background: #fff; color: var(--gray-900);
+        box-shadow: 0 2px 8px rgba(0,0,0,.1);
+    }
+
+    /* ── Chair layout (Mode 1) ─────────────────────────────────── */
+    .chair-section { animation: fadeIn .2s ease; }
+
+    .chair-legend {
+        display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .legend-item {
+        display: flex; align-items: center; gap: 6px;
+        font-size: .8rem; font-weight: 500; color: var(--gray-600);
+    }
+    .legend-dot {
+        width: 10px; height: 10px; border-radius: 50%;
+    }
+    .legend-dot.available { background: var(--green); }
+    .legend-dot.occupied  { background: var(--red); }
+    .legend-dot.selected  { background: var(--blue-chair); }
+
+    .chair-layout-wrap {
+        background: var(--gray-50); border-radius: 14px;
+        border: 1px solid var(--gray-200);
+        padding: 20px; margin-bottom: 20px;
+        display: flex; flex-direction: column; align-items: center; gap: 12px;
+    }
+    .chairs-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+    /* The central table card */
+    .table-card {
+        background: #fff; border-radius: 14px;
+        border: 1.5px solid var(--gray-200);
+        padding: 18px 40px; text-align: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        min-width: 220px;
+    }
+    .table-card-label { font-size: .7rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--gray-400); margin-bottom: 4px; }
+    .table-card-name  { font-size: 1rem; font-weight: 700; color: var(--gray-900); }
+    .table-card-cap   { font-size: .82rem; color: var(--gray-500); margin-top: 2px; }
+
+    /* Individual chair button */
+    .chair-btn {
+        width: 44px; height: 44px; border-radius: 50%;
+        border: none; cursor: pointer; font-size: .82rem; font-weight: 700;
+        font-family: inherit; color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        transition: transform .15s, box-shadow .15s, background .15s;
+        position: relative;
+    }
+    .chair-btn.available {
+        background: var(--green);
+        box-shadow: 0 2px 6px rgba(16,185,129,.3);
+    }
+    .chair-btn.available:hover {
+        transform: scale(1.12);
+        box-shadow: 0 4px 12px rgba(16,185,129,.45);
+    }
+    .chair-btn.occupied {
+        background: var(--red);
+        box-shadow: 0 2px 6px rgba(239,68,68,.3);
+        cursor: not-allowed; opacity: .85;
+    }
+    .chair-btn.selected {
+        background: var(--blue-chair);
+        box-shadow: 0 4px 14px rgba(59,130,246,.5);
+        transform: scale(1.1);
+    }
+    .chair-btn.selected:hover { transform: scale(1.18); }
+
+    /* Side chairs layout */
+    .chairs-sides {
+        display: flex; align-items: center; gap: 12px; width: 100%;
+        justify-content: center;
+    }
+    .chairs-side-col { display: flex; flex-direction: column; gap: 10px; }
+
+    /* ── Whole room mode (Mode 2) ──────────────────────────────── */
+    .whole-room-section { animation: fadeIn .2s ease; }
+
+    .whole-room-banner {
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        border: 1.5px solid #bfdbfe; border-radius: 14px;
+        padding: 20px 24px; display: flex; align-items: center; gap: 16px;
+        margin-bottom: 20px;
+    }
+    .whole-room-icon {
+        width: 52px; height: 52px; background: var(--primary); border-radius: 12px;
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        color: #fff; font-size: 1.4rem;
+    }
+    .whole-room-text h3 { margin: 0 0 4px; font-size: 1rem; font-weight: 700; color: #1e3a8a; }
+    .whole-room-text p  { margin: 0; font-size: .85rem; color: #3b82f6; font-weight: 500; }
+
+    .coworking-banner {
+        background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%);
+        border: 1.5px solid #bae6fd; border-radius: 14px;
+        padding: 20px 24px; display: flex; align-items: center; gap: 16px;
+        margin-bottom: 20px;
+    }
+    .coworking-icon {
+        width: 52px; height: 52px; background: #0ea5e9; border-radius: 12px;
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        color: #fff; font-size: 1.4rem;
+    }
+    .coworking-text h3 { margin: 0 0 4px; font-size: 1rem; font-weight: 700; color: #0f172a; }
+    .coworking-text p  { margin: 0; font-size: .85rem; color: #0369a1; font-weight: 500; }
+    .coworking-status {
+        font-size: .8rem; color: var(--gray-500); margin-bottom: 12px;
+    }
+    .coworking-status.error { color: var(--red-dark); }
+    .coworking-layout {
+        background: var(--gray-50); border: 1px solid var(--gray-200);
+        border-radius: 16px; padding: 18px; display: flex; flex-direction: column;
+        align-items: center; gap: 14px;
+    }
+    .coworking-row, .coworking-middle {
+        display: flex; align-items: center; justify-content: center; gap: 18px; width: 100%;
+    }
+    .coworking-middle { gap: 26px; }
+    .coworking-side { min-width: 58px; display: flex; justify-content: center; }
+    .coworking-table {
+        width: 240px; min-height: 120px; border-radius: 28px; background: #fff3a6;
+        border: 2px solid #e0c54f; box-shadow: 0 8px 18px rgba(0,0,0,.08);
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        text-align: center; padding: 16px;
+    }
+    .coworking-table-label { font-size: .7rem; font-weight: 700; letter-spacing: .12em; color: #7c6a00; }
+    .coworking-table-name { font-size: 1rem; font-weight: 700; color: #5f5600; }
+    .coworking-table-cap  { font-size: .82rem; color: #7c6a00; }
+    .modal-chair-btn {
+        width: 48px; height: 48px; border-radius: 50%; border: none;
+        display: inline-flex; align-items: center; justify-content: center;
+        color: #fff; font-size: .86rem; font-weight: 700; font-family: inherit;
+        cursor: pointer; transition: transform .15s, box-shadow .15s, background .15s;
+    }
+    .modal-chair-btn.available { background: var(--green); box-shadow: 0 2px 6px rgba(16,185,129,.28); }
+    .modal-chair-btn.available:hover { transform: scale(1.08); box-shadow: 0 4px 12px rgba(16,185,129,.4); }
+    .modal-chair-btn.mine { background: #16a34a; box-shadow: 0 2px 6px rgba(22,163,74,.28); }
+    .modal-chair-btn.taken { background: var(--red); cursor: not-allowed; opacity: .85; }
+    .modal-chair-btn.selected-reserve,
+    .modal-chair-btn.selected-cancel {
+        background: var(--blue-chair); box-shadow: 0 4px 14px rgba(59,130,246,.45); transform: scale(1.1);
+    }
+
+    .slots-section { animation: fadeIn .2s ease; }
+    .slots-grid {
+        display: grid; grid-template-columns: repeat(3, 1fr);
+        gap: 8px; margin-bottom: 12px;
+    }
+    .slot-btn {
+        border: 1.5px solid var(--gray-200);
+        border-radius: 10px;
+        padding: 11px 10px;
+        background: #fff;
+        color: var(--gray-700);
+        font-size: .83rem;
+        font-weight: 700;
+        font-family: inherit;
+        cursor: pointer;
+        transition: border-color .15s, background .15s, transform .1s, box-shadow .15s;
+    }
+    .slot-btn.available {
+        background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe;
+    }
+    .slot-btn.available:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(37,99,235,.12);
+    }
+    .slot-btn.selected {
+        background: #1d4ed8; color: #fff; border-color: #1d4ed8;
+        box-shadow: 0 6px 16px rgba(29,78,216,.22);
+    }
+    .slot-btn.mine {
+        background: var(--green-light); color: var(--green-dark); border-color: #6ee7b7;
+        cursor: default;
+    }
+    .slot-btn.taken {
+        background: var(--gray-100); color: var(--gray-400); border-color: var(--gray-200);
+        cursor: not-allowed;
+    }
+    .slot-btn:disabled { transform: none; box-shadow: none; }
+    .slot-status {
+        font-size: .8rem; color: var(--gray-500); margin-bottom: 12px;
+    }
+    .slot-status.error {
+        color: var(--red-dark);
+    }
+    .selected-slot-info {
+        background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px;
+        padding: 10px 14px; margin-bottom: 14px;
+        display: flex; align-items: center; gap: 8px;
+        font-size: .87rem; font-weight: 600; color: #1d4ed8;
+    }
+
+    /* ── Shared form fields ────────────────────────────────────── */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+
+    .field-group { display: flex; flex-direction: column; gap: 6px; }
+    .field-label {
+        font-size: .78rem; font-weight: 700; color: var(--gray-600);
+        display: flex; align-items: center; gap: 5px;
+        text-transform: uppercase; letter-spacing: .05em;
+    }
+    .field-label svg { color: var(--gray-400); }
+    .field-input {
+        border: 1.5px solid var(--gray-200); border-radius: 10px;
+        padding: 10px 14px; font-size: .9rem; font-family: inherit;
+        color: var(--gray-900); background: #fff; outline: none;
+        transition: border-color .15s, box-shadow .15s;
+        width: 100%; box-sizing: border-box;
+    }
+    .field-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+
+    .field-textarea {
+        resize: vertical; min-height: 80px;
+    }
+
+    .char-count {
+        text-align: right; font-size: .75rem; color: var(--gray-400); margin-top: -8px;
+    }
+
+    /* Duration badge */
+    .duration-badge {
+        background: var(--gray-50); border: 1.5px solid var(--gray-200);
+        border-radius: 10px; padding: 10px 14px;
+        font-size: .9rem; font-weight: 600; color: var(--gray-700);
+        display: flex; align-items: center; gap: 6px;
+    }
+    .duration-badge .dur-val { color: var(--primary); }
+
+    /* Selected chair info */
+    .selected-chair-info {
+        background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px;
+        padding: 10px 14px; margin-bottom: 14px;
+        display: flex; align-items: center; gap: 8px;
+        font-size: .87rem; font-weight: 600; color: #1d4ed8;
+    }
+
+    /* Modal footer */
+    .modal-footer {
+        padding: 16px 24px 24px;
+        display: flex; gap: 10px;
+        border-top: 1px solid var(--gray-100);
+    }
+    .btn-cancel {
+        flex: 1; padding: 13px 20px; border-radius: 10px;
+        background: var(--gray-100); border: none; color: var(--gray-700);
+        font-size: .93rem; font-weight: 600; font-family: inherit;
+        cursor: pointer; transition: background .15s;
+    }
+    .btn-cancel:hover { background: var(--gray-200); }
+    .btn-confirm {
+        flex: 2; padding: 13px 20px; border-radius: 10px;
+        background: var(--primary); border: none; color: #fff;
+        font-size: .93rem; font-weight: 700; font-family: inherit;
+        cursor: pointer; transition: background .15s, box-shadow .15s, transform .1s;
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-confirm:hover {
+        background: var(--primary-hover);
+        box-shadow: 0 4px 14px rgba(37,99,235,.35);
+        transform: translateY(-1px);
+    }
+    .btn-confirm:active { transform: translateY(0); }
+    .btn-confirm:disabled {
+        background: var(--gray-300); cursor: not-allowed; box-shadow: none; transform: none;
+    }
+
+    /* Success toast */
+    .toast {
+        position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+        background: #111827; color: #fff; padding: 14px 22px; border-radius: 12px;
+        font-size: .9rem; font-weight: 500;
+        display: flex; align-items: center; gap: 10px;
+        box-shadow: 0 8px 24px rgba(0,0,0,.25); z-index: 2000;
+        opacity: 0; pointer-events: none;
+        transition: opacity .25s, transform .25s;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast-icon { color: var(--green); font-size: 1.1rem; }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 560px) {
+        .form-grid, .form-grid-3 { grid-template-columns: 1fr; }
+        .slots-grid { grid-template-columns: 1fr 1fr; }
+        .coworking-middle { gap: 12px; }
+        .coworking-table { width: 180px; min-height: 100px; }
+        .modal-box { border-radius: 16px 16px 0 0; max-height: 95vh; }
+        .modal-overlay { align-items: flex-end; padding: 0; }
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div id="espaces-root" style="max-width:1200px;margin:0 auto;padding:28px 24px">
+
+    <div class="page-header">
+        <h1>Réserver un espace</h1>
+        <p>Choisissez parmi les espaces disponibles ci-dessous.</p>
+    </div>
+
+    {# ── Search ────────────────────────────────────────────────────────────── #}
+    <div class="search-bar">
+        <span class="search-ico">🔍</span>
+        <input type="text" id="searchEspace" placeholder="Rechercher un espace…" oninput="applyFilters()">
+    </div>
+
+    {# ── Filters ───────────────────────────────────────────────────────────── #}
+    <div class="filter-bar">
+        <div class="filter-group">
+            <span class="filter-label">Type</span>
+            <button class="filter-btn is-active" data-type="all" aria-pressed="true">Tous</button>
+            <button class="filter-btn" data-type="reunion" aria-pressed="false">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                Réunion
+            </button>
+            <button class="filter-btn" data-type="coworking" aria-pressed="false">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                Coworking
+            </button>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Statut</span>
+            <button class="filter-btn is-active" data-statut="all" aria-pressed="true">Tous</button>
+            <button class="filter-btn btn-dispo" data-statut="disponible" aria-pressed="false">
+                <span class="dot dot-green"></span> Disponible
+            </button>
+            <button class="filter-btn btn-occupe" data-statut="occupe" aria-pressed="false">
+                <span class="dot dot-red"></span> Occupé
+            </button>
+        </div>
+    </div>
+
+    {# ── Espaces grid ─────────────────────────────────────────────────────── #}
+    <div class="espaces-grid" id="espacesGrid">
+
+        {% for espace in espaces %}
+
+            {% set typeKey = (espace.typeEspace|default('')|lower)|replace({' ': '', '-': ''}) %}
+            {% set isOccupiedToday = occupiedTodayIds[espace.id]|default(false) %}
+            {% set isCoworking  = typeKey in ['coworking', 'co-working', 'cowork'] %}
+            {# Allow opening the modal even if some hours are already taken.
+               We'll hide taken slots inside the modal instead of disabling the card. #}
+            {% set canReserve = espace.disponible %}
+            {% set cardStatus = isOccupiedToday or not espace.disponible ? 'occupe' : 'disponible' %}
+
+            <div class="espace-card"
+                 data-name="{{ espace.nom|lower }}"
+                 data-type="{{ isCoworking ? 'coworking' : 'reunion' }}"
+                 data-statut="{{ cardStatus }}">
+
+                <div class="card-img-wrap">
+                    {% if espace.urlImage is defined and espace.urlImage %}
+                        <img src="{{ espace.urlImage starts with 'http' ? espace.urlImage : asset(espace.urlImage) }}"
+                             alt="{{ espace.nom }}" loading="lazy">
+                    {% else %}
+                        <div class="card-img-placeholder">🏢</div>
+                    {% endif %}
+
+                    <span class="card-type-badge">
+                        {% if isCoworking %}
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                            Coworking
+                        {% else %}
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                            Réunion
+                        {% endif %}
+                    </span>
+
+                    <span class="card-status-badge {{ cardStatus == 'disponible' ? 'dispo' : 'occupe' }}">
+                        <span class="dot {{ cardStatus == 'disponible' ? 'dot-green' : 'dot-red' }}"></span>
+                        {{ cardStatus == 'disponible' ? 'Disponible' : 'Occupé' }}
+                    </span>
+                </div>
+
+                <div class="card-body">
+                    <p class="card-name">{{ espace.nom }}</p>
+
+                    <div class="card-info">
+                        {% if espace.etage is defined and espace.etage is not null %}
+                        <div class="card-info-row">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                            {{ espace.etage }}{% if espace.etage == 0 %}ème{% elseif espace.etage == 1 %}er{% else %}ème{% endif %} étage
+                        </div>
+                        {% endif %}
+
+                        {% if espace.capacite is defined and espace.capacite %}
+                        <div class="card-info-row">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                            {{ espace.capacite }} personne{{ espace.capacite > 1 ? 's' }}
+                        </div>
+                        {% endif %}
+
+                        {% if espace.typeEspace is defined and espace.typeEspace %}
+                        <div class="card-info-row">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            {{ espace.typeEspace }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    {% if espace.listeEquipements is defined and espace.listeEquipements is not empty %}
+                    <div class="card-equip">
+                        {% set tagColors = ['blue', 'purple', 'cyan', 'amber', 'green'] %}
+                        {% for equip in espace.listeEquipements|split(',') %}
+                            <span class="equip-tag {{ tagColors[loop.index0 % tagColors|length] }}">
+                                {{ equip|trim }}
+                            </span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="card-footer">
+                    {% if espace.disponible %}
+                        {% if isCoworking %}
+                            <button class="btn-cta"
+                                onclick="openReservationModal({
+                                    id: {{ espace.id }},
+                                    nom: '{{ espace.nom|e('js') }}',
+                                    type: 'coworking',
+                                    capacite: {{ espace.capacite|default(0) }},
+                                    etage: '{{ espace.etage is defined ? espace.etage : '' }}',
+                                    image: '{% if espace.urlImage is defined and espace.urlImage %}{{ espace.urlImage starts with 'http' ? espace.urlImage : asset(espace.urlImage) }}{% endif %}',
+                                    mode: 'chaise'
+                                })">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="8" r="4"/><path d="M4 20v-2a4 4 0 014-4h8a4 4 0 014 4v2"/></svg>
+                                Réserver une chaise
+                            </button>
+                        {% else %}
+                            <button class="btn-cta"
+                                onclick="openReservationModal({
+                                    id: {{ espace.id }},
+                                    nom: '{{ espace.nom|e('js') }}',
+                                    type: 'reunion',
+                                    capacite: {{ espace.capacite|default(0) }},
+                                    etage: '{{ espace.etage is defined ? espace.etage : '' }}',
+                                    image: '{% if espace.urlImage is defined and espace.urlImage %}{{ espace.urlImage starts with 'http' ? espace.urlImage : asset(espace.urlImage) }}{% endif %}',
+                                    mode: 'salle'
+                                })">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                                Réserver toute la salle
+                            </button>
+                        {% endif %}
+                    {% else %}
+                        <span class="btn-cta disabled" aria-disabled="true">Indisponible</span>
+                    {% endif %}
+                </div>
+
+            </div>
+
+        {% else %}
+            <p class="espaces-empty">Aucun espace disponible.</p>
+        {% endfor %}
+
+    </div>
+</div>
+
+{# ═══════════════════════════════════════════════════════════════
+   RESERVATION MODAL
+═══════════════════════════════════════════════════════════════ #}
+<div class="modal-overlay" id="reservationModal" role="dialog" aria-modal="true">
+    <div class="modal-box" id="modalBox">
+
+        {# Hero header #}
+        <div class="modal-hero" id="modalHero">
+            <img id="modalHeroImg" src="" alt="" style="display:none">
+            <div class="modal-hero-overlay">
+                <span class="modal-hero-badge" id="modalBadge">RÉUNION</span>
+                <h2 class="modal-hero-title" id="modalTitle">Espace</h2>
+                <p class="modal-hero-sub" id="modalSub"></p>
+            </div>
+            <button class="modal-close" onclick="closeModal()" aria-label="Fermer">✕</button>
+        </div>
+
+        {# Modal body #}
+        <div class="modal-body">
+
+            {# Mode toggle #}
+            <div class="mode-toggle" id="modeToggle">
+                <button class="mode-btn is-active" id="btnModeChaise" onclick="setMode('chaise')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20v-2a4 4 0 014-4h8a4 4 0 014 4v2"/></svg>
+                    Choisir une chaise
+                </button>
+                <button class="mode-btn" id="btnModeSalle" onclick="setMode('salle')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                    Réserver toute la salle
+                </button>
+            </div>
+
+            {# ── Mode 1: Chair layout ───────────────────────────────── #}
+            <div id="chairSection" class="chair-section">
+
+                {# ── Aperçu image du siège/espace ─────────────────── #}
+                <div id="chairSpaceImageWrap" style="
+                    display:none;
+                    margin-bottom:14px;
+                    border-radius:12px;
+                    overflow:hidden;
+                    height:140px;
+                    background:#f3f4f6;
+                    position:relative;
+                ">
+                    <img id="chairSpaceImage" src="" alt="Aperçu de l'espace" style="
+                        width:100%; height:100%; object-fit:cover; display:block;
+                    ">
+                    <div style="
+                        position:absolute; inset:0;
+                        background:linear-gradient(to top, rgba(0,0,0,.45) 0%, transparent 55%);
+                        display:flex; align-items:flex-end; padding:10px 14px;
+                    ">
+                        <span id="chairSpaceImageLabel" style="
+                            color:#fff; font-size:.82rem; font-weight:600;
+                            text-shadow:0 1px 4px rgba(0,0,0,.5);
+                        "></span>
+                    </div>
+                </div>
+
+                <div class="chair-legend">
+                    <div class="legend-item"><div class="legend-dot available"></div> Disponible</div>
+                    <div class="legend-item"><div class="legend-dot selected"></div> Selectionne</div>
+                    <div class="legend-item"><div class="legend-dot occupied"></div> Reserve</div>
+                </div>
+                <div class="coworking-banner">
+                    <div class="coworking-icon">💺</div>
+                    <div class="coworking-text">
+                        <h3>Reservation chaise par chaise</h3>
+                        <p>Les sieges sont affiches directement dans le popup pour la date choisie.</p>
+                    </div>
+                </div>
+                <div class="coworking-status" id="coworkingStatus">Choisissez une date pour afficher les sieges.</div>
+                <div class="coworking-layout" id="coworkingLayout"></div>
+                <div id="selectedChairInfo" class="selected-chair-info" style="display:none">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 00-2 2v6a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+                    Siege <strong id="selectedChairLabel">—</strong> selectionne
+                </div>
+            </div>
+
+            {# ── Mode 2: Whole room ─────────────────────────────────── #}
+            <div id="salleSection" class="whole-room-section" style="display:none">
+                <div class="whole-room-banner">
+                    <div class="whole-room-icon">🏛️</div>
+                    <div class="whole-room-text">
+                        <h3>Vous réservez toute la salle</h3>
+                        <p id="salleCapaciteInfo">Capacité : — personnes</p>
+                    </div>
+                </div>
+                <div class="slots-section">
+                    <div class="chair-legend">
+                        <div class="legend-item"><div class="legend-dot available"></div> Disponible</div>
+                        <div class="legend-item"><div class="legend-dot selected"></div> Selectionne</div>
+                        <div class="legend-item"><div class="legend-dot occupied"></div> Reserve</div>
+                    </div>
+                    <div class="slot-status" id="slotStatus">Choisissez une date pour afficher les creneaux.</div>
+                    <div class="slots-grid" id="slotsGrid"></div>
+                    <div id="selectedSlotInfo" class="selected-slot-info" style="display:none">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        Creneau <strong id="selectedSlotLabel">—</strong> selectionne
+                    </div>
+                </div>
+            </div>
+
+            {# ── Shared form fields ─────────────────────────────────── #}
+            <div class="form-grid">
+                <div class="field-group">
+                    <label class="field-label">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        Date
+                    </label>
+                    <input type="date" class="field-input" id="fieldDate" onchange="handleDateChange()">
+                </div>
+                <div class="field-group">
+                    <div class="duration-badge" id="coworkingDateHint">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M12 4h9"/><path d="M4 9h16"/><path d="M4 15h16"/><path d="M4 4v16"/></svg>
+                        <span class="dur-val">La date choisie sera transmise au plan</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="field-group" id="objectifGroup" style="margin-bottom:8px">
+                <label class="field-label">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Objectif de la réservation
+                </label>
+                <textarea class="field-input field-textarea" id="fieldObjectif"
+                    placeholder="Ex: Réunion équipe marketing, formation interne, workshop…"
+                    maxlength="300" oninput="updateCharCount()"></textarea>
+                <div class="char-count"><span id="charCount">0</span> / 300</div>
+            </div>
+
+        </div>{# /modal-body #}
+
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal()">Annuler</button>
+            <button class="btn-confirm" id="btnConfirm" onclick="submitReservation()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Confirmer la réservation
+            </button>
+        </div>
+
+    </div>
+</div>
+
+{# Toast notification #}
+<div class="toast" id="toast">
+    <span class="toast-icon">✓</span>
+    <span id="toastMsg">Réservation confirmée avec succès !</span>
+</div>
+
+<script>
+(function () {
+    'use strict';
+
+    /* ── Filter logic ────────────────────────────────────────── */
+    var activeType   = 'all';
+    var activeStatut = 'all';
+
+    window.applyFilters = function () {
+        var q = (document.getElementById('searchEspace').value || '').toLowerCase().trim();
+        document.querySelectorAll('#espaces-root .espace-card').forEach(function (card) {
+            var nameMatch   = (card.dataset.name   || '').includes(q);
+            var typeMatch   = activeType   === 'all' || card.dataset.type   === activeType;
+            var statutMatch = activeStatut === 'all' || card.dataset.statut === activeStatut;
+            card.style.display = (nameMatch && typeMatch && statutMatch) ? '' : 'none';
+        });
+    };
+
+    document.querySelectorAll('[data-type]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('[data-type]').forEach(function (b) {
+                b.classList.remove('is-active'); b.setAttribute('aria-pressed', 'false');
+            });
+            btn.classList.add('is-active'); btn.setAttribute('aria-pressed', 'true');
+            activeType = btn.dataset.type;
+            applyFilters();
+        });
+    });
+
+    document.querySelectorAll('[data-statut]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('[data-statut]').forEach(function (b) {
+                b.classList.remove('is-active'); b.setAttribute('aria-pressed', 'false');
+            });
+            btn.classList.add('is-active'); btn.setAttribute('aria-pressed', 'true');
+            activeStatut = btn.dataset.statut;
+            applyFilters();
+        });
+    });
+
+    /* ── Modal state ─────────────────────────────────────────── */
+    var currentSpace   = null;
+    var currentMode    = 'chaise';
+    var selectedSlot   = null;
+    var selectedChair  = null;
+    var selectedChairAction = 'reserve';
+
+    /* Close on overlay click */
+    document.getElementById('reservationModal').addEventListener('click', function (e) {
+        if (e.target === this) closeModal();
+    });
+
+    /* Escape key */
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeModal();
+    });
+
+    /* ── Open modal ──────────────────────────────────────────── */
+    window.openReservationModal = function (space) {
+        currentSpace  = space;
+        selectedSlot  = null;
+        selectedChair = null;
+        currentMode   = space.mode;
+
+        // Hero header image
+        var img = document.getElementById('modalHeroImg');
+        if (space.image) { img.src = space.image; img.style.display = 'block'; }
+        else             { img.style.display = 'none'; }
+        document.getElementById('modalTitle').textContent = space.nom;
+        document.getElementById('modalBadge').textContent = space.type === 'coworking' ? 'COWORKING' : 'RÉUNION';
+        document.getElementById('modalSub').textContent   =
+            (space.etage !== '' ? space.etage + 'ème étage • ' : '') + space.capacite + ' pers.';
+
+        // Aperçu image dans la section siège
+        var imgWrap  = document.getElementById('chairSpaceImageWrap');
+        var imgElt   = document.getElementById('chairSpaceImage');
+        var imgLabel = document.getElementById('chairSpaceImageLabel');
+        if (space.image && space.type === 'coworking') {
+            imgElt.src       = space.image;
+            imgLabel.textContent = space.nom;
+            imgWrap.style.display = 'block';
+        } else {
+            imgWrap.style.display = 'none';
+        }
+
+        // Always hide the toggle — mode is fixed by space type
+        document.getElementById('modeToggle').style.display = 'none';
+
+        // Pre-fill date
+        var today = new Date();
+        var yyyy = today.getFullYear();
+        var mm   = String(today.getMonth()+1).padStart(2,'0');
+        var dd   = String(today.getDate()).padStart(2,'0');
+        document.getElementById('fieldDate').value  = yyyy+'-'+mm+'-'+dd;
+        document.getElementById('fieldDate').min    = yyyy+'-'+mm+'-'+dd;
+        document.getElementById('fieldObjectif').value = '';
+        document.getElementById('charCount').textContent = '0';
+
+        document.getElementById('reservationModal').classList.add('is-open');
+        document.body.style.overflow = 'hidden';
+        setMode(space.mode);
+    };
+
+    window.closeModal = function () {
+        document.getElementById('reservationModal').classList.remove('is-open');
+        document.body.style.overflow = '';
+    };
+
+    /* ── Mode toggle ─────────────────────────────────────────── */
+    window.setMode = function (mode) {
+        currentMode = mode;
+        selectedSlot = null;
+        selectedChair = null;
+        document.getElementById('btnModeChaise').classList.toggle('is-active', mode === 'chaise');
+        document.getElementById('btnModeSalle').classList.toggle('is-active',  mode === 'salle');
+        document.getElementById('chairSection').style.display = mode === 'chaise' ? '' : 'none';
+        document.getElementById('salleSection').style.display = mode === 'salle'  ? '' : 'none';
+        document.getElementById('objectifGroup').style.display = mode === 'salle' ? '' : 'none';
+        document.getElementById('coworkingDateHint').style.display = mode === 'chaise' ? 'flex' : 'none';
+
+        if (mode === 'salle' && currentSpace) {
+            document.getElementById('salleCapaciteInfo').textContent =
+                'Capacité : ' + currentSpace.capacite + ' personne' + (currentSpace.capacite > 1 ? 's' : '');
+            refreshSlots();
+        }
+        if (mode === 'chaise' && currentSpace) {
+            refreshCoworkingSeats();
+        }
+        document.getElementById('selectedSlotInfo').style.display = 'none';
+        document.getElementById('selectedChairInfo').style.display = 'none';
+        updateConfirmBtn();
+        updateConfirmLabel();
+    };
+
+    function refreshCoworkingSeats() {
+        if (!currentSpace || currentMode !== 'chaise') return;
+
+        var date = document.getElementById('fieldDate').value;
+        var layout = document.getElementById('coworkingLayout');
+        var status = document.getElementById('coworkingStatus');
+        layout.innerHTML = '';
+        selectedChair = null;
+        selectedChairAction = 'reserve';
+        document.getElementById('selectedChairInfo').style.display = 'none';
+        updateConfirmBtn();
+
+        if (!date) {
+            status.textContent = 'Choisissez une date pour afficher les sieges.';
+            status.classList.remove('error');
+            return;
+        }
+
+        status.textContent = 'Chargement des sieges...';
+        status.classList.remove('error');
+
+        fetch('/coworking/' + currentSpace.id + '/availability?date=' + encodeURIComponent(date), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(function (response) {
+                if (!response.ok) throw new Error('Impossible de charger les sieges.');
+                return response.json();
+            })
+            .then(function (payload) {
+                var chairs = payload.chairs || [];
+                if (!chairs.length) {
+                    status.textContent = 'Aucun siege disponible.';
+                    return;
+                }
+
+                status.textContent = 'Choisissez un siege pour cette date.';
+                buildCoworkingLayout(chairs);
+            })
+            .catch(function (error) {
+                layout.innerHTML = '';
+                status.textContent = error.message;
+                status.classList.add('error');
+            });
+    }
+
+    function buildCoworkingLayout(chairs) {
+        var layout = document.getElementById('coworkingLayout');
+        layout.innerHTML = '';
+
+        // Hide seats taken by other people (keep only available + mine)
+        chairs = (chairs || []).filter(function (c) { return c && c.state !== 'TAKEN'; });
+
+        if (chairs.length === 6) {
+            var topRow = document.createElement('div');
+            topRow.className = 'coworking-row';
+            topRow.appendChild(createChairButton(chairs[0]));
+            topRow.appendChild(createChairButton(chairs[1]));
+
+            var middle = document.createElement('div');
+            middle.className = 'coworking-middle';
+
+            var left = document.createElement('div');
+            left.className = 'coworking-side';
+            left.appendChild(createChairButton(chairs[2]));
+
+            var table = document.createElement('div');
+            table.className = 'coworking-table';
+            table.innerHTML =
+                '<div class="coworking-table-label">TABLE</div>' +
+                '<div class="coworking-table-name">' + currentSpace.nom + '</div>' +
+                '<div class="coworking-table-cap">6 places</div>';
+
+            var right = document.createElement('div');
+            right.className = 'coworking-side';
+            right.appendChild(createChairButton(chairs[3]));
+
+            middle.appendChild(left);
+            middle.appendChild(table);
+            middle.appendChild(right);
+
+            var bottomRow = document.createElement('div');
+            bottomRow.className = 'coworking-row';
+            bottomRow.appendChild(createChairButton(chairs[4]));
+            bottomRow.appendChild(createChairButton(chairs[5]));
+
+            layout.appendChild(topRow);
+            layout.appendChild(middle);
+            layout.appendChild(bottomRow);
+            return;
+        }
+
+        var fallback = document.createElement('div');
+        fallback.className = 'chairs-row';
+        chairs.forEach(function (chair) {
+            var node = createChairButton(chair);
+            if (node) fallback.appendChild(node);
+        });
+        layout.appendChild(fallback);
+    }
+
+    function createChairButton(chair) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'modal-chair-btn ' + normalizeChairState(chair.state);
+        btn.textContent = chair.seatNumber;
+        btn.title = chair.state === 'MINE'
+            ? 'Votre siege - cliquer pour annuler'
+            : (chair.state === 'TAKEN' ? 'Siege reserve' : 'Siege disponible');
+
+        if (chair.state === 'TAKEN') return null;
+
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('#coworkingLayout .modal-chair-btn').forEach(function (el) {
+                el.classList.remove('selected-reserve', 'selected-cancel');
+            });
+
+            selectedChair = chair.seatNumber;
+            selectedChairAction = chair.state === 'MINE' ? 'cancel' : 'reserve';
+            btn.classList.add(selectedChairAction === 'cancel' ? 'selected-cancel' : 'selected-reserve');
+            document.getElementById('selectedChairLabel').textContent =
+                chair.seatNumber + (selectedChairAction === 'cancel' ? ' (annulation)' : ' (reservation)');
+            document.getElementById('selectedChairInfo').style.display = 'flex';
+            updateConfirmBtn();
+            updateConfirmLabel();
+        });
+
+        return btn;
+    }
+
+    function normalizeChairState(state) {
+        if (state === 'MINE') return 'mine';
+        if (state === 'TAKEN') return 'taken';
+        return 'available';
+    }
+
+    function refreshSlots() {
+        if (!currentSpace || currentMode !== 'salle') return;
+
+        var date = document.getElementById('fieldDate').value;
+        var grid = document.getElementById('slotsGrid');
+        var status = document.getElementById('slotStatus');
+        grid.innerHTML = '';
+        selectedSlot = null;
+        document.getElementById('selectedSlotInfo').style.display = 'none';
+        updateConfirmBtn();
+
+        if (!date) {
+            status.textContent = 'Choisissez une date pour afficher les creneaux.';
+            status.classList.remove('error');
+            return;
+        }
+
+        status.textContent = 'Chargement des creneaux...';
+        status.classList.remove('error');
+
+        fetch('/reservation-espaces/' + currentSpace.id + '/availability?date=' + encodeURIComponent(date), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error('Impossible de charger les creneaux.');
+                }
+                return response.json();
+            })
+            .then(function (payload) {
+                if (!payload.slots || !payload.slots.length) {
+                    status.textContent = 'Aucun creneau disponible.';
+                    return;
+                }
+
+                status.textContent = 'Choisissez un creneau de 1h entre 08:00 et 17:00.';
+
+                payload.slots.forEach(function (slot) {
+                    // Hide hours taken by other people
+                    if (slot.status === 'taken') return;
+
+                    var btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'slot-btn ' + slot.status;
+                    btn.textContent = slot.label;
+                    btn.title = slot.objectif ? slot.objectif : (slot.tooltip || '');
+
+                    if (slot.status === 'mine') {
+                        btn.disabled = true;
+                    } else {
+                        btn.addEventListener('click', function () {
+                            document.querySelectorAll('#slotsGrid .slot-btn.selected').forEach(function (activeBtn) {
+                                activeBtn.classList.remove('selected');
+                                activeBtn.classList.add('available');
+                            });
+
+                            btn.classList.remove('available');
+                            btn.classList.add('selected');
+                            selectedSlot = slot.hour;
+                            document.getElementById('selectedSlotLabel').textContent = slot.label;
+                            document.getElementById('selectedSlotInfo').style.display = 'flex';
+                            updateConfirmBtn();
+                        });
+                    }
+
+                    grid.appendChild(btn);
+                });
+            })
+            .catch(function (error) {
+                grid.innerHTML = '';
+                status.textContent = error.message;
+                status.classList.add('error');
+            });
+    }
+
+    /* ── Char counter ─────────────────────────────────────────── */
+    window.updateCharCount = function () {
+        var val = document.getElementById('fieldObjectif').value;
+        document.getElementById('charCount').textContent = val.length;
+    };
+
+    window.handleDateChange = function () {
+        if (currentMode === 'chaise') {
+            refreshCoworkingSeats();
+        }
+        if (currentMode === 'salle') {
+            refreshSlots();
+        }
+    };
+
+    /* ── Confirm button state ─────────────────────────────────── */
+    function updateConfirmBtn() {
+        var btn = document.getElementById('btnConfirm');
+        if (currentMode === 'chaise') {
+            btn.disabled = selectedChair === null;
+            return;
+        }
+        btn.disabled = selectedSlot === null;
+    }
+
+    function updateConfirmLabel() {
+        var btn = document.getElementById('btnConfirm');
+        btn.innerHTML = currentMode === 'chaise'
+            ? (selectedChairAction === 'cancel'
+                ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>Annuler ce siege'
+                : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Reserver ce siege')
+            : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Confirmer la reservation';
+    }
+
+    /* ── Submit reservation ──────────────────────────────────── */
+    window.submitReservation = function () {
+        var date = document.getElementById('fieldDate').value;
+        var obj  = document.getElementById('fieldObjectif').value.trim();
+        var btn  = document.getElementById('btnConfirm');
+
+        if (!date) {
+            alert('Veuillez selectionner une date.');
+            return;
+        }
+
+        /* ── Mode chaise (coworking) ──────────────────────── */
+        if (currentMode === 'chaise') {
+            if (selectedChair === null) {
+                alert('Veuillez selectionner un siege.');
+                return;
+            }
+
+            var isCancel = selectedChairAction === 'cancel';
+            var url = '/coworking/' + currentSpace.id + '/' + (isCancel ? 'cancel-chair' : 'reserve');
+
+            // Désactiver le bouton + loader
+            btn.disabled = true;
+            btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Enregistrement…';
+
+            var formData = new FormData();
+            formData.append('_token', isCancel ? '{{ csrf_token("cancel_chair_popup") }}' : '{{ csrf_token("reserve_chair_popup") }}');
+            formData.append('chair_number', String(selectedChair));
+            formData.append('date', date);
+
+            fetch(url, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: formData
+            })
+            .then(function (res) {
+                if (!res.ok) throw new Error('Erreur serveur (' + res.status + ')');
+                return res.json().catch(function () { return {}; });
+            })
+            .then(function (json) {
+                if (json && json.success === false) {
+                    throw new Error(json.message || 'Erreur lors de la réservation.');
+                }
+                closeModal();
+                showToast(isCancel ? 'Siège annulé avec succès !' : 'Siège réservé avec succès !');
+                setTimeout(function () {
+                    window.location.href = '/reservation-espaces';
+                }, 1400);
+            })
+            .catch(function (err) {
+                btn.disabled = false;
+                updateConfirmLabel();
+                alert(err.message || 'Impossible de finaliser la réservation.');
+            });
+            return;
+        }
+
+        /* ── Mode salle entière ───────────────────────────── */
+        if (selectedSlot === null) {
+            alert('Veuillez selectionner un creneau horaire.');
+            return;
+        }
+
+        if (!obj) {
+            alert('Veuillez saisir un objectif.');
+            return;
+        }
+
+        var start = String(selectedSlot).padStart(2, '0') + ':00';
+        var end   = String(selectedSlot + 1).padStart(2, '0') + ':00';
+
+        // Désactiver + loader
+        btn.disabled = true;
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Enregistrement…';
+
+        var salleFd = new FormData();
+        salleFd.append('espace', currentSpace.id);
+        salleFd.append('dateReservation', date);
+        salleFd.append('dateHeureDebut', date + 'T' + start);
+        salleFd.append('dateHeureFin',   date + 'T' + end);
+        salleFd.append('objectif', obj);
+        salleFd.append('_token', '{{ csrf_token("quick_booking") }}');
+
+        fetch('/reservation-espaces/new', {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: salleFd
+        })
+        .then(function (res) {
+            // Le contrôleur redirige sur succès (303) — fetch suit les redirections
+            // On vérifie juste que la réponse est ok ou une redirection réussie
+            if (res.ok || res.redirected) {
+                closeModal();
+                showToast('Réservation confirmée avec succès !');
+                setTimeout(function () {
+                    window.location.href = '/reservation-espaces';
+                }, 1400);
+            } else {
+                throw new Error('Erreur serveur (' + res.status + ')');
+            }
+        })
+        .catch(function (err) {
+            btn.disabled = false;
+            updateConfirmLabel();
+            alert(err.message || 'Impossible de finaliser la réservation.');
+        });
+    };
+
+    /* ── Toast ───────────────────────────────────────────────── */
+    function showToast(msg) {
+        var t = document.getElementById('toast');
+        document.getElementById('toastMsg').textContent = msg;
+        t.classList.add('show');
+        setTimeout(function () { t.classList.remove('show'); }, 3500);
+    }
+
+})();
+</script>
+{% endblock %}

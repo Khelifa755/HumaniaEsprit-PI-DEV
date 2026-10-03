@@ -1,0 +1,131 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Réunions — Humania{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{{ asset('css/reunion_modal.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/planification/boarding.css') }}">
+    <style>
+        .page-toolbar {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+        .page-toolbar h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #111827;
+            margin: 0 0 .25rem;
+        }
+        .page-toolbar p { color: #6b7280; font-size: .9rem; margin: 0; }
+        .reunion-table-wrap {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .reunion-table-wrap table { margin-bottom: 0; }
+        .reunion-table-wrap th {
+            font-size: .72rem;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            color: #6b7280;
+            font-weight: 600;
+            border-bottom-color: #e5e7eb;
+        }
+        .reunion-empty { text-align: center; color: #9ca3af; padding: 2rem !important; }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-2 px-md-3">
+    <div class="page-toolbar">
+        <div>
+            <h1>Réunions</h1>
+            <p>Planifiez vos réunions et salles</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <a href="{{ path('app_reunion_calendar') }}" class="btn btn-outline-secondary btn-sm rounded-3">
+                <i class="bi bi-calendar3 me-1"></i>Vue calendrier
+            </a>
+            <button type="button" class="btn btn-sm rounded-3 fw-medium text-white border-0"
+                    style="background:#7F77DD"
+                    data-rm-open>
+                <i class="bi bi-plus-lg me-1"></i>Nouvelle réunion
+            </button>
+        </div>
+    </div>
+
+    <div class="reunion-table-wrap">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Titre</th>
+                        <th>Début</th>
+                        <th>Fin</th>
+                        <th>Lieu</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for reunion in reunions %}
+                    <tr>
+                        <td class="fw-medium">{{ reunion.titre }}</td>
+                        <td class="text-muted small">{{ reunion.dateHeureDebut|date('d/m/Y H:i') }}</td>
+                        <td class="text-muted small">{{ reunion.dateHeureFin|date('d/m/Y H:i') }}</td>
+                        <td class="small">
+                            {% if reunion.enLigne %}
+                                <span class="badge text-bg-info">En ligne</span>
+                            {% elseif reunion.idSalle %}
+                                {{ reunion.idSalle.nom }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                        <td class="text-end text-nowrap">
+                            <a href="{{ path('app_reunion_show', { id: reunion.id }) }}" class="btn btn-sm btn-outline-primary rounded-3">Voir</a>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-3"
+                                    data-rm-edit-url="{{ path('app_reunion_edit', { id: reunion.id }) }}">Modifier</button>
+                            <form method="post" action="{{ path('app_reunion_delete', { id: reunion.id }) }}" class="d-inline"
+                                  onsubmit="return confirm('Supprimer cette réunion ?');">
+                                <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ reunion.id) }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-3">Supprimer</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="5" class="reunion-empty">Aucune réunion pour le moment.</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% include 'PLANNIFICATION/reunion/_modal_nouvelle_reunion.html.twig' with {
+    form_create: form_create,
+    open_reunion_modal: open_reunion_modal
+} %}
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script src="{{ asset('js/reunion_modal.js') }}"></script>
+    {% if open_reunion_modal %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.rmOpenModal) {
+                window.rmOpenModal();
+            }
+        });
+    </script>
+    {% endif %}
+{% endblock %}

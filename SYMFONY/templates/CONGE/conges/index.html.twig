@@ -1,0 +1,315 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mon Congé — Humania{% endblock %}
+
+{% set today = "now"|date("Y-m-d") %}
+
+{% block stylesheets %}
+<style>
+    :root {
+        --green:#10b981;--green-dark:#059669;--green-light:#d1fae5;--green-bg:#ecfdf5;
+        --red:#ef4444;--red-light:#fee2e2;--orange:#f59e0b;--orange-light:#fef3c7;
+        --blue:#667eea;--blue-light:#eef2ff;
+        --s8:#1e293b;--s6:#475569;--s4:#94a3b8;--s2:#e2e8f0;--s1:#f1f5f9;
+        --shadow-sm:0 1px 3px rgba(0,0,0,.08);--shadow-md:0 4px 14px rgba(0,0,0,.08);--radius:14px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'DM Sans','Segoe UI',sans-serif;background:#f0f4ff;color:var(--s8);min-height:100vh;}
+    .conge-wrapper{max-width:1100px;margin:0 auto;padding:32px 28px;display:flex;flex-direction:column;gap:24px;}
+    .conge-header{background:linear-gradient(135deg,#10b981,#059669);border-radius:16px;padding:24px 28px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 8px 24px rgba(16,185,129,.3);}
+    .conge-header h1{font-size:22px;font-weight:700;color:#fff;display:flex;align-items:center;gap:10px;}
+    .conge-header p{font-size:12px;color:rgba(255,255,255,.82);margin-top:4px;}
+    .conge-btn-new{display:inline-flex;align-items:center;gap:8px;background:#fff;color:var(--green-dark);border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.12);transition:transform .15s;}
+    .conge-btn-new:hover{transform:translateY(-1px);}
+    .conge-search{background:#fff;border-radius:var(--radius);padding:14px 20px;display:flex;align-items:center;gap:16px;box-shadow:var(--shadow-sm);border:1px solid var(--s2);}
+    .conge-search-in{flex:1;display:flex;align-items:center;gap:10px;}
+    .conge-search-in input{border:none;outline:none;font-size:13px;color:var(--s8);background:transparent;width:100%;}
+    .conge-search-in input::placeholder{color:var(--s4);}
+    .conge-sdiv{width:1px;height:32px;background:var(--s2);}
+    .conge-fg{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--s6);font-weight:600;}
+    .conge-fg select{border:1px solid var(--s2);border-radius:8px;padding:6px 10px;font-size:12px;background:var(--s1);cursor:pointer;outline:none;}
+    .conge-btn-ref{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1.5px solid var(--green);color:var(--green-dark);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;transition:background .15s;}
+    .conge-btn-ref:hover{background:var(--green-bg);}
+    .conge-form-card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow-md);border:1px solid #e8f5ee;overflow:hidden;}
+    .conge-form-head{background:linear-gradient(to right,#f0fdf4,#ecfdf5);padding:18px 24px 14px;border-bottom:1px solid #d1fae5;}
+    .conge-form-head h2{font-size:15px;font-weight:700;color:var(--s8);display:flex;align-items:center;gap:8px;}
+    .conge-form-head p{font-size:11px;color:var(--s4);margin-top:2px;}
+    .conge-form-body{padding:22px 24px;}
+    .conge-row3{display:grid;grid-template-columns:1fr 1fr 200px;gap:16px;margin-bottom:18px;}
+    .conge-row2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;}
+    .conge-row2.conge-row-type-only{grid-template-columns:1fr;max-width:100%;}
+    .conge-grp{display:flex;flex-direction:column;gap:6px;}
+    .conge-grp label{font-size:9px;font-weight:700;color:var(--s4);letter-spacing:1px;text-transform:uppercase;}
+    .conge-grp input,.conge-grp select{border:1.5px solid var(--s2);border-radius:9px;padding:10px 14px;font-size:13px;color:var(--s8);background:#fff;outline:none;transition:border-color .2s;font-family:inherit;width:100%;}
+    .conge-grp input:focus,.conge-grp select:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(16,185,129,.12);}
+    #conge-nbr-display{border:1.5px solid #d1fae5;border-radius:9px;padding:10px 14px;font-size:13px;font-weight:700;width:100%;background:#f0fdf4;color:#059669;cursor:not-allowed;outline:none;font-family:inherit;}
+    .conge-err{font-size:11px;color:var(--red);font-weight:600;margin-top:4px;display:none;}
+    .conge-err.on{display:block;}
+    .conge-field-err{border-color:var(--red)!important;box-shadow:0 0 0 3px rgba(239,68,68,.12)!important;}
+    .conge-actions{display:flex;justify-content:flex-end;gap:12px;padding-top:8px;}
+    .conge-btn-cancel{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1.5px solid var(--s2);color:var(--s6);border-radius:9px;padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;}
+    .conge-btn-cancel:hover{background:var(--s1);}
+    .conge-btn-submit{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--green),var(--green-dark));color:#fff;border:none;border-radius:9px;padding:9px 22px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(16,185,129,.3);transition:transform .15s;}
+    .conge-btn-submit:hover{transform:translateY(-1px);}
+    .conge-list{display:flex;flex-direction:column;gap:12px;}
+    .conge-card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow-sm);border:1px solid var(--s2);display:flex;overflow:hidden;transition:box-shadow .2s,transform .15s;}
+    .conge-card:hover{box-shadow:var(--shadow-md);transform:translateY(-1px);}
+    .conge-accent{width:4px;min-height:100%;flex-shrink:0;}
+    .ca-ap{background:var(--green);}.ca-re{background:var(--red);}.ca-at{background:var(--orange);}
+    .conge-av{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:#fff;flex-shrink:0;margin:18px 12px 18px 16px;}
+    .av-ap{background:var(--green);}.av-re{background:var(--red);}.av-at{background:var(--orange);}
+    .conge-main{flex:1;padding:16px 0;display:flex;flex-direction:column;gap:8px;}
+    .conge-main h3{font-size:14px;font-weight:700;color:var(--s8);display:flex;align-items:center;gap:10px;}
+    .conge-meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+    .conge-chip{display:inline-flex;align-items:center;gap:5px;background:var(--s1);border:1px solid var(--s2);border-radius:20px;padding:4px 12px;font-size:11px;color:var(--s6);font-weight:600;}
+    .conge-badge{display:inline-flex;align-items:center;padding:4px 14px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border:1.5px solid transparent;}
+    .bd-ap{background:var(--green-light);color:var(--green-dark);border-color:#a7f3d0;}
+    .bd-re{background:var(--red-light);color:var(--red);border-color:#fca5a5;}
+    .bd-at{background:var(--orange-light);color:#b45309;border-color:#fde68a;}
+    .conge-btns{display:flex;flex-direction:column;gap:8px;padding:14px 18px 14px 16px;justify-content:center;border-left:1px solid var(--s1);margin-left:16px;}
+    .conge-ba{display:inline-flex;align-items:center;gap:6px;border-radius:8px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none;border:1.5px solid transparent;transition:background .15s;white-space:nowrap;background:none;}
+    .conge-ba:hover{transform:translateY(-1px);}
+    .ba-edit{background:var(--blue-light);color:var(--blue);border-color:#c7d2fe;}
+    .ba-edit:hover{background:#e0e7ff;}
+    .ba-arch{background:var(--orange-light);color:#b45309;border-color:#fde68a;}
+    .ba-arch:hover{background:#fef3c7;}
+    .conge-empty{background:#fff;border-radius:var(--radius);padding:60px 40px;text-align:center;border:1px dashed var(--s2);}
+    .conge-empty .ico{font-size:48px;margin-bottom:16px;}
+    .conge-empty h3{font-size:16px;font-weight:700;color:var(--s4);}
+    .conge-empty p{font-size:13px;color:var(--s4);margin-top:6px;}
+    .conge-flash{border-radius:10px;padding:12px 18px;font-size:13px;font-weight:600;border:1.5px solid;}
+    .cf-ok{background:var(--green-bg);color:var(--green-dark);border-color:#a7f3d0;}
+    .cf-err{background:var(--red-light);color:var(--red);border-color:#fca5a5;}
+    #conge-form-wrap{display:none;}
+    #conge-form-wrap.open{display:block;}
+    input[type="date"]::-webkit-calendar-picker-indicator{cursor:pointer;}
+</style>
+{% endblock %}
+
+{% block body %}
+
+{# ✅ Construire le dictionnaire ID → libelle depuis la BDD #}
+{% set typeLabels = {} %}
+{% for type in typeConges %}
+    {% set typeLabels = typeLabels|merge({(type.id): type.libelle}) %}
+{% endfor %}
+
+<div class="conge-wrapper">
+
+    {% for msg in app.flashes('success') %}<div class="conge-flash cf-ok">✓ {{ msg }}</div>{% endfor %}
+    {% for msg in app.flashes('error')   %}<div class="conge-flash cf-err">✕ {{ msg }}</div>{% endfor %}
+
+    {# Header #}
+    <div class="conge-header">
+        <div>
+            <h1>🌴 Mes Congés</h1>
+            <p>Gérez vos demandes de congés</p>
+        </div>
+        <button class="conge-btn-new" id="conge-toggle-btn" type="button">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            Nouveau congé
+        </button>
+    </div>
+
+    {# Barre recherche #}
+    <div class="conge-search">
+        <div class="conge-search-in">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" id="conge-search-input" placeholder="Rechercher un congé..." oninput="congeFilter()">
+        </div>
+        <div class="conge-sdiv"></div>
+        <div class="conge-fg">Statut :
+            <select id="conge-filter-statut" onchange="congeFilter()">
+                <option value="">Tous les statuts</option>
+                <option value="en attente">En attente</option>
+                <option value="approuvé">Approuvé</option>
+                <option value="refusé">Refusé</option>
+            </select>
+        </div>
+        <div class="conge-fg">Type :
+            <select id="conge-filter-type" onchange="congeFilter()">
+                <option value="">Tous les types</option>
+                {# ✅ Types depuis la BDD — sans doublons #}
+                {% for type in typeConges %}
+                    <option value="{{ type.id }}">{{ type.libelle }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <a href="{{ path('app_conge_index') }}" class="conge-btn-ref">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+            Actualiser
+        </a>
+    </div>
+
+    {# Formulaire inline #}
+    <div id="conge-form-wrap">
+        <div class="conge-form-card">
+            <div class="conge-form-head">
+                <h2>📋 Nouvelle demande de congé</h2>
+                <p>Renseignez les dates et informations du congé</p>
+            </div>
+            <div class="conge-form-body">
+                {{ form_start(formNew, {'attr': {'novalidate': 'novalidate'}}) }}
+                {{ form_widget(formNew.utilisateurId, {'attr': {'style': 'display:none', 'value': '1'}}) }}
+
+                <div class="conge-row3">
+                    <div class="conge-grp">
+                        <label>Date début *</label>
+                        {{ form_widget(formNew.dateDebut, {'attr': {'min': today}}) }}
+                        <span class="conge-err" id="conge-err-debut">⚠️ Date dans le passé non autorisée.</span>
+                    </div>
+                    <div class="conge-grp">
+                        <label>Date fin *</label>
+                        {{ form_widget(formNew.dateFin, {'attr': {'min': today}}) }}
+                        <span class="conge-err" id="conge-err-fin-passe">⚠️ Date dans le passé non autorisée.</span>
+                        <span class="conge-err" id="conge-err-fin-ordre">⚠️ La fin doit être après le début.</span>
+                    </div>
+                    <div class="conge-grp">
+                        <label>Nombre de jours</label>
+                        <input type="text" id="conge-nbr-display" readonly placeholder="Automatique…">
+                        {{ form_widget(formNew.nbrJours, {'attr': {'style': 'display:none'}}) }}
+                    </div>
+                </div>
+
+                {% set congeStatutHidden = 'hidden' in formNew.statut.vars.block_prefixes %}
+                {% if congeStatutHidden %}
+                    {{ form_widget(formNew.statut) }}
+                {% endif %}
+                <div class="conge-row2{{ congeStatutHidden ? ' conge-row-type-only' : '' }}">
+                    {% if not congeStatutHidden %}
+                    <div class="conge-grp">
+                        <label>Statut *</label>
+                        {{ form_widget(formNew.statut) }}
+                    </div>
+                    {% endif %}
+                    <div class="conge-grp">
+                        <label>Type de congé *</label>
+                        {{ form_widget(formNew.typeCongeId) }}
+                    </div>
+                </div>
+
+                <div class="conge-actions">
+                    <button type="button" class="conge-btn-cancel" id="conge-cancel-btn">✕ Annuler</button>
+                    <button type="submit" class="conge-btn-submit" id="conge-submit-btn">💾 Enregistrer le congé</button>
+                </div>
+
+                {{ form_end(formNew) }}
+            </div>
+        </div>
+    </div>
+
+    {# Liste des congés #}
+    <div class="conge-list" id="conge-list">
+        {% if conges is empty %}
+            <div class="conge-empty">
+                <div class="ico">🌴</div>
+                <h3>Aucun congé enregistré</h3>
+                <p>Cliquez sur « Nouveau congé » pour créer votre première demande</p>
+            </div>
+        {% else %}
+            {% for conge in conges %}
+    {% set sl = conge.statut|lower %}
+    {% if sl in ['approuvé','approuve'] %}
+        {% set ac='ca-ap' %}{% set av='av-ap' %}{% set bd='bd-ap' %}{% set ico='✓' %}
+    {% elseif sl in ['refusé','refuse'] %}
+        {% set ac='ca-re' %}{% set av='av-re' %}{% set bd='bd-re' %}{% set ico='✕' %}
+    {% else %}
+        {% set ac='ca-at' %}{% set av='av-at' %}{% set bd='bd-at' %}{% set ico='⏳' %}
+    {% endif %}
+
+    {% set typeLabel = conge.typeCongeId ? (typeLabels[conge.typeCongeId] ?? ('Type #' ~ conge.typeCongeId)) : 'Type non renseigné' %}
+
+    <div class="conge-card" data-statut="{{ conge.statut|lower|e('html_attr') }}" data-type="{{ conge.typeCongeId|default('') }}">
+        <div class="conge-accent {{ ac }}"></div>
+        <div class="conge-av {{ av }}">{{ ico }}</div>
+        <div class="conge-main">
+            <h3>
+                {{ typeLabel }}
+                <span class="conge-badge {{ bd }}">{{ conge.statut }}</span>
+            </h3>
+            <div class="conge-meta">
+                <span class="conge-chip">📅 {{ conge.dateDebut ? conge.dateDebut|date('d/m/Y') : '—' }} → {{ conge.dateFin ? conge.dateFin|date('d/m/Y') : '—' }}</span>
+                <span class="conge-chip">⏱ {{ conge.nbrJours }} jour{{ conge.nbrJours > 1 ? 's' : '' }}</span>
+            </div>
+        </div>
+        <div class="conge-btns">
+            <a href="{{ path('app_conge_edit', {'id': conge.id}) }}" class="conge-ba ba-edit">✏️ Modifier</a>
+            <form action="{{ path('app_conge_archive', {'id': conge.id}) }}" method="post" style="margin:0">
+                <input type="hidden" name="_token" value="{{ csrf_token('archive' ~ conge.id) }}">
+                <button type="submit" class="conge-ba ba-arch" onclick="return confirm('Archiver ce congé ?')">📦 Archiver</button>
+            </form>
+        </div>
+    </div>
+{% endfor %}
+               
+        {% endif %}
+    </div>
+
+</div>
+
+<script>var CONGE_TODAY = "{{ today }}";</script>
+<script>
+(function () {
+    var formWrap  = document.getElementById('conge-form-wrap');
+    var toggleBtn = document.getElementById('conge-toggle-btn');
+    var cancelBtn = document.getElementById('conge-cancel-btn');
+    var inpDebut  = document.getElementById('conge_dateDebut');
+    var inpFin    = document.getElementById('conge_dateFin');
+    var nbrBox    = document.getElementById('conge-nbr-display');
+    var submitBtn = document.getElementById('conge-submit-btn');
+    var errDebut  = document.getElementById('conge-err-debut');
+    var errFinP   = document.getElementById('conge-err-fin-passe');
+    var errFinO   = document.getElementById('conge-err-fin-ordre');
+
+    if (toggleBtn) toggleBtn.addEventListener('click', function () {
+        formWrap.classList.toggle('open');
+        if (formWrap.classList.contains('open'))
+            setTimeout(function () { formWrap.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
+    });
+    if (cancelBtn) cancelBtn.addEventListener('click', function () { formWrap.classList.remove('open'); });
+
+    if (inpDebut) inpDebut.setAttribute('min', CONGE_TODAY);
+    if (inpFin)   inpFin.setAttribute('min',   CONGE_TODAY);
+
+    function reset() {
+        [errDebut, errFinP, errFinO].forEach(function (e) { if (e) e.classList.remove('on'); });
+        if (inpDebut) inpDebut.classList.remove('conge-field-err');
+        if (inpFin)   inpFin.classList.remove('conge-field-err');
+        if (nbrBox)   nbrBox.value = '';
+    }
+
+    function validate() {
+        if (!inpDebut || !inpFin) return;
+        reset();
+        var d1 = inpDebut.value, d2 = inpFin.value, ok = true;
+
+        if (d1 && d1 < CONGE_TODAY) { errDebut.classList.add('on'); inpDebut.classList.add('conge-field-err'); inpDebut.value=''; d1=''; ok=false; }
+        if (d2 && d2 < CONGE_TODAY) { errFinP.classList.add('on'); inpFin.classList.add('conge-field-err'); inpFin.value=''; d2=''; ok=false; }
+        if (d1 && d2 && d2 < d1)   { errFinO.classList.add('on'); inpFin.classList.add('conge-field-err'); inpFin.value=''; d2=''; ok=false; }
+
+        if (inpFin) inpFin.setAttribute('min', d1 || CONGE_TODAY);
+
+        if (d1 && d2 && ok && nbrBox) {
+            var days = Math.round((new Date(d2) - new Date(d1)) / 86400000) + 1;
+            if (days > 0) { nbrBox.value = days + ' jour' + (days > 1 ? 's' : ''); nbrBox.style.color = '#059669'; }
+        }
+        if (submitBtn) submitBtn.disabled = false;
+    }
+
+    if (inpDebut) inpDebut.addEventListener('change', validate);
+    if (inpFin)   inpFin.addEventListener('change',   validate);
+})();
+
+function congeFilter() {
+    var s = document.getElementById('conge-search-input').value.toLowerCase();
+    var t = document.getElementById('conge-filter-statut').value.toLowerCase();
+    var y = document.getElementById('conge-filter-type').value;
+    document.querySelectorAll('.conge-card').forEach(function (c) {
+        var ok = (!s || c.innerText.toLowerCase().includes(s))
+              && (!t || c.dataset.statut.toLowerCase().includes(t))
+              && (!y || c.dataset.type === y);
+        c.style.display = ok ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,584 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Postes Internes{% endblock %}
+
+{% block stylesheets %}
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --green:  #22c55e;
+        --blue:   #3b82f6;
+        --purple: #a855f7;
+        --orange: #f97316;
+        --bg:     #f4f6f9;
+        --card:   #ffffff;
+        --text:   #1e293b;
+        --muted:  #64748b;
+        --border: #e2e8f0;
+        --radius: 14px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+        font-family: 'Inter', sans-serif;
+        background: var(--bg);
+        color: var(--text);
+    }
+
+    /* ── Page header ── */
+    .page-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 28px;
+    }
+    .page-header h1 {
+        font-family: 'Sora', sans-serif;
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--text);
+    }
+    .page-header p {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 4px;
+    }
+
+    /* ── Stat cards ── */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 28px;
+    }
+    .stat-card {
+        background: var(--card);
+        border-radius: var(--radius);
+        padding: 20px 22px 16px;
+        border-top: 4px solid transparent;
+        box-shadow: 0 1px 4px rgba(0,0,0,.06);
+        transition: transform .2s, box-shadow .2s;
+    }
+    .stat-card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,.09); }
+    .stat-card.green  { border-color: var(--green); }
+    .stat-card.blue   { border-color: var(--blue); }
+    .stat-card.purple { border-color: var(--purple); }
+    .stat-card.orange { border-color: var(--orange); }
+
+    .stat-number {
+        font-family: 'Sora', sans-serif;
+        font-size: 36px;
+        font-weight: 700;
+        line-height: 1;
+        margin-bottom: 6px;
+    }
+    .stat-card.green  .stat-number { color: var(--green); }
+    .stat-card.blue   .stat-number { color: var(--blue); }
+    .stat-card.purple .stat-number { color: var(--purple); }
+    .stat-card.orange .stat-number { color: var(--orange); }
+
+    .stat-label { font-size: 14px; color: var(--text); font-weight: 500; margin-bottom: 8px; }
+    .stat-sub   { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+
+    /* ── Toolbar ── */
+    .toolbar {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+    .search-wrap {
+        flex: 1;
+        position: relative;
+    }
+    .search-wrap svg {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--muted);
+        pointer-events: none;
+    }
+    .search-wrap input {
+        width: 100%;
+        padding: 11px 14px 11px 40px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        font-size: 14px;
+        background: var(--card);
+        outline: none;
+        transition: border-color .2s, box-shadow .2s;
+    }
+    .search-wrap input:focus {
+        border-color: var(--blue);
+        box-shadow: 0 0 0 3px rgba(59,130,246,.12);
+    }
+    .filter-select {
+        padding: 11px 36px 11px 14px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        font-size: 14px;
+        background: var(--card);
+        cursor: pointer;
+        outline: none;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        min-width: 140px;
+    }
+
+    /* ── Poste cards ── */
+    .poste-list { display: flex; flex-direction: column; gap: 12px; }
+
+    .poste-card {
+        background: var(--card);
+        border-radius: var(--radius);
+        border-left: 5px solid transparent;
+        padding: 18px 22px;
+        box-shadow: 0 1px 4px rgba(0,0,0,.06);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        transition: transform .18s, box-shadow .18s;
+        position: relative;
+    }
+    .poste-card:hover { transform: translateX(4px); box-shadow: 0 4px 14px rgba(0,0,0,.1); }
+
+    .poste-card[data-type="Renfort"]         { border-color: var(--orange); }
+    .poste-card[data-type="Mission interne"] { border-color: var(--blue); }
+    .poste-card[data-type="Mission externe"] { border-color: var(--purple); }
+
+    .poste-icon {
+        width: 46px; height: 46px;
+        border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 22px;
+        flex-shrink: 0;
+    }
+    .poste-card[data-type="Renfort"]         .poste-icon { background: #fff7ed; }
+    .poste-card[data-type="Mission interne"] .poste-icon { background: #eff6ff; }
+    .poste-card[data-type="Mission externe"] .poste-icon { background: #faf5ff; }
+
+    .poste-body { flex: 1; min-width: 0; }
+
+    .poste-title-row {
+        display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+    }
+    .poste-title {
+        font-family: 'Sora', sans-serif;
+        font-size: 16px; font-weight: 600;
+    }
+    .poste-id {
+        font-size: 11px; background: #f1f5f9; color: var(--muted);
+        border-radius: 6px; padding: 2px 7px;
+    }
+
+    .poste-meta {
+        display: flex; gap: 20px; font-size: 13px; color: var(--muted); flex-wrap: wrap;
+    }
+    .poste-meta span { display: flex; align-items: center; gap: 5px; }
+
+    .badge-type {
+        font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 20px;
+        white-space: nowrap; flex-shrink: 0;
+    }
+    .badge-renfort  { background: #fff7ed; color: var(--orange); }
+    .badge-interne  { background: #eff6ff; color: var(--blue); }
+    .badge-externe  { background: #faf5ff; color: var(--purple); }
+
+    .poste-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+    .btn-edit, .btn-del, .btn-view {
+        padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 500;
+        border: none; cursor: pointer; transition: opacity .15s, transform .15s;
+        text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .btn-edit { background: #fef9c3; color: #92400e; }
+    .btn-del  { background: #fee2e2; color: #b91c1c; }
+    .btn-view { background: #e0f2fe; color: #0369a1; }
+    .btn-edit:hover, .btn-del:hover, .btn-view:hover { opacity: .8; transform: translateY(-1px); }
+
+    /* ── Create button ── */
+    .btn-create {
+        background: #16a34a;
+        color: #fff;
+        border: none;
+        padding: 11px 22px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        transition: background .2s, transform .15s, box-shadow .2s;
+        box-shadow: 0 2px 8px rgba(22,163,74,.35);
+        white-space: nowrap;
+    }
+    .btn-create:hover {
+        background: #15803d;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 14px rgba(22,163,74,.4);
+    }
+
+    /* ── Modal ── */
+    .modal-overlay {
+        display: none;
+        position: fixed; inset: 0;
+        background: rgba(15,23,42,.45);
+        backdrop-filter: blur(4px);
+        z-index: 9998;
+        align-items: center;
+        justify-content: center;
+        animation: fadeIn .2s ease;
+    }
+    .modal-overlay.open { display: flex; }
+
+    @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(30px) scale(.97); } to { opacity: 1; transform: none; } }
+
+    .modal-box {
+        background: var(--card);
+        border-radius: 18px;
+        width: 100%;
+        max-width: 560px;
+        padding: 32px 36px;
+        box-shadow: 0 20px 60px rgba(0,0,0,.18);
+        animation: slideUp .25s ease;
+        position: relative;
+        z-index: 9999;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .modal-header {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 24px;
+    }
+    .modal-header h2 {
+        font-family: 'Sora', sans-serif;
+        font-size: 20px; font-weight: 700;
+    }
+    .modal-close {
+        width: 34px; height: 34px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: transparent;
+        cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 18px; color: var(--muted);
+        transition: background .15s;
+    }
+    .modal-close:hover { background: #f1f5f9; }
+
+    /* Form styles inside modal */
+    .modal-box .form-group { margin-bottom: 18px; }
+    .modal-box label {
+        display: block; font-size: 13px; font-weight: 500;
+        color: var(--muted); margin-bottom: 6px;
+    }
+    .modal-box input,
+    .modal-box select {
+        width: 100%; padding: 10px 14px;
+        border: 1px solid var(--border);
+        border-radius: 9px; font-size: 14px;
+        outline: none;
+        transition: border-color .2s, box-shadow .2s;
+        background: #fafbfc;
+        font-family: 'Inter', sans-serif;
+    }
+    .modal-box input:focus,
+    .modal-box select:focus {
+        border-color: var(--blue);
+        box-shadow: 0 0 0 3px rgba(59,130,246,.12);
+        background: #fff;
+    }
+    .modal-box .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+    .modal-footer {
+        display: flex; justify-content: flex-end; gap: 10px;
+        margin-top: 26px; padding-top: 20px;
+        border-top: 1px solid var(--border);
+    }
+    .btn-cancel {
+        padding: 9px 20px; border-radius: 9px;
+        border: 1px solid var(--border);
+        background: transparent; font-size: 14px;
+        cursor: pointer; font-weight: 500;
+        transition: background .15s;
+    }
+    .btn-cancel:hover { background: #f1f5f9; }
+    .btn-save {
+        padding: 9px 22px; border-radius: 9px;
+        background: #16a34a; color: #fff;
+        border: none; font-size: 14px;
+        font-weight: 600; cursor: pointer;
+        transition: background .2s;
+        box-shadow: 0 2px 6px rgba(22,163,74,.3);
+    }
+    .btn-save:hover { background: #15803d; }
+
+    /* Edit modal accent */
+    .modal-box.edit-modal .btn-save {
+        background: var(--blue);
+        box-shadow: 0 2px 6px rgba(59,130,246,.3);
+    }
+    .modal-box.edit-modal .btn-save:hover { background: #2563eb; }
+
+    /* Delete confirm */
+    .modal-box.delete-modal .btn-save {
+        background: #dc2626;
+        box-shadow: 0 2px 6px rgba(220,38,38,.3);
+    }
+    .modal-box.delete-modal p {
+        font-size: 15px; color: var(--muted); margin-bottom: 8px;
+    }
+
+    /* Empty state */
+    .empty-state {
+        text-align: center; padding: 60px 20px;
+        color: var(--muted); font-size: 15px;
+    }
+
+    @media (max-width: 768px) {
+        .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        .poste-card { flex-wrap: wrap; }
+        .modal-box { padding: 22px 18px; margin: 16px; }
+        .modal-box .form-row { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+{# ── Page header ── #}
+<div class="page-header">
+    <div>
+        <h1>Postes Internes</h1>
+        <p>Missions et mobilités internes disponibles</p>
+    </div>
+    <button class="btn-create" onclick="openModal('createModal')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        Créer un poste
+    </button>
+</div>
+
+{# ── Stats ── #}
+{% set total    = poste_internes|length %}
+{% set nb_mi    = poste_internes|filter(p => p.typePoste == 'Mission interne')|length %}
+{% set nb_me    = poste_internes|filter(p => p.typePoste == 'Mission externe')|length %}
+{% set nb_renf  = poste_internes|filter(p => p.typePoste == 'Renfort')|length %}
+
+<div class="stats-grid">
+    <div class="stat-card green">
+        <div class="stat-number">{{ total }}</div>
+        <div class="stat-label">Total postes</div>
+        <div class="stat-sub">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+            Toutes missions
+        </div>
+    </div>
+    <div class="stat-card blue">
+        <div class="stat-number">{{ nb_mi }}</div>
+        <div class="stat-label">Mission interne</div>
+        <div class="stat-sub">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+            En interne
+        </div>
+    </div>
+    <div class="stat-card purple">
+        <div class="stat-number">{{ nb_me }}</div>
+        <div class="stat-label">Mission externe</div>
+        <div class="stat-sub">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
+            Détachement
+        </div>
+    </div>
+    <div class="stat-card orange">
+        <div class="stat-number">{{ nb_renf }}</div>
+        <div class="stat-label">Renfort</div>
+        <div class="stat-sub">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Support équipe
+        </div>
+    </div>
+</div>
+
+{# ── Toolbar ── #}
+<div class="toolbar">
+    <div class="search-wrap">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="searchInput" placeholder="Rechercher un poste interne..." oninput="filterPostes()">
+    </div>
+    <select class="filter-select" id="typeFilter" onchange="filterPostes()">
+        <option value="">Tous</option>
+        <option value="Mission interne">Mission interne</option>
+        <option value="Mission externe">Mission externe</option>
+        <option value="Renfort">Renfort</option>
+    </select>
+</div>
+
+{# ── Poste list ── #}
+<div class="poste-list" id="posteList">
+{% for poste_interne in poste_internes %}
+    {% set type = poste_interne.typePoste %}
+    {% set icon = '💼' %}
+    {% set badgeClass = 'badge-interne' %}
+    {% if type == 'Renfort' %}
+        {% set icon = '💪' %}
+        {% set badgeClass = 'badge-renfort' %}
+    {% elseif type == 'Mission externe' %}
+        {% set icon = '🌐' %}
+        {% set badgeClass = 'badge-externe' %}
+    {% endif %}
+
+    <div class="poste-card" data-type="{{ type }}" data-search="{{ type|lower }} {{ poste_interne.id }}">
+        <div class="poste-icon">{{ icon }}</div>
+
+        <div class="poste-body">
+            <div class="poste-title-row">
+                <span class="poste-title">{{ type }}</span>
+                <span class="poste-id">#{{ poste_interne.id }}</span>
+            </div>
+            <div class="poste-meta">
+                <span>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/><path d="M12 6v6l4 2"/></svg>
+                    Rémun. {{ poste_interne.remuneration }}
+                </span>
+                <span>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    Début : {{ poste_interne.dateDebut ? poste_interne.dateDebut|date('d/m/Y') : 'N/A' }}
+                </span>
+                <span>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h4l1 5-2.5 1.5a11 11 0 0 0 5 5L12 12l5 1v4a2 2 0 0 1-2 2A16 16 0 0 1 1 5a2 2 0 0 1 2-2z"/></svg>
+                    Fin : {{ poste_interne.dateFin ? poste_interne.dateFin|date('d/m/Y') : 'N/A' }}
+                </span>
+            </div>
+        </div>
+
+        <span class="badge-type {{ badgeClass }}">{{ type }}</span>
+
+        <div class="poste-actions">
+            <a href="{{ path('app_poste_interne_show', {'id': poste_interne.id}) }}" class="btn-view">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                Voir
+            </a>
+            <button class="btn-edit" onclick="openEditModal({{ poste_interne.id }}, '{{ type }}', {{ poste_interne.remuneration }}, '{{ poste_interne.dateDebut ? poste_interne.dateDebut|date('Y-m-d') : '' }}', '{{ poste_interne.dateFin ? poste_interne.dateFin|date('Y-m-d') : '' }}')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                Modifier
+            </button>
+            <button class="btn-del" onclick="openDeleteModal({{ poste_interne.id }}, '{{ type }}')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                Supprimer
+            </button>
+        </div>
+    </div>
+{% else %}
+    <div class="empty-state">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" style="margin:0 auto 12px"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8L6 7h12z"/></svg>
+        <p>Aucun poste interne disponible.</p>
+    </div>
+{% endfor %}
+</div>
+
+{# ════════ CREATE MODAL ════════ #}
+<div class="modal-overlay" id="createModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>✨ Créer un poste interne</h2>
+            <button class="modal-close" onclick="closeModal('createModal')">✕</button>
+        </div>
+        {{ include('RECRUTEMENT/poste_interne/_form.html.twig', {
+            form: form,
+            button_label: 'Créer le poste',
+            modal_mode: true,
+            form_action: path('app_poste_interne_new')
+        }) }}
+    </div>
+</div>
+
+{# ════════ EDIT MODAL ════════ #}
+<div class="modal-overlay" id="editModal">
+    <div class="modal-box edit-modal">
+        <div class="modal-header">
+            <h2>✏️ Modifier le poste</h2>
+            <button class="modal-close" onclick="closeModal('editModal')">✕</button>
+        </div>
+        <div id="editFormContainer">
+            {# Loaded dynamically via JS / direct form include #}
+        </div>
+    </div>
+</div>
+
+{# ════════ DELETE MODAL ════════ #}
+<div class="modal-overlay" id="deleteModal">
+    <div class="modal-box delete-modal" style="max-width:420px">
+        <div class="modal-header">
+            <h2>🗑️ Confirmer la suppression</h2>
+            <button class="modal-close" onclick="closeModal('deleteModal')">✕</button>
+        </div>
+        <p>Voulez-vous vraiment supprimer le poste <strong id="deletePosteName"></strong> ?</p>
+        <p>Cette action est irréversible.</p>
+        <form id="deleteForm" method="post">
+            <input type="hidden" name="_token" id="deleteToken" value="">
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeModal('deleteModal')">Annuler</button>
+                <button type="submit" class="btn-save">Supprimer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script type="application/json" id="poste-interne-delete-csrf">{% if poste_internes is empty %}{}{% else %}{ {% for poste_interne in poste_internes %}"{{ poste_interne.id }}": {{ csrf_token('delete' ~ poste_interne.id)|json_encode|raw }}{% if not loop.last %}, {% endif %}{% endfor %} }{% endif %}</script>
+
+<script>
+const posteInterneEditTpl = {{ path('app_poste_interne_edit', {id: 999999999})|json_encode|raw }};
+const posteInterneDeleteTpl = {{ path('app_poste_interne_delete', {id: 999999999})|json_encode|raw }};
+const posteInterneDeleteCsrf = JSON.parse(document.getElementById('poste-interne-delete-csrf').textContent);
+
+function openModal(id) {
+    document.getElementById(id).classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+    document.body.style.overflow = '';
+}
+// Close on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+        if (e.target === overlay) closeModal(overlay.id);
+    });
+});
+// ESC key
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay.open').forEach(m => closeModal(m.id));
+    }
+});
+
+function openEditModal(id, type, remun, dateDebut, dateFin) {
+    window.location.href = posteInterneEditTpl.replace('999999999', String(id));
+}
+
+function openDeleteModal(id, type) {
+    document.getElementById('deletePosteName').textContent = type + ' #' + id;
+    document.getElementById('deleteForm').action = posteInterneDeleteTpl.replace('999999999', String(id));
+    const token = posteInterneDeleteCsrf[id] ?? posteInterneDeleteCsrf[String(id)] ?? '';
+    document.getElementById('deleteToken').value = token;
+    document.getElementById('deleteModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+
+// Search & filter
+function filterPostes() {
+    const q    = document.getElementById('searchInput').value.toLowerCase();
+    const type = document.getElementById('typeFilter').value;
+    document.querySelectorAll('.poste-card').forEach(card => {
+        const matchQ    = !q    || card.dataset.search.includes(q) || card.querySelector('.poste-title').textContent.toLowerCase().includes(q);
+        const matchType = !type || card.dataset.type === type;
+        card.style.display = (matchQ && matchType) ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}

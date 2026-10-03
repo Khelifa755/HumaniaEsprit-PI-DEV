@@ -1,0 +1,506 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Analyse CV — IA{% endblock %}
+
+{% block stylesheets %}
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg:       #f4f6fb;
+    --card:     #ffffff;
+    --border:   #e2e8f0;
+    --text:     #1a2540;
+    --muted:    #64748b;
+    --muted2:   #94a3b8;
+    --blue:     #5b8dee;
+    --blue-lt:  #e3eeff;
+    --indigo:   #7c6ef5;
+    --green:    #27ae60;
+    --amber:    #f39c12;
+    --red:      #e74c3c;
+    --radius:   14px;
+    --shadow:   0 2px 8px rgba(0,0,0,.07), 0 1px 3px rgba(0,0,0,.04);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+
+/* ── Header ── */
+.acv-header { margin-bottom: 20px; }
+.acv-header h1 { font-size: 22px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 10px; }
+.acv-header p  { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.acv-divider {
+    height: 1px;
+    background: linear-gradient(to right, transparent, #dde4f0 20%, #dde4f0 80%, transparent);
+    margin: 18px 0 24px;
+}
+
+/* ── Card ── */
+.acv-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 24px;
+    margin-bottom: 20px;
+}
+.acv-card-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ── Upload zone ── */
+.upload-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+.btn-choose {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--blue-lt);
+    color: var(--blue);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 22px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: background .15s;
+}
+.btn-choose:hover { background: #cfe0ff; }
+/* Masquer l'input natif */
+#cvInput { display: none; }
+
+.file-name {
+    font-size: 13px;
+    color: var(--muted2);
+    font-style: italic;
+}
+.file-name.has-file { color: var(--text); font-style: normal; font-weight: 600; }
+
+.launch-row { display: flex; align-items: center; gap: 14px; }
+
+.btn-analyse {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, var(--blue), var(--indigo));
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 28px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: opacity .2s, transform .15s;
+}
+.btn-analyse:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
+.btn-analyse:disabled { opacity: .5; cursor: not-allowed; }
+
+.spinner {
+    width: 22px; height: 22px;
+    border: 3px solid #e2e8f0;
+    border-top-color: var(--blue);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    display: none;
+    flex-shrink: 0;
+}
+.spinner.active { display: block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.status-msg { font-size: 13px; color: var(--muted); }
+.status-msg.ok    { color: var(--green); }
+.status-msg.error { color: var(--red); }
+
+/* ── Results section (hidden initially) ── */
+#resultSection { display: none; }
+
+/* ── Score + Radar row ── */
+.result-top {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 18px;
+    margin-bottom: 18px;
+}
+
+/* Score badge */
+.score-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 8px;
+}
+.score-label { font-size: 12px; color: var(--muted2); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+.score-value {
+    font-size: 46px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text);
+    transition: color .3s;
+}
+.score-mention {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    transition: color .3s;
+}
+
+/* Radar card */
+.radar-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.radar-card-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 14px; align-self: flex-start; }
+#radarCanvas { display: block; max-width: 100%; }
+
+/* Assessment */
+.assessment-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 22px 24px;
+}
+.assessment-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+.assessment-header span { font-size: 18px; }
+.assessment-header strong { font-size: 14px; font-weight: 700; color: var(--text); }
+.assessment-text {
+    background: #f8faff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text);
+    white-space: pre-wrap;
+    min-height: 120px;
+}
+
+/* ── Axis scores bar list ── */
+.axis-list { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
+.axis-row { display: flex; align-items: center; gap: 12px; }
+.axis-name { width: 160px; font-size: 12px; font-weight: 600; color: var(--muted); flex-shrink: 0; }
+.axis-bar-wrap { flex: 1; height: 8px; background: #f1f5f9; border-radius: 99px; overflow: hidden; }
+.axis-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--blue), var(--indigo)); transition: width .6s ease; }
+.axis-score-val { width: 32px; font-size: 12px; font-weight: 700; color: var(--text); text-align: right; flex-shrink: 0; }
+</style>
+{% endblock %}
+
+{% block body %}
+
+{# ── Header ── #}
+<div class="acv-header">
+    <h1>🤖 Analyse CV — Intelligence Artificielle (n8n)</h1>
+    <p>Téléchargez un CV PDF pour obtenir une analyse IA instantanée via n8n</p>
+</div>
+<div class="acv-divider"></div>
+
+{# ── Upload card ── #}
+<div class="acv-card">
+    <div class="acv-card-title">📂 Sélection du CV</div>
+
+    {# Input fichier caché — déclenché par le bouton #}
+    <input type="file" id="cvInput" accept=".pdf,application/pdf">
+
+    <div class="upload-row">
+        <button class="btn-choose" onclick="document.getElementById('cvInput').click()">
+            📂 Choisir un PDF
+        </button>
+        <span class="file-name" id="fileNameLabel">Aucun fichier sélectionné</span>
+    </div>
+
+    <div class="launch-row">
+        <button class="btn-analyse" id="btnAnalyse" disabled onclick="lancerAnalyse()">
+            🚀 Lancer l'analyse IA
+        </button>
+        <div class="spinner" id="spinner"></div>
+        <span class="status-msg" id="statusMsg"></span>
+    </div>
+</div>
+
+{# ── Résultats (masqués jusqu'à l'analyse) ── #}
+<div id="resultSection">
+
+    <div class="result-top">
+
+        {# Score badge #}
+        <div class="score-card">
+            <div class="score-label">Score IA</div>
+            <div class="score-value" id="scoreValue">–</div>
+            <div class="score-mention" id="scoreMention">En attente d'analyse</div>
+        </div>
+
+        {# Radar chart #}
+        <div class="radar-card">
+            <div class="radar-card-title">Analyse par axe</div>
+            <canvas id="radarCanvas" width="420" height="300"></canvas>
+        </div>
+
+    </div>
+
+    {# Barres de scores par axe #}
+    <div class="acv-card">
+        <div class="acv-card-title">📊 Détail des scores</div>
+        <div class="axis-list" id="axisList"></div>
+    </div>
+
+    {# Évaluation textuelle #}
+    <div class="assessment-card">
+        <div class="assessment-header">
+            <span>🤖</span>
+            <strong>Évaluation IA</strong>
+        </div>
+        <div class="assessment-text" id="assessmentText">–</div>
+    </div>
+
+</div>
+
+<script>
+const AXES = [
+    'Compétences Techniques',
+    'Expérience',
+    'Adéquation Poste',
+    'Localisation',
+    'Potentiel Évolution',
+];
+
+const ANALYSE_URL = '{{ path("app_analyse_cv_analyser") }}';
+
+// ── Sélection du fichier ──────────────────────────────────────────────────
+document.getElementById('cvInput').addEventListener('change', function () {
+    const f = this.files[0];
+    const label = document.getElementById('fileNameLabel');
+    const btn   = document.getElementById('btnAnalyse');
+    if (f) {
+        label.textContent = f.name;
+        label.classList.add('has-file');
+        btn.disabled = false;
+    } else {
+        label.textContent = 'Aucun fichier sélectionné';
+        label.classList.remove('has-file');
+        btn.disabled = true;
+    }
+});
+
+// ── Lancer l'analyse ─────────────────────────────────────────────────────
+async function lancerAnalyse() {
+    const input = document.getElementById('cvInput');
+    if (!input.files[0]) return;
+
+    setLoading(true);
+    document.getElementById('resultSection').style.display = 'none';
+
+    const formData = new FormData();
+    formData.append('cv', input.files[0]);
+
+    try {
+        const resp = await fetch(ANALYSE_URL, {
+            method: 'POST',
+            body: formData,
+        });
+        const data = await resp.json();
+
+        if (!resp.ok || data.error) {
+            setStatus('❌ Erreur : ' + (data.error ?? 'Réponse invalide.'), 'error');
+        } else {
+            afficherResultat(data);
+        }
+    } catch (e) {
+        setStatus('❌ Erreur réseau : ' + e.message, 'error');
+    } finally {
+        setLoading(false);
+    }
+}
+
+// ── Affichage des résultats ───────────────────────────────────────────────
+function afficherResultat(data) {
+    // Score
+    document.getElementById('scoreValue').textContent  = data.vote.toFixed(0) + ' / 10';
+    document.getElementById('scoreValue').style.color  = data.color;
+    document.getElementById('scoreMention').textContent = data.mention;
+    document.getElementById('scoreMention').style.color = data.color;
+
+    // Évaluation
+    document.getElementById('assessmentText').textContent = data.consideration;
+
+    // Barres d'axes
+    const list = document.getElementById('axisList');
+    list.innerHTML = '';
+    data.axisScores.forEach((score, i) => {
+        const pct = (score / 10) * 100;
+        list.innerHTML += `
+            <div class="axis-row">
+                <div class="axis-name">${AXES[i]}</div>
+                <div class="axis-bar-wrap">
+                    <div class="axis-bar-fill" style="width:${pct}%"></div>
+                </div>
+                <div class="axis-score-val">${score}</div>
+            </div>`;
+    });
+
+    // Radar chart
+    drawRadar(data.axisScores);
+
+    // Status
+    setStatus('✅ Analyse terminée avec succès', 'ok');
+
+    // Afficher la section résultats
+    document.getElementById('resultSection').style.display = 'block';
+    document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── Radar Chart (Canvas 2D natif, même logique que le Java) ──────────────
+function drawRadar(scores) {
+    const canvas = document.getElementById('radarCanvas');
+    const gc     = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    gc.clearRect(0, 0, W, H);
+
+    const n      = AXES.length;
+    const cx     = W / 2;
+    const cy     = H / 2 + 10;
+    const maxR   = Math.min(W, H) * 0.32;
+    const levels = 5;
+
+    // Grilles polygonales
+    for (let lvl = 1; lvl <= levels; lvl++) {
+        const r = maxR * lvl / levels;
+        const pts = axisPoints(n, cx, cy, r);
+        gc.beginPath();
+        gc.moveTo(pts[0].x, pts[0].y);
+        pts.forEach(p => gc.lineTo(p.x, p.y));
+        gc.closePath();
+        gc.strokeStyle = '#dce1e7';
+        gc.lineWidth   = 1;
+        gc.stroke();
+        // Label grille
+        gc.fillStyle = '#94a3b8';
+        gc.font      = '9px DM Sans, sans-serif';
+        gc.textAlign = 'center';
+        gc.fillText(String(lvl * 2), cx + 4, cy - r + 4);
+    }
+
+    // Axes radiaux
+    const outerPts = axisPoints(n, cx, cy, maxR);
+    outerPts.forEach(p => {
+        gc.beginPath();
+        gc.moveTo(cx, cy);
+        gc.lineTo(p.x, p.y);
+        gc.strokeStyle = '#bdc3c7';
+        gc.lineWidth   = 1;
+        gc.stroke();
+    });
+
+    // Polygone des données
+    const dataPts = scores.map((s, i) => {
+        const angle = (Math.PI * 2 * i / n) - Math.PI / 2;
+        const r     = maxR * (s / 10);
+        return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+    });
+    gc.beginPath();
+    gc.moveTo(dataPts[0].x, dataPts[0].y);
+    dataPts.forEach(p => gc.lineTo(p.x, p.y));
+    gc.closePath();
+    gc.fillStyle   = 'rgba(91,141,238,0.22)';
+    gc.fill();
+    gc.strokeStyle = '#5b8dee';
+    gc.lineWidth   = 2.5;
+    gc.stroke();
+
+    // Points + valeurs sur les axes
+    dataPts.forEach((p, i) => {
+        // Cercle bleu
+        gc.beginPath();
+        gc.arc(p.x, p.y, 5, 0, Math.PI * 2);
+        gc.fillStyle = '#5b8dee';
+        gc.fill();
+        // Centre blanc
+        gc.beginPath();
+        gc.arc(p.x, p.y, 2, 0, Math.PI * 2);
+        gc.fillStyle = '#fff';
+        gc.fill();
+        // Valeur près du point
+        const angle = (Math.PI * 2 * i / n) - Math.PI / 2;
+        const vr    = maxR * (scores[i] / 10) + 14;
+        gc.fillStyle = '#e57373';
+        gc.font      = 'bold 9px DM Sans, sans-serif';
+        gc.textAlign = 'center';
+        gc.fillText(scores[i].toFixed(1),
+            cx + vr * Math.cos(angle),
+            cy + vr * Math.sin(angle) + 4);
+    });
+
+    // Labels des axes (au-delà du rayon max)
+    gc.fillStyle  = '#1a2540';
+    gc.font       = 'bold 10px DM Sans, sans-serif';
+    gc.textAlign  = 'center';
+    AXES.forEach((label, i) => {
+        const angle  = (Math.PI * 2 * i / n) - Math.PI / 2;
+        const labelR = maxR + 34;
+        const lx = cx + labelR * Math.cos(angle);
+        const ly = cy + labelR * Math.sin(angle);
+        // Multi-ligne si espace dans le label
+        const words = label.split(' ');
+        if (words.length > 1) {
+            gc.fillText(words[0], lx, ly - 5);
+            gc.fillText(words.slice(1).join(' '), lx, ly + 8);
+        } else {
+            gc.fillText(label, lx, ly);
+        }
+    });
+
+    // Point centre
+    gc.beginPath();
+    gc.arc(cx, cy, 3, 0, Math.PI * 2);
+    gc.fillStyle = 'rgba(91,141,238,0.5)';
+    gc.fill();
+}
+
+function axisPoints(n, cx, cy, r) {
+    const pts = [];
+    for (let i = 0; i < n; i++) {
+        const angle = (Math.PI * 2 * i / n) - Math.PI / 2;
+        pts.push({ x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) });
+    }
+    return pts;
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────
+function setLoading(on) {
+    document.getElementById('spinner').classList.toggle('active', on);
+    document.getElementById('btnAnalyse').disabled = on;
+    if (on) setStatus('⏳ Analyse en cours… veuillez patienter.', '');
+}
+
+function setStatus(msg, type) {
+    const el = document.getElementById('statusMsg');
+    el.textContent  = msg;
+    el.className    = 'status-msg ' + (type || '');
+}
+</script>
+{% endblock %}

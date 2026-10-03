@@ -1,0 +1,28 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Modifier — Candidature Externe{% endblock %}
+
+{% block stylesheets %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --purple:#6c3fc5; --border:#e2e8f0; --bg:#f4f6fb; --text:#1e293b; --muted:#64748b; }
+  body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); }
+  .edit-wrapper { max-width:700px; margin:40px auto; background:#fff; border-radius:16px; padding:36px; box-shadow:0 4px 24px rgba(0,0,0,.08); }
+  .edit-wrapper h1 { font-size:1.4rem; font-weight:700; margin-bottom:24px; }
+  .back-link { display:inline-flex; align-items:center; gap:6px; color:var(--muted); font-size:.88rem; text-decoration:none; margin-bottom:20px; }
+  .back-link:hover { color:var(--purple); }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="edit-wrapper">
+  <a href="{{ path('app_candidature_externe_index') }}" class="back-link">
+    ← Retour à la liste
+  </a>
+  <h1>✎ Modifier la candidature</h1>
+  {{ include('RECRUTEMENT/candidature_externe/_form.html.twig', {'button_label': 'Mettre à jour'}) }}
+  <hr style="margin:24px 0;border:none;border-top:1px solid var(--border)">
+  {{ include('RECRUTEMENT/candidature_externe/_delete_form.html.twig') }}
+</div>
+{% endblock %}

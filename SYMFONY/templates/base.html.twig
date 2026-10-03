@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>
+			{% block title %}Humania RH
+			{% endblock %}
+			· Humania</title>
+		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+		<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+		<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+		<style>
+			* {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
+
+			:root {
+				--sidebar-w: 262px;
+				--bg-app: #F4F6FB;
+				--sidebar-bg: #f8fafc;
+				--sidebar-border: #e2e8f0;
+				--text-dark: #1e293b;
+				--text-mid: #475569;
+				--text-light: #94a3b8;
+				--accent-blue: #5b8dee;
+				--accent-red: #e57373;
+				--accent-yellow: #c9a227;
+				--accent-green: #5db87a;
+				--accent-purple: #8b5cf6;
+				--accent-pink: #ec4899;
+				--primary: #4F46E5;
+				--font-main: 'DM Sans', sans-serif;
+				--font-serif: 'DM Serif Display', serif;
+			}
+
+			body {
+				font-family: var(--font-main);
+				background: var(--bg-app);
+				display: flex;
+				min-height: 100vh;
+				overflow: hidden;
+			}
+			body.auth-page {
+				display: block;
+				overflow: auto;
+			}
+
+			/* ══════════════════════════════════════════
+       SIDEBAR
+    ══════════════════════════════════════════ */
+			.sidebar {
+				width: var(--sidebar-w);
+				min-width: var(--sidebar-w);
+				max-width: var(--sidebar-w);
+				background: var(--sidebar-bg);
+				border-right: 1px solid var(--sidebar-border);
+				display: flex;
+				flex-direction: column;
+				height: 100vh;
+				position: fixed;
+				left: 0;
+				top: 0;
+				box-shadow: 4px 0 18px rgba(0, 20, 80, 0.06);
+				z-index: 100;
+			}
+
+			/* Logo */
+			.sidebar-logo {
+				display: flex;
+				align-items: center;
+				gap: 13px;
+				padding: 22px 16px 22px 20px;
+				min-height: 82px;
+			}
+			.logo-badge {
+				width: 48px;
+				height: 48px;
+				background: linear-gradient(to bottom right, #e57373, #5b8dee);
+				border-radius: 14px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				color: white;
+				font-family: var(--font-serif);
+				font-size: 22px;
+				font-weight: bold;
+				flex-shrink: 0;
+			}
+			.logo-text {
+				display: flex;
+				flex-direction: column;
+				gap: 3px;
+			}
+			.logo-name {
+				font-family: var(--font-serif);
+				font-size: 16px;
+				font-weight: bold;
+				color: var(--text-dark);
+				line-height: 1;
+			}
+			.logo-dots {
+				display: flex;
+				gap: 4px;
+				align-items: center;
+			}
+			.logo-dot {
+				width: 6px;
+				height: 6px;
+				border-radius: 3px;
+			}
+			.logo-sub {
+				font-size: 10px;
+				color: var(--text-light);
+			}
+
+			/* Divider */
+			.sidebar-divider {
+				height: 1px;
+				background: linear-gradient(to right, transparent, #e2e8f0 20%, #cbd5e1 50%, #e2e8f0 80%, transparent);
+				flex-shrink: 0;
+			}
+
+			/* Scroll menu */
+			.sidebar-scroll {
+				flex: 1;
+				overflow-y: auto;
+				overflow-x: hidden;
+				padding: 8px 10px 18px;
+			}
+			.sidebar-scroll::-webkit-scrollbar {
+				width: 4px;
+			}
+			.sidebar-scroll::-webkit-scrollbar-track {
+				background: transparent;
+			}
+			.sidebar-scroll::-webkit-scrollbar-thumb {
+				background: linear-gradient(to bottom, #e57373, #5b8dee, #f5c842, #5db87a);
+				border-radius: 10px;
+			}
+
+			/* Section headers */
+			.nav-section {
+				margin-bottom: 2px;
+			}
+			.nav-section-header {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				padding: 14px 8px 4px 14px;
+				cursor: pointer;
+				border-radius: 6px;
+				transition: background 0.15s;
+			}
+			.nav-section-header:hover {
+				background: #e2e8f0;
+			}
+			.nav-section-title {
+				font-size: 9px;
+				font-weight: 700;
+				color: var(--text-light);
+				letter-spacing: 1.8px;
+				text-transform: uppercase;
+			}
+			.nav-section-arrow {
+				font-size: 10px;
+				color: var(--text-light);
+				transition: transform 0.2s;
+			}
+			.nav-section-arrow.collapsed {
+				transform: rotate(-90deg);
+			}
+			.nav-section-content {
+				padding: 2px 0 4px;
+			}
+			.nav-section-content.collapsed {
+				display: none;
+			}
+
+			/* Nav buttons */
+			.nav-btn {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				width: 100%;
+				padding: 7px 12px 7px 10px;
+				background: transparent;
+				border: none;
+				border-radius: 8px;
+				cursor: pointer;
+				text-align: left;
+				transition: background 0.15s;
+				text-decoration: none;
+				color: inherit;
+			}
+			.nav-btn:hover {
+				background: #e2e8f0;
+			}
+			.nav-btn:hover .nav-btn-text {
+				color: var(--text-dark);
+			}
+			.nav-btn.active {
+				background: rgba(91, 141, 238, 0.09);
+			}
+			.nav-btn.active .nav-btn-text {
+				color: var(--accent-blue);
+				font-weight: 700;
+			}
+			.nav-btn.active .nav-btn-bar {
+				opacity: 1;
+			}
+
+			.nav-btn-bar {
+				width: 3px;
+				height: 16px;
+				border-radius: 2px;
+				background: var(--accent-blue);
+				opacity: 0;
+				flex-shrink: 0;
+				transition: opacity 0.2s;
+			}
+			.nav-btn-bar.red {
+				background: var(--accent-red);
+			}
+			.nav-btn-bar.yellow {
+				background: var(--accent-yellow);
+			}
+			.nav-btn-bar.green {
+				background: var(--accent-green);
+			}
+			.nav-btn-bar.purple {
+				background: var(--accent-purple);
+			}
+			.nav-btn-bar.pink {
+				background: var(--accent-pink);
+			}
+
+			.nav-btn-icon {
+				width: 28px;
+				height: 28px;
+				border-radius: 8px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 13px;
+				flex-shrink: 0;
+				color: white;
+			}
+			.nav-btn-icon.blue {
+				background: rgba(91, 141, 238, 0.25);
+			}
+			.nav-btn-icon.red {
+				background: rgba(229, 115, 115, 0.25);
+			}
+			.nav-btn-icon.yellow {
+				background: rgba(201, 162, 39, 0.25);
+			}
+			.nav-btn-icon.green {
+				background: rgba(93, 184, 122, 0.25);
+			}
+			.nav-btn-icon.purple {
+				background: rgba(139, 92, 246, 0.25);
+			}
+			.nav-btn-icon.pink {
+				background: rgba(236, 72, 153, 0.25);
+			}
+
+			.nav-btn-text {
+				font-size: 12.5px;
+				color: var(--text-mid);
+				line-height: 1;
+			}
+
+			/* User card */
+			.sidebar-user {
+				background: #f1f5f9;
+				border-top: 1px solid var(--sidebar-border);
+				flex-shrink: 0;
+			}
+			.user-accent-bar {
+				height: 2px;
+				display: flex;
+			}
+			.user-accent-seg {
+				flex: 1;
+			}
+			.user-card-content {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				padding: 12px 14px 13px 16px;
+				cursor: pointer;
+				transition: background 0.15s;
+			}
+			.user-card-content:hover {
+				background: #e2e8f0;
+			}
+			.user-avatar {
+				width: 44px;
+				height: 44px;
+				border-radius: 12px;
+				background: #dbeafe;
+				border: 1.5px solid #93c5fd;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-family: var(--font-serif);
+				font-size: 15px;
+				font-weight: bold;
+				color: #1d4ed8;
+				flex-shrink: 0;
+			}
+			.user-info {
+				flex: 1;
+				min-width: 0;
+			}
+			.user-name {
+				font-size: 12px;
+				font-weight: 700;
+				color: var(--text-dark);
+			}
+			.user-email {
+				font-size: 9px;
+				color: #64748b;
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+			.user-role-badge {
+				display: inline-block;
+				font-size: 8px;
+				font-weight: 700;
+				padding: 2px 6px;
+				border-radius: 6px;
+				margin-top: 2px;
+			}
+			.role-admin {
+				background: #fee2e2;
+				color: #dc2626;
+				border: 1px solid #dc262644;
+			}
+			.role-rh {
+				background: #ede9fe;
+				color: #7c3aed;
+				border: 1px solid #7c3aed44;
+			}
+			.role-manager {
+				background: #dbeafe;
+				color: #2563eb;
+				border: 1px solid #2563eb44;
+			}
+			.role-employe {
+				background: #f1f5f9;
+				color: #64748b;
+				border: 1px solid #64748b44;
+			}
+			.logout-btn {
+				background: transparent;
+				border: none;
+				font-size: 15px;
+				color: #64748b;
+				cursor: pointer;
+				border-radius: 8px;
+				padding: 6px;
+				transition: background 0.15s, color 0.15s;
+			}
+			.logout-btn:hover {
+				background: #fee2e2;
+				color: #ef4444;
+			}
+
+			/* ══════════════════════════════════════════
+       MAIN CONTENT
+    ══════════════════════════════════════════ */
+			.main-wrapper {
+				margin-left: var(--sidebar-w);
+				flex: 1;
+				height: 100vh;
+				overflow-y: auto;
+				display: flex;
+				flex-direction: column;
+			}
+			.main-wrapper.no-sidebar {
+				margin-left: 0;
+				height: auto;
+				min-height: 100vh;
+			}
+			.main-content {
+				flex: 1;
+				padding: 2rem;
+			}
+		</style>
+		{% block stylesheets %}{% endblock %}
+	</head>
+	{% set isAuthPage = app.user is null or app.request.pathinfo starts with '/login' or app.request.pathinfo starts with '/mot-de-passe-oublie' or app.request.pathinfo starts with '/login/mfa' %}
+	<body class="{% if isAuthPage %}auth-page{% endif %}" data-user-id="{{ app.user.id|default('') }}" data-user-name="{{ app.user.username|default('') }}" data-user-avatar="{{ app.user.username|default('')|slice(0,2)|upper }}">
+
+		{% if not isAuthPage %}
+			<!-- ══ SIDEBAR ══ -->
+			<nav
+				class="sidebar">
+
+				<!-- Logo -->
+				<div class="sidebar-logo">
+					<div class="logo-badge" style="background: transparent; border-radius: 14px;">
+						<img src="{{ asset('images/logo - HUMANIA.png') }}" alt="Humania Logo" style="width: 100%; height: 100%; object-fit: contain; border-radius: 14px;">
+					</div>
+					<div class="logo-text">
+						<span class="logo-name">HUMANIA</span>
+						<div class="logo-dots">
+							<span class="logo-dot" style="background:#e57373"></span>
+							<span class="logo-dot" style="background:#5b8dee"></span>
+							<span class="logo-dot" style="background:#f5c842"></span>
+							<span class="logo-dot" style="background:#5db87a"></span>
+						</div>
+						<span class="logo-sub">RH · Management</span>
+					</div>
+				</div>
+
+				<div class="sidebar-divider"></div>
+
+				<!-- Menu -->
+
+				<div
+					class="sidebar-scroll">
+
+					<!-- USER MANAGEMENT -->
+					<div class="nav-section">
+						<div class="nav-section-header" onclick="toggleSection(this)">
+							<span class="nav-section-title">
+								{% if is_granted('ROLE_ADMIN') or is_granted('ROLE_RH') %}
+									User Management
+								{% elseif is_granted('ROLE_MANAGER') %}
+									Mon Espace Manager
+								{% else %}
+									Mon Espace
+								{% endif %}
+							</span>
+							<span class="nav-section-arrow">▾</span>
+						</div>
+						<div
+							class="nav-section-content">
+
+							{# Dashboard — visible pour TOUS #}
+							<a href="{{ path('app_home') }}" class="nav-btn {% if app.request.pathinfo == '/' or app.request.pathinfo starts with '/home' or (app.request.pathinfo starts with '/admin' and not (app.request.pathinfo starts with '/admin/utilisateurs' or app.request.pathinfo starts with '/admin/archives' or app.request.pathinfo starts with '/admin/candidats')) or (app.request.pathinfo starts with '/rh' and not app.request.pathinfo starts with '/rh/utilisateurs') or app.request.pathinfo starts with '/manager/dashboard' or app.request.pathinfo starts with '/formateur/dashboard' %}active{% endif %}">
+								<span class="nav-btn-bar blue"></span>
+								<span class="nav-btn-icon blue">
+									<i class="fas fa-gauge-high"></i>
+								</span>
+								<span class="nav-btn-text">Dashboard</span>
+							</a>
+
+							{# Admin / RH uniquement #}
+							{% if is_granted('ROLE_ADMIN') or is_granted('ROLE_RH') %}
+								<a href="{{ path('app_admin_users') }}" class="nav-btn {% if app.request.pathinfo starts with '/admin/utilisateurs' %}active{% endif %}">
+									<span class="nav-btn-bar red"></span>
+									<span class="nav-btn-icon red">
+										<i class="fas fa-users"></i>
+									</span>
+									<span class="nav-btn-text">Users</span>
+								</a>
+								<a href="{{ path('app_admin_archives') }}" class="nav-btn {% if app.request.pathinfo starts with '/admin/archives' %}active{% endif %}">
+									<span class="nav-btn-bar yellow"></span>
+									<span class="nav-btn-icon yellow">
+										<i class="fas fa-box-archive"></i>
+									</span>
+									<span class="nav-btn-text">Archives</span>
+								</a>
+								<a href="{{ path('app_admin_candidats_acceptes') }}" class="nav-btn {% if app.request.pathinfo starts with '/admin/candidats-acceptes' %}active{% endif %}">
+									<span class="nav-btn-bar green"></span>
+									<span class="nav-btn-icon green">
+										<i class="fas fa-briefcase"></i>
+									</span>
+									<span class="nav-btn-text">Offers & Hiring</span>
+								</a>
+							{% endif %}
+
+						</div>
+					</div>
+
+					<!-- RECRUTEMENT -->
+					<div class="nav-section">
+						<div class="nav-section-header" onclick="toggleSection(this)">
+							<span class="nav-section-title">Recrutement</span>
+							<span class="nav-section-arrow">▾</span>
+						</div>
+						<div class="nav-section-content">
+							<a href="{{ path('app_candidature_interne_index') }}" class="nav-btn {% if app.request.pathinfo starts with '/candidature/interne' %}active{% endif %}">
+								<span class="nav-btn-bar blue"></span>
+								<span class="nav-btn-icon blue">
+									<i class="fas fa-file-lines"></i>
+								</span>
+								<span class="nav-btn-text">Candidature Interne</span>
+							</a>
+							<a href="{{ path('app_candidature_externe_index') }}" class="nav-btn {% if app.request.pathinfo starts with '/candidature/externe' %}active{% endif %}">
+								<span class="nav-btn-bar blue"></span>
+								<span class="nav-btn-icon blue">
+									<i class="fas fa-file-pdf"></i>
+								</span>
+								<span class="nav-btn-text">Candidature Externe</span>
+							</a>
+							<a href="{{ path('app_document_index') }}" class="nav-btn {% if app.request.pathinfo starts with '/document' %}active{% endif %}">
+								<span class="nav-btn-bar yellow"></span>
+								<span class="nav-btn-icon yellow">
+									<i class="fas fa-folder"></i>
+								</span>
+								<span class="nav-btn-text">Documents</span>
+							</a>
+							<a href="{{ path('app_poste_externe_index') }}" class="nav-btn {% if app.request.pathinfo starts with '/poste-externe' or app.request.pathinfo starts with '/poste_externe' %}active{% endif %}">
+								<span class="nav-btn-bar green"></span>
+								<span class="nav-btn-icon green">
+									<i class="fas fa-globe"></i>
+								</span>
+								<span class="nav-btn-text">Poste Externe</span>
+							</a>
+							<a href="{{ path('app_poste_interne_index') }}" class="nav-btn {% if app.request.pathinfo starts with '/poste-interne' or app.request.pathinfo starts with '/poste_interne' %}active{% endif %}">
+								<span class="nav-btn-bar green"></span>
+								<span class="nav-btn-icon green">
+									<i class="fas fa-building"></i>
+								</span>
+								<span class="nav-btn-text">Poste Interne</span>
+							</a>
+							<a href="{{ path('app_analyse_rh_index') }}" class="nav-btn {% if app.request.pathinfo starts with '/analyse-rh' or app.request.pathinfo starts with '/analyse_rh' %}active{% endif %}">
+								<span class="nav-btn-bar red"></span>
+								<span class="nav-btn-icon red">
+									<i class="fas fa-chart-bar"></i>
+								</span>
+								<span class="nav-btn-text">Analyse RH</span>
+							</a>
+							<a href="{{ path('app_analyse_cv_index') }}" class="nav-btn {% if app.request.pathinfo starts with '/analyse-cv' or app.request.pathinfo starts with '/analyse_cv' %}active{% endif %}">
+								<span class="nav-btn-bar red"></span>
+								<span class="nav-btn-icon red">
+									<i class="fas fa-chart-bar"></i>
+								</span>
+								<span class="nav-btn-text">Analyse CV</span>
+							</a>
+						</div>
+					</div>
+
+					<!-- SOCIAL MEDIA -->
+					<div class="nav-section">
+						<div class="nav-section-header" onclick="toggleSection(this)">
+							<span class="nav-section-title">Social Media</span>
+							<span class="nav-section-arrow">▾</span>
+						</div>
+						<div class="nav-section-content">
+							<a href="{{ path('social_feed') }}" class="nav-btn {% if app.request.pathinfo starts with '/social' %}active{% endif %}">
+								<span class="nav-btn-bar blue"></span>
+								<span class="nav-btn-icon blue">
+									<i class="fas fa-comments"></i>
+								</span>
+								<span class="nav-btn-text">Réseaux sociaux</span>
+							</a>
+						</div>
+					</div>
+
+					<!-- COMPÉTENCES -->
+					<div class="nav-section">
+						<div class="nav-section-header" onclick="toggleSection(this)">
+							<span class="nav-section-title">Compétences</span>
+							<span class="nav-section-arrow">▾</span>
+						</div>
+						<div class="nav-section-content">
+							<a href="/competence/catalog" class="nav-btn {% if app.request.pathinfo starts with '/competence/catalog' %}active{% endif %}">
+								<span class="nav-btn-bar blue"></span>
+								<span class="nav-btn-icon blue">
+									<i class="fas fa-bullseye"></i>
+								</span>
+								<span class="nav-btn-text">Compétences</span>
+							</a>
+							{% if is_granted('ROLE_ADMIN') or is_granted('ROLE_RH') or is_granted('ROLE_MANAGER') %}
+								<a href="/competences/matrice" class="nav-btn {% if app.request.pathinfo starts with '/competences/matrice' %}active{% endif %}">
+									<span class="nav-btn-bar green"></span>
+									<span class="nav-btn-icon green">
+										<i class="fas fa-chart-line"></i>
+									</span>
+									<span class="nav-btn-text">Matrice des Compétences</span>
+								</a>
+							{% endif %}
+							<a href="/formation/catalog" class="nav-btn {% if app.request.pathinfo starts with '/formation/catalog' %}active{% endif %}">
+								<span class="nav-btn-bar green"></span>
+								<span class="nav-btn-icon green">
+									<i class="fas fa-graduation-cap"></i>
+								</span>
+								<span class="nav-btn-text">Formations</span>
+							</a>
+							<a href="/mes-lecons" class="nav-btn {% if app.request.pathinfo starts with '/mes-lecons' %}active{% endif %}">
+								<span class="nav-btn-bar green"></span>
+								<span class="nav-btn-icon green">
+									<i class="fas fa-book"></i>
+								</span>
+								<span class="nav-btn-text">Mes Leçons</span>
+							</a>
+							<a href="/evaluations" class="nav-btn {% if app.request.pathinfo starts with '/evaluations' %}active{% endif %}">
+								<span class="nav-btn-bar yellow"></span>
+								<span class="nav-btn-icon yellow">
+									<i class="fas fa-clipboard"></i>
+								</span>
+								<span class="nav-btn-text">Évaluations</span>
+							</a>
+							<a href="/pdi" class="nav-btn {% if app.request.pathinfo starts with '/pdi' %}active{% endif %}">
+								<span class="nav-btn-bar yellow"></span>
+								<span class="nav-btn-icon yellow">
+									<i class="fas fa-map"></i>
+								</span>
+								<span class="nav-btn-text">Plans de développement</span>
+							</a>
+
+
+						</div>
+					</div>
+
+					<!-- ABSENCES & CONGÉS -->
+					<div class="nav-section">
+						<div class="nav-section-header" onclick="toggleSection(this)">
+							<span class="nav-section-title">Absences &amp; Congés</span>
+							<span class="nav-section-arrow">▾</span>
+						</div>
+						<div
+							class="nav-section-content">
+							{# Mes Absences - visible pour tous #}
+							<a href="{{ path('app_absence_index') }}" class="nav-btn {% if app.request.pathinfo starts with '/absence' %}active{% endif %}">
+								<span class="nav-btn-bar red"></span>
+								<span class="nav-btn-icon red">
+									<i class="fas fa-calendar"></i>
+								</span>
+								<span class="nav-btn-text">Mes Absences</span>
+							</a>
+
+							{# Mes Congés - visible pour tous #}
+							<a href="{{ path('app_conge_index') }}" class="nav-btn {% if app.request.pathinfo starts with '/conge/' %}active{% endif %}">
+								<span class="nav-btn-bar green"></span>
+								<span class="nav-btn-icon green">
+									<i class="fas fa-umbrella-beach"></i>
+								</span>
+								<span class="nav-btn-text">Mes Congés</span>
+							</a>
+
+							{# Mes Soldes - visible pour tous #}
+							<a href="{{ path('conges_soldes') }}" class="nav-btn {% if app.request.pathinfo == '/conges/soldes' %}active{% endif %}">
+								<span class="nav-btn-bar yellow"></span>
+								<span class="nav-btn-icon yellow">
+									<i class="fas fa-wallet"></i>
+								</span>
+								<span class="nav-btn-text">Mes Soldes</span>
+							</a>
+
+							{# 🔥 Validations - visible seulement pour MANAGER ou ADMIN #}
+							{% if is_granted('ROLE_MANAGER') or is_granted('ROLE_ADMIN') %}
+								<a href="{{ path('conges_validations') }}" class="nav-btn {% if app.request.pathinfo == '/conges/validations' %}active{% endif %}">
+									<span class="nav-btn-bar green"></span>
+									<span class="nav-btn-icon green">
+										<i class="fas fa-check-circle"></i>
+									</span>
+									<span class="nav-btn-text">Validations</span>
+								</a>
+							{% endif %}
+
+							{# 🔥 Rapport RH - visible seulement pour ADMIN #}
+							{% if is_granted('ROLE_ADMIN') %}
+								<a href="{{ path('app_dashboard') }}" class="nav-btn {% if app.request.pathinfo starts with '/dashboard' or app.request.pathinfo starts with '/conges/Dashboard' %}active{% endif %}">
+									<span class="nav-btn-bar yellow"></span>
+									<span class="nav-btn-icon yellow">
+										<i class="fas fa-chart-bar"></i>
+									</span>
+									<span class="nav-btn-text">Rapport RH</span>
+								</a>
+							{% endif %}
+						</div>
+					</div>
+					<!-- PLANIFICATION -->
+					<div class="nav-section">
+						<div class="nav-section-header" onclick="toggleSection(this)">
+							<span class="nav-section-title">Planification</span>
+							<span class="nav-section-arrow">▾</span>
+						</div>
+						<div class="nav-section-content">
+							{% if is_granted('ROLE_ADMIN') %}
+								<a href="{{ path('app_espaces_index') }}" class="nav-btn {% if app.request.pathinfo starts with '/espaces' %}active{% endif %}">
+									<span class="nav-btn-bar blue"></span>
+									<span class="nav-btn-icon blue">
+										<i class="fas fa-map-pin"></i>
+									</span>
+									<span class="nav-btn-text">Catalogue des Espaces</span>
+								</a>
+							{% endif %}
+								<span class="nav-btn-bar blue"></span>
+								<span class="nav-btn-icon blue">
+									<i class="fas fa-ticket"></i>
+								</span>
+								<span class="nav-btn-text">Participer événement</span>
+							</a>
+							<a href="{{ path('app_reunion_index') }}" class="nav-btn {% if app.request.pathinfo starts with '/reunion' %}active{% endif %}">
+								<span class="nav-btn-bar green"></span>
+								<span class="nav-btn-icon green">
+									<i class="fas fa-calendar-days"></i>
+								</span>
+								<span class="nav-btn-text">Réunions</span>
+							</a>
+							{# <a href="{{ path('app_minimap_index') }}" class="nav-btn {% if app.request.pathinfo starts with '/carte' %}active{% endif %}">
+								<span class="nav-btn-bar yellow"></span>
+								<span class="nav-btn-icon yellow">
+									<i class="fas fa-map"></i>
+								</span>
+								<span class="nav-btn-text">Carte intérieure</span>
+							</a> #}
+							{% if is_granted('ROLE_ADMIN') or is_granted('ROLE_RH') %}
+								<a href="{{ path('app_boarding_history') }}" class="nav-btn {% if app.request.pathinfo starts with '/boarding/history' %}active{% endif %}">
+									<span class="nav-btn-bar purple"></span>
+									<span class="nav-btn-icon purple">
+										<i class="fas fa-clock-rotate-left"></i>
+									</span>
+									<span class="nav-btn-text">Historique Boarding</span>
+								</a>
+								<a href="{{ path('app_onboarding_index') }}" class="nav-btn {% if app.request.pathinfo starts with '/onboarding' %}active{% endif %}">
+									<span class="nav-btn-bar green"></span>
+									<span class="nav-btn-icon green">
+										<i class="fas fa-user-plus"></i>
+									</span>
+									<span class="nav-btn-text">Onboarding</span>
+								</a>
+								<a href="{{ path('app_offboarding_index') }}" class="nav-btn {% if app.request.pathinfo starts with '/offboarding' %}active{% endif %}">
+									<span class="nav-btn-bar red"></span>
+									<span class="nav-btn-icon red">
+										<i class="fas fa-user-minus"></i>
+									</span>
+									<span class="nav-btn-text">Offboarding</span>
+								</a>
+							{% endif %}
+							<a href="{{ path('app_reservation_espaces_index') }}" class="nav-btn {% if app.request.pathinfo starts with '/reservation-espaces' %}active{% endif %}">
+								<span class="nav-btn-bar blue"></span>
+								<span class="nav-btn-icon blue">
+									<i class="fas fa-map-pin"></i>
+								</span>
+								<span class="nav-btn-text">Réserver un espace</span>
+							</a>
+							{% if is_granted('ROLE_ADMIN') %}
+								<a href="{{ path('app_evenement_index') }}" class="nav-btn {% if app.request.pathinfo starts with '/evenement' %}active{% endif %}">
+									<span class="nav-btn-bar pink"></span>
+									<span class="nav-btn-icon pink">
+										<i class="fas fa-champagne-glasses"></i>
+									</span>
+									<span class="nav-btn-text">Gestion des Événements</span>
+								</a>
+							{% endif %}
+						</div>
+					</div>
+
+				</div>
+				<!-- /sidebar-scroll -->
+				<div class="sidebar-divider"></div><!-- User card --><div class="sidebar-user">
+					<div class="user-accent-bar">
+						<span class="user-accent-seg" style="background:#e57373"></span>
+						<span class="user-accent-seg" style="background:#5b8dee"></span>
+						<span class="user-accent-seg" style="background:#f5c842"></span>
+						<span class="user-accent-seg" style="background:#5db87a"></span>
+					</div>
+					<div class="user-card-content">
+						<a href="{{ path('app_profil') }}" class="nav-btn" style="padding:0;background:transparent;flex:1;">
+							<div class="user-avatar">{{ app.user ? app.user.initials : '?' }}</div>
+							<div class="user-info">
+								<div class="user-name">{{ app.user ? app.user.fullName : 'Utilisateur' }}</div>
+								<div class="user-email">{{ app.user ? app.user.userIdentifier : '' }}</div>
+								{% if is_granted('ROLE_ADMIN') %}
+									<span class="user-role-badge role-admin">ADMIN</span>
+								{% elseif is_granted('ROLE_RH') %}
+									<span class="user-role-badge role-rh">RH</span>
+								{% elseif is_granted('ROLE_MANAGER') %}
+									<span class="user-role-badge role-manager">MANAGER</span>
+								{% else %}
+									<span class="user-role-badge role-employe">EMPLOYE</span>
+								{% endif %}
+							</div>
+						</a>
+						<a href="{{ path('app_logout') }}" class="logout-btn" title="Déconnexion">
+							<i class="fas fa-right-from-bracket"></i>
+						</a>
+					</div>
+				</div>
+			</nav>
+		{% endif %}<!-- ══ MAIN ══ --><div class="main-wrapper {% if isAuthPage %}no-sidebar{% endif %}">
+			<div class="main-content">
+				{% for msg in app.flashes('success') %}
+					<div class="alert alert-success alert-dismissible fade show" role="alert">✅{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+					</div>
+				{% endfor %}
+				{% for msg in app.flashes('error') %}
+					<div class="alert alert-danger alert-dismissible fade show" role="alert">❌{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+					</div>
+				{% endfor %}
+				{% block body %}{% endblock %}
+			</div>
+		</div>
+		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+		<script>
+			function toggleSection(header) {
+const arrow = header.querySelector('.nav-section-arrow');
+const content = header.nextElementSibling;
+content.classList.toggle('collapsed');
+arrow.classList.toggle('collapsed');
+}
+
+// Keep track of the last non-social app page so social header can return here.
+(function () {
+try {
+var currentPath = "{{ app.request.pathinfo|e('js') }}";
+if (currentPath && ! currentPath.startsWith('/social')) {
+localStorage.setItem('lastSidebarPage', window.location.href);
+}
+} catch (e) {}
+})();
+		</script>
+		{% block javascripts %}{% endblock %}
+
+		{# Chat Widget - LinkedIn Style - Only on SOCIALMEDIA pages #}
+		{% set currentRoute = app.request.attributes.get('_route') %}
+		{% if app.user and currentRoute and currentRoute starts with 'social_' %}
+			{% include 'SOCIALMEDIA/messaging/chat_widget.html.twig' %}
+			<script src="{{ asset('js/chat.js') }}"></script>
+		{% endif %}
+	</body>
+</html>
