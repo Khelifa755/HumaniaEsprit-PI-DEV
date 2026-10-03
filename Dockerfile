@@ -1,9 +1,9 @@
 FROM php:8.2-apache
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl libfreetype6-dev libicu-dev libjpeg62-turbo-dev libonig-dev libpng-dev libzip-dev unzip \
+    curl libcurl4-openssl-dev libfreetype6-dev libicu-dev libjpeg62-turbo-dev libonig-dev libpng-dev libxml2-dev libzip-dev unzip \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j"$(nproc)" curl dom gd intl mbstring pdo_mysql xml zip opcache \
+    && docker-php-ext-install -j"$(nproc)" dom gd intl mbstring pdo_mysql xml zip opcache \
     && a2enmod rewrite headers \
     && rm -rf /var/lib/apt/lists/*
 
@@ -11,7 +11,7 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 COPY SYMFONY/composer.json SYMFONY/composer.lock ./
-RUN composer install --no-dev --no-interaction --no-progress --prefer-dist --optimize-autoloader --no-scripts
+RUN php -m && composer diagnose && composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts
 COPY SYMFONY/ .
 RUN composer run-script post-install-cmd --no-interaction \
     && mkdir -p var/cache var/log public/uploads \
