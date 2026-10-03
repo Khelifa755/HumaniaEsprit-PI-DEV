@@ -1,8 +1,9 @@
 FROM php:8.2-apache
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl libicu-dev libonig-dev libzip-dev unzip \
-    && docker-php-ext-install -j"$(nproc)" intl mbstring pdo_mysql zip opcache \
+    curl libfreetype6-dev libicu-dev libjpeg62-turbo-dev libonig-dev libpng-dev libzip-dev unzip \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j"$(nproc)" curl dom gd intl mbstring pdo_mysql xml zip opcache \
     && a2enmod rewrite headers \
     && rm -rf /var/lib/apt/lists/*
 
